@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, SciterIntf, SciterApi, TiScriptApi, Sciter, StdCtrls, OleCtrls,
+  Dialogs, SciterApi, TiScriptApi, Sciter, StdCtrls, OleCtrls,
   ExtCtrls, ComCtrls, ShellCtrls, Menus;
 
 type
