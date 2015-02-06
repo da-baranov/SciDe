@@ -51,10 +51,9 @@ type
     procedure tv1Change(Sender: TObject; Node: TTreeNode);
   private
     { Private declarations }
-    procedure OnElementMouse(ASender: TObject; const target: IElement; eventType: Integer;
-                                                x: Integer; y: Integer; buttons: Integer;
-                                                keys: Integer);
-    procedure OnElementControlEvent(ASender: TObject; const target: IElement; eventType: Integer;
+    procedure OnElementMouse(ASender: TObject; const target: IElement;
+      eventType: MOUSE_EVENTS; x, y: Integer; buttons: MOUSE_BUTTONS; keys: KEYBOARD_STATES);
+    procedure OnElementControlEvent(ASender: TObject; const target: IElement; eventType: BEHAVIOR_EVENTS;
                              reason: Integer; const source: IElement);
   public
     { Public declarations }
@@ -213,19 +212,19 @@ begin
 end;
 
 procedure TMainForm.OnElementControlEvent(ASender: TObject;
-  const target: IElement; eventType, reason: Integer;
+  const target: IElement; eventType: BEHAVIOR_EVENTS; reason: Integer;
   const source: IElement);
 begin
   if target <> nil then
-    txtLog.Lines.Add(Format('Control event of type %d, sender is %s, value is %s', [eventType, target.Tag, target.Value]))
+    txtLog.Lines.Add(Format('Control event of type %d, sender is %s, value is %s', [Integer(eventType), target.Tag, target.Value]))
   else
-    txtLog.Lines.Add(Format('Control event of type %d', [eventType]));
+    txtLog.Lines.Add(Format('Control event of type %d', [Integer(eventType)]));
 end;
 
 procedure TMainForm.OnElementMouse(ASender: TObject; const target: IElement;
-  eventType, x, y, buttons, keys: Integer);
+  eventType: MOUSE_EVENTS; x, y: Integer; buttons: MOUSE_BUTTONS; keys: KEYBOARD_STATES);
 begin
-  txtLog.Lines.Add(Format('MouseEvent of type %d at %d:%d', [eventType, x, y]));
+  txtLog.Lines.Add(Format('MouseEvent of type %d at %d:%d', [Integer(eventType), x, y]));
 end;
 
 constructor TMainForm.Create(AOwner: TComponent);

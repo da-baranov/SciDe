@@ -16,18 +16,17 @@ type
   IElementCollection = interface;
   
     // Element events
-  TElementOnMouse = procedure(ASender: TObject; const target: IElement; eventType: Integer;
-                                                x: Integer; y: Integer; buttons: Integer;
-                                                keys: Integer) of object;
-  TElementOnKey = procedure(ASender: TObject; const target: IElement; eventType: Integer;
-                                              code: Integer; keys: Integer) of object;
-  TElementOnFocus = procedure(ASender: TObject; const target: IElement; eventType: Integer) of object;
+  TElementOnMouse = procedure(ASender: TObject; const target: IElement; eventType: MOUSE_EVENTS;
+                                                x: Integer; y: Integer; buttons: MOUSE_BUTTONS;
+                                                keys: KEYBOARD_STATES) of object;
+  TElementOnKey = procedure(ASender: TObject; const target: IElement; eventType: KEY_EVENTS;
+                                              code: Integer; keys: KEYBOARD_STATES) of object;
+  TElementOnFocus = procedure(ASender: TObject; const target: IElement; eventType: FOCUS_EVENTS) of object;
   TElementOnTimer = procedure(ASender: TObject; timerId: Integer) of object;
-  TElementOnControlEvent = procedure(ASender: TObject; const target: IElement; eventType: Integer;
+  TElementOnControlEvent = procedure(ASender: TObject; const target: IElement; eventType: BEHAVIOR_EVENTS;
                                                        reason: Integer; const source: IElement) of object;
-  TElementOnScroll = procedure(ASender: TObject; const target: IElement; eventType: Integer;
+  TElementOnScroll = procedure(ASender: TObject; const target: IElement; eventType: SCROLL_EVENTS;
                                                  pos: Integer; isVertical: WordBool) of object;
-  TElementOnChange = procedure(ASender: TObject; const source: IElement) of object;
 
   // Sciter events
   TSciterOnStdOut = procedure(ASender: TObject; const msg: WideString) of object;
@@ -721,6 +720,7 @@ end;
 procedure TSciter.CreateParams(var Params: TCreateParams);
 begin
   inherited CreateParams(Params);
+  Params.Style := Params.Style or WS_TABSTOP;
 end;
 
 procedure TSciter.CreateWindowHandle(const Params: TCreateParams);
@@ -1700,7 +1700,7 @@ begin
   oresult := DispatchInvoke(sender, pInfo.Name, oargs);
 
   // VARIANT to sciter_value
-  if V2S(oresult, @sresult) <> SCDOM_OK then
+  if V2S(oresult, @sresult) <> 0 then
     raise EOleException.CreateFmt('COM object call failed: cannot convert result to VARIANT.', []);
 
   // sciter_value to tiscript_value
