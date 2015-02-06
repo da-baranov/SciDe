@@ -51,7 +51,6 @@ type
     procedure tv1Change(Sender: TObject; Node: TTreeNode);
   private
     { Private declarations }
-    procedure OnErr(Sender: TObject; const Message: WideString);
     procedure OnElementMouse(ASender: TObject; const target: IElement; eventType: Integer;
                                                 x: Integer; y: Integer; buttons: Integer;
                                                 keys: Integer);
@@ -101,7 +100,6 @@ end;
 procedure TMainForm.cmd2Click(Sender: TObject);
 var
   method_def: ptiscript_method_def;
-  method_impl: ptiscript_method;
   smethod_name: AnsiString;
   func: tiscript_value;
   funcName: tiscript_value;
@@ -230,11 +228,6 @@ begin
   txtLog.Lines.Add(Format('MouseEvent of type %d at %d:%d', [eventType, x, y]));
 end;
 
-procedure TMainForm.OnErr(Sender: TObject; const Message: WideString);
-begin
-  txtLog.Lines.Add(Message);
-end;
-
 constructor TMainForm.Create(AOwner: TComponent);
 begin
   inherited;
@@ -262,7 +255,6 @@ end;
 
 procedure TMainForm.cmdRemoveHeadingsClick(Sender: TObject);
 var
-  i: Integer;
   pList: IElementCollection;
 begin
   pList := sctr1.SelectAll('h1');

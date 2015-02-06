@@ -91,7 +91,7 @@ ImageBase=4194304
 ExeDescription=
 [Directories]
 OutputDir=
-UnitOutputDir=
+UnitOutputDir=dcu
 PackageDLLOutputDir=
 PackageDCPOutputDir=
 SearchPath=$(DELPHI)\Lib\Debug;c:\Delphi7\Source\Jcl\lib\d7\debug;c:\Delphi7\Source\Jvcl\jcl\lib\d7\debug
@@ -146,3 +146,6 @@ Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
 [HistoryLists\hlSearchPath]
 Count=1
 Item0=$(DELPHI)\Lib\Debug;c:\Delphi7\Source\Jcl\lib\d7\debug;c:\Delphi7\Source\Jvcl\jcl\lib\d7\debug
+[HistoryLists\hlUnitOutputDirectory]
+Count=1
+Item0=dcu
