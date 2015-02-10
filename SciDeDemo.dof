@@ -135,7 +135,13 @@ ProductName=SciDe
 ProductVersion=3.2.0.2
 Comments=
 [Excluded Packages]
+C:\svn\Projects\KB85\Медицинские документы\ODAC\Bin\Delphi7\dacvcl70.bpl=Devart Data Access GUI related Components
+C:\svn\Projects\KB85\Медицинские документы\ODAC\Bin\Delphi7\dclcrcontrols70.bpl=Devart Controls
+C:\svn\Projects\KB85\Медицинские документы\ODAC\Bin\Delphi7\dcldac70.bpl=Devart Data Access Components
+C:\svn\Projects\KB85\Медицинские документы\ODAC\Bin\Delphi7\dclodac70.bpl=Oracle Data Access Components
+C:\bin\odacvcl70.bpl=Oracle Data Access GUI related Components
 C:\bin\odac70.bpl=Oracle Data Access Components
+C:\svn\Projects\KB85\Медицинские документы\ODAC\Bin\Delphi7\dcloraprov70.bpl=OraProvider package
 C:\bin\oraprov70.bpl=OraProvider package
 [HistoryLists\hlConditionals]
 Count=1

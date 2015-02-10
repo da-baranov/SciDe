@@ -1,6 +1,6 @@
 object MainForm: TMainForm
-  Left = 503
-  Top = 163
+  Left = 671
+  Top = 196
   Width = 865
   Height = 648
   Caption = 'MainForm'
@@ -69,7 +69,7 @@ object MainForm: TMainForm
     Top = 0
     Width = 289
     Height = 590
-    ActivePage = tsDOM
+    ActivePage = ts2
     Align = alLeft
     MultiLine = True
     TabOrder = 1
@@ -115,6 +115,24 @@ object MainForm: TMainForm
         Caption = 'Call script function hello_from_sciter'
         TabOrder = 1
         OnClick = cmd3Click
+      end
+      object cmdRegisterOLE: TButton
+        Left = 10
+        Top = 70
+        Width = 261
+        Height = 25
+        Caption = 'cmdRegisterOLE'
+        TabOrder = 2
+        OnClick = cmdRegisterOLEClick
+      end
+      object Button1: TButton
+        Left = 10
+        Top = 100
+        Width = 261
+        Height = 25
+        Caption = 'Button1'
+        TabOrder = 3
+        OnClick = Button1Click
       end
     end
     object ts3: TTabSheet

@@ -319,7 +319,7 @@ type
   PSciterWindowDelegate = ^SciterWindowDelegate;
 
   ISciterAPI = packed record
-    Version: UINT;                                  // is zero for now
+    Version: UINT;
     SciterClassName: function: LPCWSTR; stdcall;
     SciterVersion: function(major: Integer): UINT; stdcall;
     SciterDataReady: function(hwnd: HWINDOW; uri: PWideChar; data: PByte; dataLength: UINT): BOOL; stdcall;
@@ -678,12 +678,12 @@ type
   PSCROLL_PARAMS = ^SCROLL_PARAMS;
 
 function _SciterAPI: PSciterApi; stdcall;
-function S2V(Value: PSciterValue): OleVariant;
-function V2S(const Value: OleVariant; SciterValue: PSciterValue): UINT;
-function V2T(vm: HVM; Value: tiscript_value): OleVariant;
-function T2V(vm: HVM; const Value: OleVariant): tiscript_value;
-function API: PSciterApi;
-function NI: ptiscript_native_interface;
+function  S2V(Value: PSciterValue; var OleValue: OleVariant): UINT;
+function  V2S(const Value: OleVariant; SciterValue: PSciterValue): UINT;
+function  T2V(vm: HVM; Value: tiscript_value): OleVariant;
+function  V2T(vm: HVM; const Value: OleVariant): tiscript_value;
+function  API: PSciterApi;
+function  NI: ptiscript_native_interface;
 
 implementation
 
@@ -703,15 +703,13 @@ end;
 
 function _SciterAPI: PSciterApi; external 'sciter32.dll' name 'SciterAPI'; stdcall;
 
-function S2V(Value: PSciterValue): OleVariant;
+function S2V(Value: PSciterValue; var OleValue: OleVariant): UINT;
 var
-  oResult: OleVariant;
   pType: TSciterValueType;
   pUnits: UINT;
   pWStr: PWideChar;
   iNum: UINT;
   sWStr: WideString;
-  sWStr2: WideString;
   iResult: Integer;
   dResult: Double;
   i64Result: Int64;
@@ -722,7 +720,7 @@ var
   pDispValue: IDispatch;
   arrSize: UINT;
   sArrItem: TSciterValue;
-  oArrItem: Variant;
+  oArrItem: OleVariant;
   oleArrayResult: Variant;
   j: Integer;
 begin
@@ -731,21 +729,27 @@ begin
     T_ARRAY:
       begin
         API.ValueElementsCount(Value, arrSize);
-        oleArrayResult := VarArrayCreate([0, arrSize], varVariant );
+        OleValue := VarArrayCreate([0, arrSize], varVariant );
         for j := 0 to arrSize - 1 do
         begin
+          oArrItem := Unassigned;
           API.ValueNthElementValue(Value, j, @sArrItem);
-          oArrItem := S2V(@sArrItem);
-          VarArrayPut(oleArrayResult, oArrItem, [j]);
+          S2V(@sArrItem, oArrItem );
+          VarArrayPut(Variant(OleValue), oArrItem, [j]);
         end;
-        Result := oleArrayResult;
+        Result := HV_OK;
       end;
     T_BOOL:
       begin
-        if FAPI.ValueIntData(Value, iResult) = HV_OK then
-          Result := iResult <> 0
-        else
-          Result := False;
+        Result := FAPI.ValueIntData(Value, iResult);
+        if Result = HV_OK then
+        begin
+          OleValue := iResult <> 0;
+        end
+          else
+        begin
+          OleValue := False;
+        end;
       end;
     T_BYTES:
       begin
@@ -753,19 +757,19 @@ begin
       end;
     T_CURRENCY:
       begin
-        FAPI.ValueInt64Data(Value, i64Result);
+        Result := FAPI.ValueInt64Data(Value, i64Result);
         cResult := CompToCurrency(i64Result);
         //cResult := PCurrency(i64Result)^;
         // PInt64(aCurrencyVar)^
-        oResult := cResult;
+        OleValue := cResult;
       end;
     T_DATE:
       begin
-        FAPI.ValueInt64Data(Value, i64Result);
+        Result := FAPI.ValueInt64Data(Value, i64Result);
         ft := TFileTime(i64Result);
         FileTimeToSystemTime(ft, st);
         SystemTimeToVariantTime(st, dResult);
-        oResult := TDateTime(dResult);
+        OleValue := TDateTime(dResult);
       end;
     T_DOM_OBJECT:
       begin
@@ -773,15 +777,14 @@ begin
       end;
     T_FLOAT:
       begin
-        FAPI.ValueFloatData(Value, dResult);
-        oResult := dResult;
+        Result := FAPI.ValueFloatData(Value, dResult);
+        OleValue := dResult;
       end;
     T_STRING:
       begin
-        FAPI.ValueStringData(Value, pWStr, iNum);
+        Result := FAPI.ValueStringData(Value, pWStr, iNum);
         sWStr := WideCharLenToString(pWStr, iNum);
-        Result := sWStr;
-        Exit;
+        OleValue := sWStr;
       end;
     T_FUNCTION:
       begin
@@ -789,8 +792,8 @@ begin
       end;
     T_INT:
       begin
-        FAPI.ValueIntData(Value, iResult);
-        oResult := iResult;
+        Result := FAPI.ValueIntData(Value, iResult);
+        OleValue := iResult;
       end;
     T_LENGTH:
       begin
@@ -802,39 +805,41 @@ begin
       end;
     T_NULL:
       begin
-        oResult := Null;
+        OleValue := Null;
+        Result := HV_OK;
       end;
     T_OBJECT:
       begin
         pbResult := nil;
-        if API.ValueBinaryData(Value, pbResult, iNum) = HV_OK then
+        Result := API.ValueBinaryData(Value, pbResult, iNum);
+        if Result = HV_OK then
         begin
           if pbResult <> nil then
           begin
             pDispValue := IDispatch(Pointer(pbResult));
             pDispValue._AddRef;
-            oResult := OleVariant(pDispValue);
+            OleValue := OleVariant(pDispValue);
           end
             else
           begin
-            oResult := Unassigned;
+            OleValue := Unassigned;
           end;
         end
           else
         begin
-          oResult := Unassigned;
+          OleValue := Unassigned;
         end;
       end;
     T_UNDEFINED:
       begin
-        oResult := Unassigned;
+        OleValue := Unassigned;
+        Result := HV_OK;
       end;
     else
       begin
         raise ESciterNotImplementedException.CreateFmt('Not implemented (%d)', [Integer(pType)]);
       end;
   end;
-  Result := oResult;
 end;
 
 function V2S(const Value: OleVariant; SciterValue: PSciterValue): UINT;
@@ -927,7 +932,7 @@ begin
     varDispatch:
       begin
         pDisp := IDispatch(Value);
-        pDisp._AddRef; // TODO: ?
+        pDisp._AddRef;
         Result := FAPI.ValueBinaryDataSet(SciterValue, PByte(pDisp), 1, T_OBJECT, 0);
       end;
     else
@@ -937,15 +942,15 @@ begin
   end;
 end;
 
-function V2T(vm: HVM; Value: tiscript_value): OleVariant;
+function T2V(vm: HVM; Value: tiscript_value): OleVariant;
 var
   sValue: TSciterValue;
 begin
   API.Sciter_T2S(vm, Value, sValue, False);
-  Result := S2V(@sValue);
+  S2V(@sValue, Result);
 end;
 
-function T2V(vm: HVM; const Value: OleVariant): tiscript_value;
+function V2T(vm: HVM; const Value: OleVariant): tiscript_value;
 var
   sValue: TSciterValue;
   tResult: tiscript_value;

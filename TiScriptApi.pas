@@ -1,5 +1,7 @@
 unit TiScriptApi;
 
+{$A8}
+
 interface
 
 uses
@@ -17,10 +19,8 @@ type
   tiscript_pvalue = record
     val: tiscript_value;
     vm: HVM;
-    {$WARN UNSAFE_CODE OFF}
     d1: Pointer;
     d2: Pointer;
-    {$WARN UNSAFE_CODE ON}
   end;
   ptiscript_pvalue = ^tiscript_pvalue;
 
@@ -48,14 +48,26 @@ type
   tiscript_method_def_array = array[0..0] of tiscript_method_def;
   ptiscript_method_def_array = ^tiscript_method_def_array;
 
-  tiscript_get_prop = function(c: HVM; obj: tiscript_value): tiscript_value; cdecl;
+  tiscript_get_prop = function(c: HVM; this: tiscript_value): tiscript_value; cdecl;
   ptiscript_get_prop = ^tiscript_get_prop;
 
-  tiscript_set_prop = procedure(c: tiscript_VM; obj: tiscript_value; value: tiscript_value ); cdecl;
+  tiscript_tagged_get_prop = function(c: HVM; this: tiscript_value; tag: Pointer): tiscript_value; cdecl;
+
+  tiscript_set_prop = procedure(c: HVM; this: tiscript_value; value: tiscript_value ); cdecl;
   ptiscript_set_prop = ^tiscript_set_prop;
 
-  tiscript_finalizer = procedure(c: tiscript_VM; obj: tiscript_value); cdecl;
+  tiscript_tagged_set_prop = procedure(c: HVM; this: tiscript_value; value: tiscript_value; tag: Pointer); cdecl;
+
+  tiscript_finalizer = procedure(c: HVM; this: tiscript_value); cdecl;
   ptiscript_finalizer = ^tiscript_finalizer;
+
+  tiscript_get_item = function(c: HVM; this: tiscript_value; key: tiscript_value): tiscript_value; cdecl;
+  ptiscript_get_item = ^ptiscript_get_item;
+
+  tiscript_set_item = procedure(c: HVM; this: tiscript_value; key: tiscript_value; value: tiscript_value); cdecl;
+  ptiscript_set_item = ^tiscript_set_item;
+
+  tiscript_on_gc_copy = procedure(instance_data: Pointer; new_self: tiscript_value); cdecl;
 
   { TIScript property definition }
   tiscript_prop_def = record
@@ -73,11 +85,11 @@ type
     methods:    ptiscript_method_def;
     props:      ptiscript_prop_def;
     consts:     Pointer; // ptiscript_const_def;
-    get_item:   Pointer; // ptiscript_get_item;
-    set_item:   Pointer; // ptiscript_set_item;
-    finalizer:  ptiscript_finalizer;
+    get_item:   tiscript_get_item;
+    set_item:   tiscript_set_item;
+    finalizer:  tiscript_finalizer;
     iterator:   Pointer; // ptiscript_iterator;
-    on_gc_copy: Pointer; // ptiscript_on_gc_copy;
+    on_gc_copy: tiscript_on_gc_copy;
     prototype:  tiscript_value;
   end;
   ptiscript_class_def = ^tiscript_class_def;

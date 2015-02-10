@@ -3,7 +3,7 @@ unit Sciter;
 interface
 
 uses
-  Windows, Forms, Dialogs, Messages, ComObj, ActiveX, Controls, Classes, SysUtils, SciterApi, TiScriptApi,
+  Windows, Forms, Dialogs, Messages, ComObj, ActiveX, OleCtrls, Controls, Classes, SysUtils, SciterApi, TiScriptApi,
   Contnrs, Variants, Math, Graphics;
 
 type
@@ -225,6 +225,7 @@ type
     procedure LoadHtml(const Html: WideString; const BaseURL: WideString);
     procedure LoadURL(const URL: Widestring);
     procedure RegisterComObject(const Name: WideString; const Obj: IDispatch);
+    procedure RegisterNativeFunction(const Name: WideString; Handler: tiscript_method);
     function Select(const Selector: WideString): TElement;
     function SelectAll(const Selector: WideString): IElementCollection;
     procedure Test;
@@ -279,23 +280,45 @@ type
     property OnStdWarn: TSciterOnStdOut read FOnStdWarn write SetOnStdWarn;
 end;
 
-function ComObjectMethodHandler(vm: HVM; obj: tiscript_value; tag: Pointer): tiscript_value; cdecl;
-function ComObjectGetterHandler(vm: HVM; obj: tiscript_value; tag: Pointer): tiscript_value; cdecl;
-procedure ComObjectSetterHandler(vm: HVM; obj: tiscript_value; value: tiscript_value; tag: Pointer); cdecl;
-procedure ComObjectFinalizer(vm: HVM; obj: tiscript_value); cdecl;
 procedure SciterDebug(param: Pointer; subsystem: UINT; severity: UINT; text: PWideChar; text_length: UINT); stdcall;
 procedure Register;
 
 implementation
+
+uses SciterOleProxy;
+
+function CreateObjectNative(vm: HVM): tiscript_value; cdecl;
+var
+  oVal: OleVariant;
+  pVal: IDispatch;
+  tProgId: tiscript_value;
+  pProgId: PWideChar;
+  iCnt: UINT;
+  sProgId: WideString;
+begin
+  iCnt := NI.get_arg_count(vm);
+  tProgId := NI.get_arg_n(vm, 2);
+  NI.get_string_value(tProgId, pProgId, iCnt);
+  sProgId := WideString(pProgId);
+  oVal := CreateOleObject(sProgId);
+  Result := WrapOleObject(vm, IDispatch(oVal));
+end;
 
 procedure ElementTagCallback(str: PAnsiChar; str_length: UINT; param : Pointer); stdcall;
 var
   pElement: TElement;
   sStr: AnsiString;
 begin
-  sStr := AnsiString(str);
   pElement := TElement(param);
-  pElement.FTag := sStr;
+  if str_length > 0 then
+  begin
+    sStr := String(str);
+    pElement.FTag := sStr; 
+  end
+    else
+  begin
+    pElement.FTag := '';
+  end;
 end;
 
 procedure ElementHtmlCallback(bytes: PByte; num_bytes: UINT; param: Pointer); stdcall;
@@ -322,31 +345,46 @@ end;
 procedure ElementTextCallback(str: PWideChar; str_length: UINT; param: Pointer); stdcall;
 var
   pElement: TElement;
-  sStr: WideString;
 begin
-  sStr := WideString(str);
   pElement := TElement(param);
-  pElement.FText := sStr;
+  if str_length > 0 then
+  begin
+    pElement.FText := WideCharLenToString(str, str_length);
+  end
+    else
+  begin
+    pElement.FText := '';
+  end;
 end;
 
 procedure AttributeTextCallback(str: PWideChar; str_length: UINT; param: Pointer); stdcall;
 var
   pElement: TElement;
-  sStr: WideString;
 begin
-  sStr := WideString(str);
   pElement := TElement(param);
-  pElement.FAttrValue := sStr;
+  if str_length > 0 then
+  begin
+    pElement.FAttrValue := WideCharLenToString(str, str_length);
+  end
+    else
+  begin
+    pElement.FAttrValue := '';
+  end;
 end;
 
 procedure StyleAttributeTextCallback(str: PWideChar; str_length: UINT; param: Pointer); stdcall;
 var
   pElement: TElement;
-  sStr: WideString;
 begin
-  sStr := WideString(str);
   pElement := TElement(param);
-  pElement.FStyleAttrValue := sStr;
+  if str_length > 0 then
+  begin
+    pElement.FStyleAttrValue := WideCharLenToString(str, str_length);
+  end
+    else
+  begin
+    pElement.FStyleAttrValue := '';
+  end;
 end;
 
 function SelectorCallback(he: HELEMENT; Param: Pointer ): BOOL; stdcall;
@@ -573,115 +611,9 @@ begin
   end;
 end;
 
-function DispatchInvoke(const Dispatch: IDispatch; const DispID: integer;
-  const AParams: array of OleVariant): OleVariant; overload;
-var
-  Argc: integer;
-  ArgErr: integer;
-  ExcepInfo: TExcepInfo;
-  Flags: Word;
-  i: integer;
-  j: integer;
-  Params: DISPPARAMS;
-  pArgs: PVariantArgList;
-  VarResult: Variant;
-begin
-  Result := Unassigned;
-  
-  Flags := INVOKE_FUNC or INVOKE_PROPERTYPUT or INVOKE_PROPERTYPUTREF;
-  
-  Argc := High(AParams) + 1;
-  if Argc < 0 then Argc := 0;
-
-  // Paramarray
-  GetMem(pArgs, sizeof(TVariantArg) * Argc);
-  j := 0;
-  for i := High(AParams) downto Low(AParams) do
-  begin
-    // VariantCopy(vDest, AParams[i]);
-    pArgs[j] := tagVARIANT(TVarData(AParams[i]));
-    j := j + 1;
-  end;
-
-  Params.rgvarg := pArgs;
-  Params.cArgs := Argc;
-  params.cNamedArgs := 0;
-  params.rgdispidNamedArgs := nil;
-
-  try
-    OleCheck(Dispatch.Invoke(DispID, GUID_NULL, LOCALE_USER_DEFAULT, Flags, TDispParams(Params), @VarResult, @ExcepInfo, @ArgErr));
-  finally
-    FreeMem(pArgs, sizeof(TVariantArg) * Argc);
-  end;
-  Result := VarResult;
-end;
 
 type
   TComMethodCall = (Method, NonIndexedProperty, IndexedProperty);
-
-  TComMethodInfo = class
-  private
-    function GetAnsiName: AnsiString;
-  public
-    CallArgsCount: Integer;
-    CallType: TComMethodCall;
-    GetArgsCount: Integer;
-    HasGetter: Boolean;
-    HasSetter: Boolean;
-    Name: WideString;
-    SetArgsCount: Integer;
-    property AnsiName: AnsiString read GetAnsiName;
-  end;
-
-  TComMethodInfoList = class(TObjectList)
-  private
-    function Get_Item(const Index: Integer): TComMethodInfo;
-  public
-    procedure Add(Info: TComMethodInfo);
-    function LookupMethodInfo(const Name: WideString): TComMethodInfo;
-    property Item[const Index: Integer]: TComMethodInfo read Get_Item; default;
-  end;
-
-  TComClassInfo = class
-  private
-    FAllMethods: TComMethodInfoList;
-    FClassDef: ptiscript_class_def;
-    FMethods: TComMethodInfoList;
-    FNativeMethods: Pointer;
-    FNativeMethodsSz: Integer;
-    FProps: TComMethodInfoList;
-    procedure BuildClassDef;
-    function GetAnsiGuid: AnsiString;
-    function GetAnsiProgId: AnsiString;
-    function GetClassDef: ptiscript_class_def;
-    function GetMethods: TComMethodInfoList;
-    function GetProps: TComMethodInfoList;
-  public
-    Guid: WideString;
-    ProgID: WideString;
-    constructor Create;
-    destructor Destroy; override;
-    procedure Build(const Obj: IDispatch);
-    property AllMethods: TComMethodInfoList read FAllMethods;
-    property AnsiGuid: AnsiString read GetAnsiGuid;
-    property AnsiProgId: AnsiString read GetAnsiProgId;
-    property ClassDef: ptiscript_class_def read GetClassDef;
-    property Methods: TComMethodInfoList read GetMethods;
-    property Props: TComMethodInfoList read GetProps;
-  end;
-
-  TComClassList = class(TObjectList)
-  private
-    function GetItem(const Index: Integer): TComClassInfo;
-  public
-    destructor Destroy; override;
-    procedure Add(Value: TComClassInfo);
-    function LookupClassInfo(const Obj: IDispatch): TComClassInfo;
-    property Item[const Index: Integer]: TComClassInfo read GetItem; default;
-  end;
-
-var
-  CLASS_BAG: TComClassList;
 
 constructor TSciter.Create(AOwner: TComponent);
 begin
@@ -706,13 +638,15 @@ var
   i: Integer;
 begin
   sFunctionName := FunctionName;
+  API.ValueInit(@pVal);
   SetLength(pArgs, Length(Args));
   for i := Low(Args) to High(Args) do
   begin
     V2S(Args[i], @Args[i]);
   end;
-  if API.SciterCall(Self.Handle, PAnsiChar(sFunctionName), 0, nil, pVal) then
-    Result := S2V(@pVal)
+  // if API.SciterCall(Self.Handle, PAnsiChar(sFunctionName), Length(pArgs), @pArgs[0], pVal) then
+  if API.SciterCall(Handle, PAnsiChar(sFunctionName), 0, nil, pVal) then
+    S2V(@pVal, Result)
   else
     raise Exception.CreateFmt('Failed to call function "%s".', [FunctionName]);
 end;
@@ -728,7 +662,8 @@ begin
   inherited;
   if HandleAllocated then
   begin
-    API.SciterSetupDebugOutput(Self.Handle, Self, @SciterDebug); 
+    API.SciterSetupDebugOutput(Self.Handle, Self, @SciterDebug);
+    RegisterNativeFunction('CreateObject', @CreateObjectNative); 
     if FHtml <> '' then
     begin
       LoadHtml(FHtml, FBaseUrl);
@@ -756,7 +691,7 @@ var
   pVal: TSciterValue;
 begin
   if API.SciterEval(Self.Handle, PWideChar(Script), Length(Script), pVal)  then
-    Result := S2V(@pVal)
+    S2V(@pVal, Result)
   else
     Result := Unassigned;
 end;
@@ -886,43 +821,10 @@ end;
 procedure TSciter.RegisterComObject(const Name: WideString;
   const Obj: IDispatch);
 var
-  pClassInfo: TComClassInfo;
-  vm: TIScriptApi.HVM;
-  zns: tiscript_value;
-  class_def: tiscript_value;
-  class_instance: tiscript_value;
-  pinned_class_instance: tiscript_pvalue;
-  var_name: tiscript_value;
-  var_value: tiscript_value;
+  vm: TiScriptApi.HVM;
 begin
-  pClassInfo := CLASS_BAG.LookupClassInfo(Obj);
-  try
-    vm        := API.SciterGetVM(Handle);
-    zns       := NI.get_global_ns(vm);
-    var_name  := NI.string_value(vm, PWideChar(Name), Length(Name));
-    var_value := NI.get_prop(vm, zns, var_name);
-
-    if NI.is_undefined(var_value) then
-    begin
-      class_def := NI.define_class(vm, pClassInfo.ClassDef, zns);
-      if not NI.is_class(vm, class_def) then
-        raise Exception.Create('Not a class');
-      class_instance := NI.create_object(vm, class_def);
-      if not NI.is_native_object(class_instance) then
-        raise Exception.Create('Error');
-      pinned_class_instance.vm := nil;
-      pinned_class_instance.val := class_instance;
-      pinned_class_instance.d1 := nil;
-      pinned_class_instance.d2 := nil;
-      NI.pin(vm, @pinned_class_instance);
-      Obj._AddRef;
-      NI.set_instance_data(class_instance, Pointer(obj));
-      NI.set_prop(vm, zns, var_name, class_instance);
-    end;
-  finally
-    //if pClassInfo <> nil then
-    //  pClassInfo.Free;
-  end;
+  vm := API.SciterGetVM(Handle);
+  SciterOleProxy.RegisterOleObject(vm, Obj, Name);
 end;
 
 function TSciter.Select(const Selector: WideString): TElement;
@@ -1150,14 +1052,18 @@ end;
 
 function TElement.Get_Tag: WideString;
 begin
-  API.SciterGetElementTypeCB(FElement, @ElementTagCallback, Self);
-  Result := Self.FTag;
+  if API.SciterGetElementTypeCB(FElement, @ElementTagCallback, Self) = SCDOM_OK then
+    Result := FTag
+  else
+    Result := '';
 end;
 
 function TElement.Get_Text: WideString;
 begin
-  API.SciterGetElementTextCB(FELEMENT, @ElementTextCallback, Self);
-  Result := FText;
+  if API.SciterGetElementTextCB(FELEMENT, @ElementTextCallback, Self) = SCDOM_OK then
+    Result := FText
+  else
+    Result := '';
 end;
 
 function TElement.Get_Value: OleVariant;
@@ -1170,7 +1076,7 @@ begin
   if API.SciterGetValue(FElement, @pValue) <> SCDOM_OK then
     Result := Unassigned
   else
-    Result := S2V(@pValue);
+    S2V(@pValue, Result);
 end;
 
 procedure TElement.InsertElement(const Child: IElement; Index: Integer);
@@ -1351,260 +1257,6 @@ begin
   FList.Clear;
 end;
 
-{ TComClassInfo }
-
-constructor TComClassInfo.Create;
-begin
-  FAllMethods := TComMethodInfoList.Create(False);
-  FProps := TComMethodInfoList.Create(False);
-  FMethods := TComMethodInfoList.Create(False);
-end;
-
-destructor TComClassInfo.Destroy;
-begin
-  FClassDef.methods := nil;
-  FreeMem(FNativeMethods, FNativeMethodsSz);
-  FNativeMethods := nil;
-  
-  FProps.Free;
-  FMethods.Free;
-  FAllMethods.Free;
-  inherited;
-end;
-
-procedure TComClassInfo.Build(const Obj: IDispatch);
-var
-  iCnt: Integer;
-  typeInfo: ITypeInfo;
-  typeAttr: PTypeAttr;
-  ptypeGuid: PWideChar;
-  pprogId: PWideChar;
-  typeGuid: WideString;
-  funcDesc: PFuncDesc;
-  sfuncName: PWideChar;
-  funcName: WideString;
-  i: Integer;
-  cNames: Integer;
-  pMethodInfo: TComMethodInfo;
-begin
-  FAllMethods.Clear;
-  FMethods.Clear;
-  FProps.Clear;
-
-  try
-    if Obj = nil then
-      Exit;
-
-    OleCheck(Obj.GetTypeInfoCount(iCnt));
-    if iCnt = 0 then
-      Exit;
-
-    OleCheck(Obj.GetTypeInfo(0, LOCALE_USER_DEFAULT, typeInfo));
-
-    OleCheck(typeInfo.GetTypeAttr(typeAttr));
-
-    // Guid
-    OleCheck(StringFromCLSID(typeAttr.guid, ptypeGuid));
-    typeGuid := WideString(ptypeGuid);
-    Self.Guid := typeGuid;
-
-    // ProgID
-    if Succeeded(ProgIDFromCLSID(typeAttr.guid, pprogId)) then
-    begin
-      Self.ProgID := WideString(pprogId);
-      CoTaskMemFree(pprogId);
-    end;
-
-
-    for i := 0 to typeAttr.cFuncs - 1 do
-    try
-      funcDesc := nil;
-      OleCheck(typeInfo.GetFuncDesc(i, funcDesc));
-
-      sfuncName := nil;
-      typeInfo.GetNames(funcDesc.memid, @sfuncName, 1, cNames);
-      funcName := WideString(sfuncName);
-
-      pMethodInfo := Self.AllMethods.LookupMethodInfo(funcName);
-
-      if funcDesc.invkind = INVOKE_FUNC then
-      begin
-        pMethodInfo.CallType := Method;
-        pMethodInfo.CallArgsCount := funcDesc.cParams;
-      end
-        else
-      if funcDesc.invkind = INVOKE_PROPERTYGET then
-      begin
-        if funcDesc.cParams > 0 then
-        begin
-          // Indexed property
-          pMethodInfo.CallType := IndexedProperty;
-        end
-          else
-        begin
-          // Non-indexed property
-          pMethodInfo.CallType := NonIndexedProperty;
-        end;
-        pMethodInfo.HasGetter := true;
-        pMethodInfo.GetArgsCount := funcDesc.cParams;
-      end
-        else
-      begin
-        if funcDesc.cParams > 1 then
-        begin
-          // Indexed property
-          pMethodInfo.CallType := IndexedProperty;
-
-        end
-          else
-        begin
-          // Non-indexed property
-          pMethodInfo.CallType := NonIndexedProperty;
-        end;
-        pMethodInfo.HasSetter := True;
-        pMethodInfo.SetArgsCount := funcDesc.cParams;
-      end;
-     finally
-       if sfuncName <> nil then
-         CoTaskMemFree(sfuncName);
-       if funcDesc <> nil then
-        typeInfo.ReleaseFuncDesc(funcDesc);
-    end;
-    BuildClassDef;
-  finally
-    if ptypeGuid <> nil then
-      CoTaskMemFree(ptypeGuid);
-    if typeAttr <> nil then
-      if typeInfo <> nil then
-        typeInfo.ReleaseTypeAttr(typeAttr);
-  end;
-end;
-
-procedure TComClassInfo.BuildClassDef;
-var
-  i: Integer;
-  pInfo: TComMethodInfo;
-  pclass_methods: ptiscript_method_def;
-  pComMethods: TComMethodInfoList;
-  pComProps: TComMethodInfoList;
-  smethod_name: AnsiString;
-  sprop_name: AnsiString;
-  propsSz: Integer;
-  pclass_props: ptiscript_prop_def;
-begin
-  GetMem(FClassDef, SizeOf(tiscript_class_def));
-  FClassDef.methods := nil;
-  FClassDef.props := nil;
-  FClassDef.consts := nil;
-  FClassDef.get_item := nil;
-  FClassDef.set_item := nil;
-  FClassDef.finalizer := @ComObjectFinalizer;
-  FClassDef.iterator := nil;
-  FClassDef.on_gc_copy := nil;
-  FClassDef.prototype := 0;
-
-  FClassDef.name := StrNew(PAnsiChar(Self.AnsiGuid));
-
-  // Methods
-  pComMethods := Self.Methods;
-  FNativeMethodsSz := SizeOf(tiscript_method_def) * (pComMethods.Count + 1); // 1 - "null-terminating record"
-  GetMem(pclass_methods, FNativeMethodsSz);
-  FClassDef.methods := pclass_methods;
-  
-  for i := 0 to pComMethods.Count - 1 do
-  begin
-    pInfo := pComMethods[i];
-    smethod_name := pInfo.AnsiName;
-    pclass_methods.name := StrNew(PAnsiChar(smethod_name));
-    pclass_methods.handler := @ComObjectMethodHandler;
-    pclass_methods.dispatch := nil;
-    pclass_methods.tag := pInfo;
-    Inc(pclass_methods);
-  end;
-  // null-terminating record
-  pclass_methods.dispatch := nil;
-  pclass_methods.name := nil;
-  pclass_methods.handler := nil;
-  pclass_methods.tag := nil;
-
-  // Properties
-  pComProps := Self.Props;
-  propsSz := SizeOf(tiscript_prop_def) * (pComProps.Count + 1); // 1 - "null-terminating record"
-  GetMem(pclass_props, propsSz);
-  FClassDef.props := pclass_props;
-  for i := 0 to pComProps.Count - 1 do
-  begin
-    pInfo := pComProps[i];
-    sprop_name := pInfo.Name;
-    pclass_props.dispatch := nil;
-    pclass_props.name := StrNew(PAnsiChar(sprop_name));
-
-    // non-indexed property getter
-    if (pInfo.HasGetter) and (pInfo.GetArgsCount = 0) then
-      pclass_props.getter := @ComObjectGetterHandler
-    else
-      pclass_props.getter := nil;
-
-    // non-indexed property setter
-    if (pInfo.HasSetter) and (pInfo.SetArgsCount = 1) then
-      pclass_props.setter := @ComObjectSetterHandler
-    else
-      pclass_props.setter := nil;
-
-    pclass_props.tag := pInfo;
-
-    Inc(pclass_props);
-  end;
-  // null-terminating record
-  pclass_props.dispatch := nil;
-  pclass_props.name := nil;
-  pclass_props.getter := nil;
-  pclass_props.setter := nil;
-  pclass_props.tag := nil;
-end;
-
-function TComClassInfo.GetAnsiGuid: AnsiString;
-begin
-  Result := Self.Guid;
-end;
-
-function TComClassInfo.GetAnsiProgId: AnsiString;
-begin
-  Result := Self.AnsiProgId;
-end;
-
-function TComClassInfo.GetClassDef: ptiscript_class_def;
-begin
-  Result := FClassDef;
-end;
-
-function TComClassInfo.GetMethods: TComMethodInfoList;
-var
-  i: Integer;
-begin
-  FMethods.Clear;
-  for i := 0 to Self.FAllMethods.Count - 1 do
-  begin
-    if Self.FAllMethods.Item[i].CallType = Method then
-      FMethods.Add(Self.FAllMethods.Item[i]);
-  end;
-  Result := FMethods;
-end;
-
-function TComClassInfo.GetProps: TComMethodInfoList;
-var
-  i: Integer;
-begin
-  FProps.Clear;
-  for i := 0 to Self.FAllMethods.Count -1 do
-  begin
-    if (Self.FAllMethods[i].CallType = NonIndexedProperty) or
-       (Self.FAllMethods[i].CallType = IndexedProperty) then
-      FProps.Add(Self.FAllMethods[i]);
-  end;
-  Result := FProps;
-end;
-
 procedure SciterDebug(param: Pointer; subsystem: UINT; severity: UINT; text: PWideChar; text_length: UINT); stdcall;
 var
   FSciter: TSciter;
@@ -1617,188 +1269,7 @@ begin
   end;
 end;
 
-procedure ComObjectFinalizer(vm: HVM; obj: tiscript_value); cdecl;
-var
-  pDisp: IDispatch;
-begin
-  pDisp := IDispatch(NI.get_instance_data(obj));
-	if pDisp <> nil then
-  begin
-		pDisp._Release;
-		NI.set_instance_data(obj, nil);
-	end;
-end;
 
-function ComObjectGetterHandler(vm: HVM; obj: tiscript_value; tag: Pointer): tiscript_value; cdecl;
-var
-  pDisp: IDispatch;
-  oValue: OleVariant;
-  sValue: TSciterValue;
-  pMethodInfo: TComMethodInfo;
-  tResult: tiscript_value;
-begin
-  pDisp := IDispatch(NI.get_instance_data(obj));
-  pMethodInfo := TComMethodInfo(tag);
-  oValue := ComObj.GetDispatchPropValue(pDisp, pMethodInfo.Name);
-  V2S(oValue, @sValue);
-  API.Sciter_S2T(vm, @sValue, tResult);
-  Result := tResult;
-end;
-
-procedure ComObjectSetterHandler(vm: HVM; obj: tiscript_value; value: tiscript_value; tag: Pointer); cdecl;
-var
-  pDisp: IDispatch;
-  oValue: OleVariant;
-  sValue: TSciterValue;
-  pMethodInfo: TComMethodInfo;
-begin
-  pDisp := IDispatch(NI.get_instance_data(obj));
-  pMethodInfo := TComMethodInfo(tag);
-  API.Sciter_T2S(vm, value, svalue, False);
-  oValue := S2V(@sValue);
-  ComObj.SetDispatchPropValue(pDisp, pMethodInfo.Name, oValue);
-end;
-
-function ComObjectMethodHandler(vm: HVM; obj: tiscript_value; tag: Pointer): tiscript_value; cdecl;
-var
-  argc: Integer;
-  arg: tiscript_value;
-  sarg: TSciterValue;
-  oargs: array of OleVariant;
-  i: Integer;
-  ti_self: tiscript_value;
-  ti_super: tiscript_value;
-  sender: IDispatch;
-  pInfo: TComMethodInfo;
-  oresult: OleVariant;
-  sresult: TSciterValue;
-  tresult: tiscript_value;
-begin
-  pInfo := nil;
-  if tag <> nil then
-    pInfo := TComMethodInfo(tag);
-
-  argc := NI.get_arg_count(vm);
-  // this
-  if argc > 0 then
-  begin
-    ti_self := NI.get_arg_n(vm, 0);
-    sender := IDispatch(NI.get_instance_data(ti_self));
-  end;
-  // super
-  if (argc > 1) then
-    ti_super := NI.get_arg_n(vm, 1);
-
-  // Invoke params
-  SetLength(oargs, argc - 2);
-  for i := 2 to argc - 1 do
-  begin
-    arg := NI.get_arg_n(vm, i);
-    API.Sciter_T2S(vm, arg, sarg, false);
-    oargs[i - 2] := S2V(@sarg);
-  end;
-  oresult := DispatchInvoke(sender, pInfo.Name, oargs);
-
-  // VARIANT to sciter_value
-  if V2S(oresult, @sresult) <> 0 then
-    raise EOleException.CreateFmt('COM object call failed: cannot convert result to VARIANT.', []);
-
-  // sciter_value to tiscript_value
-  if not API.Sciter_S2T(vm, @sresult, tresult) then
-    raise EOleException.CreateFmt('COM object call failed: cannot convert sciter_value to tiscript_value.', []);
-  
-  Result := tresult;
-end;
-
-{ TComMethodInfoList }
-
-procedure TComMethodInfoList.Add(Info: TComMethodInfo);
-begin
-  inherited Add(Info);
-end;
-
-function TComMethodInfoList.Get_Item(const Index: Integer): TComMethodInfo;
-begin
-  Result := inherited GetItem(Index) as TComMethodInfo;
-end;
-
-function TComMethodInfoList.LookupMethodInfo(
-  const Name: WideString): TComMethodInfo;
-var
-  i: Integer;
-begin
-  for i := 0 to Count - 1 do
-  begin
-    if Item[i].Name = Name then
-    begin
-      Result := Item[i];
-      Exit;
-    end;
-  end;
-  Result := TComMethodInfo.Create;
-  Result.Name := Name;
-  Add(Result);
-end;
-
-{ TComMethodInfo }
-
-function TComMethodInfo.GetAnsiName: AnsiString;
-begin
-  Result := Name;
-end;
-
-destructor TComClassList.Destroy;
-begin
-  inherited;
-end;
-
-{ TComClassList }
-
-procedure TComClassList.Add(Value: TComClassInfo);
-begin
-  inherited Add(Value);
-end;
-
-function TComClassList.GetItem(const Index: Integer): TComClassInfo;
-begin
-  Result := inherited GetItem(Index) as TComClassInfo;
-end;
-
-function TComClassList.LookupClassInfo(const Obj: IDispatch): TComClassInfo;
-var
-  pInfo: TComClassInfo;
-  i: Integer;
-  typeInfo: ITypeInfo;
-  typeAttr: PTypeAttr;
-  sGuid: AnsiString;
-begin
-  typeInfo := nil;
-  typeAttr := nil;
-  try
-    Obj.GetTypeInfo(0, LOCALE_USER_DEFAULT, typeInfo);
-    typeInfo.GetTypeAttr(typeAttr);
-    sGuid := GUIDToString(typeAttr.guid);
-    for i := 0 to Count - 1 do
-    begin
-      if Item[i].AnsiGuid = sGuid then
-      begin
-        Result := Item[i];
-        Exit;
-      end;
-    end;
-
-    pInfo := TComClassInfo.Create;
-    pInfo.Build(Obj);
-    Self.Add(pInfo);
-    Result := pInfo;
-  finally
-    if typeInfo <> nil then
-    begin
-      if typeAttr <> nil then
-        typeInfo.ReleaseTypeAttr(typeAttr);
-    end;
-  end;
-end;
 
 procedure Register;
 begin
@@ -1816,9 +1287,42 @@ begin
   end;
 end;
 
-initialization
-  CLASS_BAG := TComClassList.Create(False);
+procedure TSciter.RegisterNativeFunction(const Name: WideString;
+  Handler: tiscript_method);
+var
+  method_def: ptiscript_method_def;
+  smethod_name: AnsiString;
+  func_def: tiscript_value;
+  func_name: tiscript_value;
+  vm: TiScriptApi.HVM;
+  zns: tiscript_value;
+begin
+  vm := API.SciterGetVM(Handle);
+  zns := NI.get_global_ns(vm);
+  
+  smethod_name := Name;
+  func_name := NI.string_value(vm, PWideChar(Name), Length(Name));
 
-finalization
-  CLASS_BAG.Free;
+  New(method_def);
+  method_def.dispatch := nil;
+  method_def.name := StrNew(PAnsiChar(smethod_name));
+  method_def.handler := @Handler;
+  method_def.tag := nil;
+
+  func_def := NI.native_function_value(vm, method_def);
+  if not NI.is_native_function(func_def) then
+  begin
+    raise Exception.CreateFmt('Failed to register native function "%s".', [Name]);
+  end;
+
+  NI.set_prop(vm, zns, func_name, func_def);
+
+  // NI.call(vm, zns, func_def, nil, 0, retval);
+end;
+
+
+initialization
+  CoInitialize(nil);
+  OleInitialize(nil);
+
 end.

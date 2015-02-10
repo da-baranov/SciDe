@@ -30,6 +30,9 @@ type
     cmdRemoveHeadings: TButton;
     DumpHTML1: TMenuItem;
     cmdUnsubscribe: TButton;
+    cmdRegisterOLE: TButton;
+    Button1: TButton;
+    procedure Button1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure cmd12Click(Sender: TObject);
     procedure cmd1Click(Sender: TObject);
@@ -42,6 +45,7 @@ type
     procedure cmd8Click(Sender: TObject);
     procedure cmd9Click(Sender: TObject);
     procedure cmdChangeHeadingsTextClick(Sender: TObject);
+    procedure cmdRegisterOLEClick(Sender: TObject);
     procedure cmdRemoveHeadingsClick(Sender: TObject);
     procedure cmdUnsubscribeClick(Sender: TObject);
     procedure DumpHTML1Click(Sender: TObject);
@@ -55,6 +59,7 @@ type
       eventType: MOUSE_EVENTS; x, y: Integer; buttons: MOUSE_BUTTONS; keys: KEYBOARD_STATES);
     procedure OnElementControlEvent(ASender: TObject; const target: IElement; eventType: BEHAVIOR_EVENTS;
                              reason: Integer; const source: IElement);
+  protected
   public
     { Public declarations }
     constructor Create(AOwner: TComponent); override;
@@ -73,7 +78,7 @@ const
   DEFAULT_HTML: WideString = '<html>' +
                              '<head>' +
                              '<style>@import url(richtext.css);body { margin:0;} </style>' +
-                             '<script type="text/tiscript">function hello_from_sciter() {return "Hello!";} </script>' +
+                             '<script type="text/tiscript">function hello_from_sciter() {return "Hello!";} function r() { var x = CreateObject("MSXML2.DOMDocument"); x.loadXML("<x><y/></x>"); stdout.println(x.documentElement.childNodes["0"].nodeName); }</script>' +
                              '</head>' +
                              '<body>' +
                              '' +
@@ -97,44 +102,9 @@ begin
 end;
 
 procedure TMainForm.cmd2Click(Sender: TObject);
-var
-  method_def: ptiscript_method_def;
-  smethod_name: AnsiString;
-  func: tiscript_value;
-  funcName: tiscript_value;
-  pwfuncName: PWideChar;
-  i: UINT;
-  vm: HVM;
-  zns: tiscript_value;
-  retval: tiscript_value;
 begin
-  vm := API.SciterGetVM(sctr1.Handle);
-
-  smethod_name := 'SayHello';
-
-  New(method_def);
-  method_def^.dispatch := nil;
-  method_def^.name := nil;
-  method_def^.handler := nil;
-  method_def^.tag := nil;
-
-  method_def.name := StrNew(PAnsiChar(smethod_name));
-  method_def.handler := @SayHelloNative;
-
-  func := NI.native_function_value(vm, method_def);
-  if not NI.is_native_function(func) then
-  begin
-    ShowMessage('Operation failed.');
-    Exit;
-  end;
-
-  funcName := NI.string_value(vm, PWideChar(WideString(smethod_name)), Length(smethod_name));
-  NI.get_string_value(funcName, pwFuncName, i);
-  zns := NI.get_global_ns(vm);
-  NI.set_prop(vm, zns, funcName, func);
-
-  NI.call(vm, zns, func, nil, 0, retval);
-  // FSciter.Call(smethod_name, []);
+  sctr1.RegisterNativeFunction('SayHello', @SayHelloNative);
+  sctr1.Call('SayHello', []);
 end;
 
 procedure TMainForm.cmd3Click(Sender: TObject);
@@ -232,6 +202,11 @@ begin
   inherited;
 end;
 
+procedure TMainForm.Button1Click(Sender: TObject);
+begin
+  sctr1.Call('r', []);
+end;
+
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
   sctr1.LoadHtml(DEFAULT_HTML, '');
@@ -250,6 +225,17 @@ begin
   pList := sctr1.SelectAll('h1');
   for i := 0 to pList.Count - 1 do
     pList[i].Text := 'Heading ' + IntToStr(i) + ' - text changed at ' + DateTimeToStr(Now);
+end;
+
+procedure TMainForm.cmdRegisterOLEClick(Sender: TObject);
+var
+  oDisp: OleVariant;
+  pDisp: IDispatch;
+begin
+  oDisp := CreateOleObject('MSXML2.DOMDocument');
+  oDisp.LoadXml('<x />');
+  pDisp := IDispatch(oDisp);
+  sctr1.RegisterComObject('xml', pDisp);
 end;
 
 procedure TMainForm.cmdRemoveHeadingsClick(Sender: TObject);
