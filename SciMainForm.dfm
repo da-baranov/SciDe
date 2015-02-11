@@ -1,6 +1,6 @@
 object MainForm: TMainForm
-  Left = 671
-  Top = 196
+  Left = 532
+  Top = 170
   Width = 865
   Height = 648
   Caption = 'MainForm'
@@ -69,7 +69,7 @@ object MainForm: TMainForm
     Top = 0
     Width = 289
     Height = 590
-    ActivePage = ts2
+    ActivePage = tsBrowser
     Align = alLeft
     MultiLine = True
     TabOrder = 1
@@ -82,7 +82,7 @@ object MainForm: TMainForm
         Width = 281
         Height = 544
         ObjectTypes = [otFolders, otNonFolders]
-        Root = 'C:\Distr\sciter-sdk-3\samples'
+        Root = 'C:\'
         UseShellImages = True
         Align = alClient
         AutoRefresh = False
@@ -133,6 +133,15 @@ object MainForm: TMainForm
         Caption = 'Button1'
         TabOrder = 3
         OnClick = Button1Click
+      end
+      object Button2: TButton
+        Left = 150
+        Top = 220
+        Width = 75
+        Height = 25
+        Caption = 'Button2'
+        TabOrder = 4
+        OnClick = Button2Click
       end
     end
     object ts3: TTabSheet

@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Forms, Dialogs, Messages, ComObj, ActiveX, OleCtrls, Controls, Classes, SysUtils, SciterApi, TiScriptApi,
-  Contnrs, Variants, Math, Graphics;
+  Contnrs, Variants, Math, Graphics, SciterNativeProxy;
 
 type
 
@@ -34,14 +34,15 @@ type
   TSciterOnLoadData = procedure(ASender: TObject; const url: WideString; resType: Integer;
                                                   requestId: Integer; out discard: WordBool) of object;
   TSciterOnDataLoaded = procedure(ASender: TObject; const url: WideString; resType: Integer;
-                                                    var data: Byte; dataLength: Integer;
+                                                    data: PByte; dataLength: Integer;
                                                     requestId: Integer) of object;
-
+  TSciterOnDocumentComplete = procedure(ASender: TObject; const url: WideString) of object;
 
 
   IElement = interface
     ['{E2C542D1-5B7B-4513-BFBC-7B0DD9FB04DE}']
     procedure AppendChild(const Element: IElement);
+    function CloneElement: TElement;
     function CreateElement(const Tag: WideString; const Text: WideString): IElement;
     procedure Delete;
     function Equals(const Element: IElement): WordBool;
@@ -60,11 +61,11 @@ type
     function Get_Text: WideString;
     function Get_Value: OleVariant;
     procedure InsertElement(const Child: IElement; Index: Integer);
-    procedure PostEvent(EventCode: Integer);
-    procedure ScrollToView; stdcall;
+    procedure PostEvent(EventCode: BEHAVIOR_EVENTS);
+    procedure ScrollToView;
     function Select(const Selector: WideString): TElement;
     function SelectAll(const Selector: WideString): IElementCollection;
-    procedure SendEvent(EventCode: Integer);
+    procedure SendEvent(EventCode: BEHAVIOR_EVENTS);
     procedure Set_Attr(const AttrName: WideString; const Value: WideString);
     procedure Set_InnerHtml(const Value: WideString);
     procedure Set_OnControlEvent(const Value: TElementOnControlEvent);
@@ -150,16 +151,18 @@ type
   public
     destructor Destroy; override;
     procedure AppendChild(const Element: IElement);
+    procedure ClearAttributes;
+    function CloneElement: TElement;
     function CreateElement(const Tag: WideString; const Text: WideString): IElement;
     procedure Delete;
     function Equals(const Element: IElement): WordBool;
     function GetChild(Index: Integer): IElement;
     procedure InsertElement(const Child: IElement; Index: Integer);
-    procedure PostEvent(EventCode: Integer);
-    procedure ScrollToView; stdcall;
+    procedure PostEvent(EventCode: BEHAVIOR_EVENTS);
+    procedure ScrollToView;
     function Select(const Selector: WideString): TElement;
     function SelectAll(const Selector: WideString): IElementCollection;
-    procedure SendEvent(EventCode: Integer);
+    procedure SendEvent(EventCode: BEHAVIOR_EVENTS);
     procedure Set_Attr(const AttrName: WideString; const Value: WideString);
     procedure Set_StyleAttr(const AttrName: WideString; const Value: WideString);
     property Attr[const AttrName: WideString]: WideString read Get_Attr write Set_Attr;
@@ -194,10 +197,14 @@ type
   private
     FBaseUrl: WideString;
     FHtml: WideString;
+    FOnDataLoaded: TSciterOnDataLoaded;
+    FOnEngineDestroyed: TNotifyEvent;
+    FOnLoadData: TSciterOnLoadData;
     FOnStdErr: TSciterOnStdErr;
     FOnStdOut: TSciterOnStdOut;
     FOnStdWarn: TSciterOnStdOut;
     FUrl: WideString;
+    FOnDocumentComplete: TSciterOnDocumentComplete;
     function GetHVM: HVM;
     function Get_Html: WideString;
     function Get_Root: TElement;
@@ -208,14 +215,20 @@ type
     procedure CreateParams(var Params: TCreateParams); override;
     procedure CreateWindowHandle(const Params: TCreateParams); override;
     procedure CreateWnd; override;
+    procedure DestroyWnd; override;
+    function HandleAttachBehavior(data: LPSCN_ATTACH_BEHAVIOR): UINT; virtual;
+    function HandleDataLoaded(data: LPSCN_DATA_LOADED): UINT; virtual;
+    function HandleDocumentComplete: UINT; virtual;
+    function HandleEngineDestroyed(data: LPSCN_ENGINE_DESTROYED): UINT; virtual;
+    function HandleLoadData(data: LPSCN_LOAD_DATA): UINT; virtual;
+    function HandlePostedNotification(data: LPSCN_POSTED_NOTIFICATION): UINT; virtual;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
+    procedure Paint; override;
     procedure SetParent(AParent: TWinControl); override;
     procedure WndProc(var Message: TMessage); override;
-    procedure Paint; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    procedure MouseWheelHandler(var Message: TMessage); override;
     function Call(const FunctionName: WideString; const Args: array of OleVariant): OleVariant;
     function Eval(const Script: WideString): OleVariant;
     function FindElement(Point: TPoint): IElement;
@@ -224,15 +237,17 @@ type
     function GetMinWidth: Integer;
     procedure LoadHtml(const Html: WideString; const BaseURL: WideString);
     procedure LoadURL(const URL: Widestring);
+    procedure MouseWheelHandler(var Message: TMessage); override;
     procedure RegisterComObject(const Name: WideString; const Obj: IDispatch);
+    function RegisterNativeClass(ClassDef: ptiscript_class_def; ThrowIfExists: Boolean; ReplaceClassDef: Boolean { reserved } = False): tiscript_value;
     procedure RegisterNativeFunction(const Name: WideString; Handler: tiscript_method);
     function Select(const Selector: WideString): TElement;
     function SelectAll(const Selector: WideString): IElementCollection;
     procedure Test;
     procedure UpdateWindow;
     property Html: WideString read Get_Html;
-    property HVM: HVM read GetHVM;
     property Root: TElement read Get_Root;
+    property VM: HVM read GetHVM;
   published
     property Action;
     property Align;
@@ -275,9 +290,13 @@ type
     property TabOrder;
     property TabStop default True;
     property Visible;
+    property OnDataLoaded: TSciterOnDataLoaded read FOnDataLoaded write FOnDataLoaded;
+    property OnEngineDestroyed: TNotifyEvent read FOnEngineDestroyed write FOnEngineDestroyed;
+    property OnLoadData: TSciterOnLoadData read FOnLoadData write FOnLoadData;
     property OnStdErr: TSciterOnStdErr read FOnStdErr write SetOnStdErr;
     property OnStdOut: TSciterOnStdOut read FOnStdOut write SetOnStdOut;
     property OnStdWarn: TSciterOnStdOut read FOnStdWarn write SetOnStdWarn;
+    property OnDocumentComplete: TSciterOnDocumentComplete read FOnDocumentComplete write FOnDocumentComplete;
 end;
 
 procedure SciterDebug(param: Pointer; subsystem: UINT; severity: UINT; text: PWideChar; text_length: UINT); stdcall;
@@ -290,18 +309,52 @@ uses SciterOleProxy;
 function CreateObjectNative(vm: HVM): tiscript_value; cdecl;
 var
   oVal: OleVariant;
-  pVal: IDispatch;
   tProgId: tiscript_value;
   pProgId: PWideChar;
   iCnt: UINT;
   sProgId: WideString;
 begin
-  iCnt := NI.get_arg_count(vm);
-  tProgId := NI.get_arg_n(vm, 2);
-  NI.get_string_value(tProgId, pProgId, iCnt);
-  sProgId := WideString(pProgId);
-  oVal := CreateOleObject(sProgId);
-  Result := WrapOleObject(vm, IDispatch(oVal));
+  Result := NI.nothing_value;
+  try
+    iCnt := NI.get_arg_count(vm);
+    // TODO: Check args count
+
+    tProgId := NI.get_arg_n(vm, 2);
+    NI.get_string_value(tProgId, pProgId, iCnt);
+    sProgId := WideString(pProgId);
+    oVal := CreateOleObject(sProgId);
+    Result := WrapOleObject(vm, IDispatch(oVal));
+  except
+    on E:Exception do
+      ThrowError(vm, E.Message);
+  end;
+end;
+
+function HostCallback(pns: LPSCITER_CALLBACK_NOTIFICATION; callbackParam: Pointer ): UINT; stdcall;
+var
+  pSciter: TSciter;
+begin
+  Result := 0;
+  pSciter := TObject(callbackParam) as TSciter;
+  case pns.code of
+    SciterApi.SC_LOAD_DATA:
+      Result := pSciter.HandleLoadData(LPSCN_LOAD_DATA(pns));
+      
+    SciterApi.SC_DATA_LOADED:
+      Result := pSciter.HandleDataLoaded(LPSCN_DATA_LOADED(pns));
+
+    SciterApi.SC_DOCUMENT_COMPLETE:
+      Result := pSciter.HandleDocumentComplete;
+      
+    SciterApi.SC_ATTACH_BEHAVIOR:
+      Result := pSciter.HandleAttachBehavior(LPSCN_ATTACH_BEHAVIOR(pns));
+
+    SciterApi.SC_ENGINE_DESTROYED:
+      Result := pSciter.HandleEngineDestroyed(LPSCN_ENGINE_DESTROYED(pns));
+
+    SciterApi.SC_POSTED_NOTIFICATION:
+      Result := pSciter.HandlePostedNotification(LPSCN_POSTED_NOTIFICATION(pns));
+  end;
 end;
 
 procedure ElementTagCallback(str: PAnsiChar; str_length: UINT; param : Pointer); stdcall;
@@ -396,6 +449,23 @@ begin
   pElement := TElement.Create(he);
   pElementCollection.Add(pElement);
   Result := False;
+end;
+
+function WindowElementEventProc(tag: Pointer; he: HELEMENT; evtg: UINT; prms: Pointer): SCDOM_RESULT; stdcall;
+var
+  pSciter: TSciter;
+  pDataArrivedParams: PDATA_ARRIVED_PARAMS;
+  pBehaviorEventParams: PBEHAVIOR_EVENT_PARAMS;
+  sUri: OleVariant;
+begin
+  Result := SCDOM_OK;
+  pSciter := TObject(tag) as TSciter;
+  if (evtg and UINT(HANDLE_BEHAVIOR_EVENT)) = UINT(HANDLE_BEHAVIOR_EVENT) then
+  begin
+    pBehaviorEventParams := prms;
+    if pBehaviorEventParams.cmd = DOCUMENT_COMPLETE then
+      Result := SCDOM_RESULT(pSciter.HandleDocumentComplete);
+  end;
 end;
 
 function ElementEventProc(tag: Pointer; he: HELEMENT; evtg: UINT; prms: Pointer): Integer; stdcall;
@@ -662,8 +732,10 @@ begin
   inherited;
   if HandleAllocated then
   begin
+    API.SciterSetCallback(Handle, @HostCallback, Self);
+    API.SciterWindowAttachEventHandler(Handle, @WindowElementEventProc, Self, UINT(HANDLE_ALL));
     API.SciterSetupDebugOutput(Self.Handle, Self, @SciterDebug);
-    RegisterNativeFunction('CreateObject', @CreateObjectNative); 
+    RegisterNativeFunction('CreateObject', @CreateObjectNative);
     if FHtml <> '' then
     begin
       LoadHtml(FHtml, FBaseUrl);
@@ -678,11 +750,20 @@ begin
       FBaseUrl := '';
       FUrl := '';
     end;
+
   end;
 end;
 
 procedure TSciter.CreateWnd;
 begin
+  inherited;
+end;
+
+procedure TSciter.DestroyWnd;
+var
+  pbHandled: Integer;
+begin
+  API.SciterProcND(Handle, WM_DESTROY, 0, 0, pbHandled);
   inherited;
 end;
 
@@ -757,6 +838,51 @@ begin
     Result := nil;
 end;
 
+function TSciter.HandleAttachBehavior(data: LPSCN_ATTACH_BEHAVIOR): UINT;
+begin
+  Result := 0;
+end;
+
+function TSciter.HandleDataLoaded(data: LPSCN_DATA_LOADED): UINT;
+begin
+  if Assigned(FOnDataLoaded) then
+    FOnDataLoaded(Self, WideString(data.uri), Integer(data.dataType), data.data, data.dataSize, 0);
+  Result := 0;
+end;
+
+function TSciter.HandleDocumentComplete: UINT;
+begin
+  Result := 0;
+  if Assigned(FOnDocumentComplete) then
+    FOnDocumentComplete(Self, '');
+end;
+
+function TSciter.HandleEngineDestroyed(data: LPSCN_ENGINE_DESTROYED): UINT;
+begin
+  if Assigned(FOnEngineDestroyed) then
+    FOnEngineDestroyed(Self);
+  Result := 0;
+end;
+
+function TSciter.HandleLoadData(data: LPSCN_LOAD_DATA): UINT;
+var
+  discard: WordBool;
+begin
+  Result := LOAD_OK;
+  if Assigned(FOnLoadData) then
+  begin
+    FOnLoadData(Self, WideString(data.uri), data.dataType, Integer(data.requestId), discard);
+    if discard then
+      Result := LOAD_DISCARD;
+  end;
+end;
+
+function TSciter.HandlePostedNotification(
+  data: LPSCN_POSTED_NOTIFICATION): UINT;
+begin
+  Result := 0;
+end;
+
 procedure TSciter.LoadHtml(const Html: WideString; const BaseURL: WideString);
 var
   sHtml: AnsiString;
@@ -818,6 +944,17 @@ begin
     Perform(WM_VSCROLL, 0, 0);
 end;
 
+procedure TSciter.Paint;
+begin
+  inherited;
+  if csDesigning in ComponentState then
+  begin
+    Canvas.Brush.Color := clWindow;
+    Canvas.FillRect(ClientRect);
+    Canvas.TextOut(10, 10, 'Sciter: ' + Name);
+  end;
+end;
+
 procedure TSciter.RegisterComObject(const Name: WideString;
   const Obj: IDispatch);
 var
@@ -825,6 +962,47 @@ var
 begin
   vm := API.SciterGetVM(Handle);
   SciterOleProxy.RegisterOleObject(vm, Obj, Name);
+end;
+
+function TSciter.RegisterNativeClass(ClassDef: ptiscript_class_def; ThrowIfExists: Boolean; ReplaceClassDef: Boolean): tiscript_value;
+var
+  vm: HVM;
+begin
+  vm := API.SciterGetVM(Handle);
+  Result := SciterAPI.RegisterNativeClass(vm, ClassDef, ThrowIfExists, ReplaceClassDef);
+end;
+
+procedure TSciter.RegisterNativeFunction(const Name: WideString;
+  Handler: tiscript_method);
+var
+  method_def: ptiscript_method_def;
+  smethod_name: AnsiString;
+  func_def: tiscript_value;
+  func_name: tiscript_value;
+  vm: TiScriptApi.HVM;
+  zns: tiscript_value;
+begin
+  vm := API.SciterGetVM(Handle);
+  zns := NI.get_global_ns(vm);
+  
+  smethod_name := Name;
+  func_name := NI.string_value(vm, PWideChar(Name), Length(Name));
+
+  New(method_def);
+  method_def.dispatch := nil;
+  method_def.name := StrNew(PAnsiChar(smethod_name));
+  method_def.handler := @Handler;
+  method_def.tag := nil;
+
+  func_def := NI.native_function_value(vm, method_def);
+  if not NI.is_native_function(func_def) then
+  begin
+    raise Exception.CreateFmt('Failed to register native function "%s".', [Name]);
+  end;
+
+  NI.set_prop(vm, zns, func_name, func_def);
+
+  // NI.call(vm, zns, func_def, nil, 0, retval);
 end;
 
 function TSciter.Select(const Selector: WideString): TElement;
@@ -929,6 +1107,20 @@ end;
 procedure TElement.AppendChild(const Element: IElement);
 begin
   InsertElement(Element, MaxInt);
+end;
+
+procedure TElement.ClearAttributes;
+begin
+  API.SciterClearAttributes(FElement);
+end;
+
+function TElement.CloneElement: TElement;
+var
+  phe: HELEMENT;
+begin
+  Result := nil;
+  if API.SciterCloneElement(FElement, phe) = SCDOM_OK then
+    Result := TElement.Create(phe);
 end;
 
 function TElement.CreateElement(const Tag: WideString; const Text: WideString): IElement;
@@ -1084,7 +1276,7 @@ begin
   API.SciterInsertElement(HELEMENT(Child.Handle), FElement, Index);
 end;
 
-procedure TElement.PostEvent(EventCode: Integer);
+procedure TElement.PostEvent(EventCode: BEHAVIOR_EVENTS);
 begin
   API.SciterPostEvent(FELEMENT, UINT(EventCode), nil, nil);
 end;
@@ -1116,7 +1308,7 @@ begin
   Result := pResult;
 end;
 
-procedure TElement.SendEvent(EventCode: Integer);
+procedure TElement.SendEvent(EventCode: BEHAVIOR_EVENTS);
 var
   handled: BOOL;
 begin
@@ -1274,50 +1466,6 @@ end;
 procedure Register;
 begin
   RegisterComponents('Samples', [TSciter]);
-end;
-
-procedure TSciter.Paint;
-begin
-  inherited;
-  if csDesigning in ComponentState then
-  begin
-    Canvas.Brush.Color := clWindow;
-    Canvas.FillRect(ClientRect);
-    Canvas.TextOut(10, 10, 'Sciter: ' + Name);
-  end;
-end;
-
-procedure TSciter.RegisterNativeFunction(const Name: WideString;
-  Handler: tiscript_method);
-var
-  method_def: ptiscript_method_def;
-  smethod_name: AnsiString;
-  func_def: tiscript_value;
-  func_name: tiscript_value;
-  vm: TiScriptApi.HVM;
-  zns: tiscript_value;
-begin
-  vm := API.SciterGetVM(Handle);
-  zns := NI.get_global_ns(vm);
-  
-  smethod_name := Name;
-  func_name := NI.string_value(vm, PWideChar(Name), Length(Name));
-
-  New(method_def);
-  method_def.dispatch := nil;
-  method_def.name := StrNew(PAnsiChar(smethod_name));
-  method_def.handler := @Handler;
-  method_def.tag := nil;
-
-  func_def := NI.native_function_value(vm, method_def);
-  if not NI.is_native_function(func_def) then
-  begin
-    raise Exception.CreateFmt('Failed to register native function "%s".', [Name]);
-  end;
-
-  NI.set_prop(vm, zns, func_name, func_def);
-
-  // NI.call(vm, zns, func_def, nil, 0, retval);
 end;
 
 

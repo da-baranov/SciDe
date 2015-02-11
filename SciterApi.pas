@@ -13,16 +13,27 @@ const
   SOH_INSERT_BEFORE       = 4;
   SOH_INSERT_AFTER        = 5;
 
+const
   HV_OK_TRUE = -1;
   HV_OK = 0;
   HV_BAD_PARAMETER = 1;
   HV_INCOMPATIBLE_TYPE = 2;
 
+const
+  SC_LOAD_DATA = $1;
+  SC_DATA_LOADED = $2;
+  SC_DOCUMENT_COMPLETE = $3 deprecated;
+  SC_ATTACH_BEHAVIOR = $4;
+  SC_ENGINE_DESTROYED  = $5;
+  SC_POSTED_NOTIFICATION = $6;
+
+const
+  LOAD_OK: UINT = 0;
+  LOAD_DISCARD: UINT = 1;
+  LOAD_DELAYED: UINT = 2;
+
+
 type
-  ESciterNotImplementedException = class(EOleException)
-
-  end;
-
   SCDOM_RESULT =
   (
     SCDOM_OK = 0,
@@ -31,7 +42,8 @@ type
     SCDOM_PASSIVE_HANDLE = 3,
     SCDOM_INVALID_PARAMETER = 4,
     SCDOM_OPERATION_FAILED = 5,
-    SCDOM_OK_NOT_HANDLED = -1
+    SCDOM_OK_NOT_HANDLED = -1,
+    SCDOM_DUMMY = MAXINT
   );
 
 
@@ -39,6 +51,8 @@ type
 
   HELEMENT = Pointer;
   LPVOID   = Pointer;
+
+  UINT_PTR = ^UINT;
 
   LPCSTR_RECEIVER = procedure( str: PAnsiChar; str_length: UINT; param : Pointer ); stdcall;
   PLPCSTR_RECEIVER = ^LPCSTR_RECEIVER;
@@ -57,6 +71,9 @@ type
 
   SciterHostCallback = function(pns: LPSCITER_CALLBACK_NOTIFICATION; callbackParam: Pointer ): UINT; stdcall;
   LPSciterHostCallback = ^SciterHostCallback;
+
+  ElementEventProc = function(tag: Pointer; he: HELEMENT; evtg: UINT; prms: Pointer ): Integer { really BOOL }; stdcall;
+  LPELEMENT_EVENT_PROC = ^ElementEventProc;
 
   SCN_LOAD_DATA = packed record
     code: UINT;
@@ -82,11 +99,30 @@ type
   end;
   LPSCN_DATA_LOADED = ^SCN_DATA_LOADED;
 
-  SCN_ENGINE_DESTROYED = record
+  SCN_ATTACH_BEHAVIOR = packed record
+    code: UINT;
+    hwnd: HWINDOW;
+    element: HELEMENT;
+    behaviorName: PAnsiChar;
+    elementProc: LPELEMENT_EVENT_PROC;
+    elementTag: LPVOID
+  end;
+  LPSCN_ATTACH_BEHAVIOR = ^SCN_ATTACH_BEHAVIOR;
+
+  SCN_ENGINE_DESTROYED = packed record
     code: UINT;
     hwnd: HWINDOW
   end;
   LPSCN_ENGINE_DESTROYED = ^SCN_ENGINE_DESTROYED;
+
+  SCN_POSTED_NOTIFICATION = packed record
+    code: UINT;
+    hwnd: HWINDOW;
+    wparam: UINT_PTR;
+    lparam: UINT_PTR;
+    lreturn: UINT_PTR;
+  end;
+  LPSCN_POSTED_NOTIFICATION = ^SCN_POSTED_NOTIFICATION;
 
   TProcPointer = procedure; stdcall;
   TSciterClassName = function: PWideChar; stdcall;
@@ -96,9 +132,6 @@ type
 
   SciterElementCallback = function(he: HELEMENT; Param: Pointer ): BOOL; stdcall;
   PSciterElementCallback = ^SciterElementCallback;
-
-  ElementEventProc = function(tag: Pointer; he: HELEMENT; evtg: UINT; prms: Pointer ): Integer { really BOOL }; stdcall;
-  LPELEMENT_EVENT_PROC = ^ElementEventProc;
 
   TSciterValueType =
   (
@@ -116,7 +149,31 @@ type
     T_FUNCTION,
     T_BYTES,
     T_OBJECT,
-    T_DOM_OBJECT
+    T_DOM_OBJECT,
+    T_DUMMY = MAXINT
+  );
+
+  EVENT_GROUPS =
+  (
+      HANDLE_INITIALIZATION = $0000,
+      HANDLE_MOUSE = $0001,
+      HANDLE_KEY = $0002,
+      HANDLE_FOCUS = $0004,
+      HANDLE_SCROLL = $0008,
+      HANDLE_TIMER = $0010,
+      HANDLE_SIZE = $0020,
+      HANDLE_DATA_ARRIVED = $080,
+      HANDLE_BEHAVIOR_EVENT        = $0100,
+      HANDLE_METHOD_CALL           = $0200,
+      HANDLE_SCRIPTING_METHOD_CALL = $0400,
+      HANDLE_TISCRIPT_METHOD_CALL  = $0800,
+
+      HANDLE_EXCHANGE              = $1000,
+      HANDLE_GESTURE               = $2000,
+
+      HANDLE_ALL                   = $FFFF,
+
+      SUBSCRIPTIONS_REQUEST        = $FFFFFFFF
   );
 
   ELEMENT_STATE_BITS =
@@ -155,7 +212,8 @@ type
    STATE_POPUP            = $08000000,  // this element is out of flow - popup
 
    STATE_IS_LTR           = $10000000,  // the element or one of its containers has dir=ltr declared
-   STATE_IS_RTL           = $20000000  // the element or one of its containers has dir=rtl declared
+   STATE_IS_RTL           = $20000000,  // the element or one of its containers has dir=rtl declared
+   ELEMENT_STATE_BITS_DUMMY = MAXINT
   );
 
   ELEMENT_AREAS =
@@ -170,7 +228,8 @@ type
     MARGIN_BOX  = $30,
     BACK_IMAGE_AREA = $40,
     FORE_IMAGE_AREA = $50,
-    SCROLLABLE_AREA = $60
+    SCROLLABLE_AREA = $60,
+    ELEMENT_AREAS_DUMMY = MAXINT
   );
 
 
@@ -296,13 +355,14 @@ type
 
 
 
-    FIRST_APPLICATION_EVENT_CODE = $100
+    FIRST_APPLICATION_EVENT_CODE = $100,
     // all custom event codes shall be greater
     // than this number. All codes below this will be used
     // solely by application - HTMLayout will not intrepret it
     // and will do just dispatching.
     // To send event notifications with  these codes use
     // HTMLayoutSend/PostEvent API.
+    BEHAVIOR_EVENTS_DUMMY = MAXINT
   );
   
   BEHAVIOR_EVENT_PARAMS = packed record
@@ -520,7 +580,8 @@ type
   (
     CONTROL_KEY_PRESSED = 1,
     SHIFT_KEY_PRESSED = 2,
-    ALT_KEY_PRESSED = 4
+    ALT_KEY_PRESSED = 4,
+    KEYBOARD_STATES_DUMMY = MAXINT
   );
 
   CURSOR_TYPE =
@@ -541,7 +602,8 @@ type
     CURSOR_HAND,
     CURSOR_DRAG_MOVE,
     CURSOR_DRAG_COPY,
-    CURSOR_OTHER
+    CURSOR_OTHER,
+    CURSOR_TYPE_DUMMY = MAXINT
   );
 
   MOUSE_EVENTS =
@@ -560,14 +622,16 @@ type
     DRAG_LEAVE  = 11,
     DRAG_REQUEST = 12,
     MOUSE_CLICK = $FF,
-    DRAGGING = $100
+    DRAGGING = $100,
+    MOUSE_EVENTS_DUMMY = MAXINT
   );
 
   MOUSE_BUTTONS =
   (
     MAIN_MOUSE_BUTTON = 1,
     PROP_MOUSE_BUTTON = 2,
-    MIDDLE_MOUSE_BUTTON = 4
+    MIDDLE_MOUSE_BUTTON = 4,
+    MOUSE_BUTTONS_DUMMY = MAXINT
   );
 
   MOUSE_PARAMS = packed record
@@ -589,7 +653,8 @@ type
   (
     KEY_DOWN = 0,
     KEY_UP,
-    KEY_CHAR
+    KEY_CHAR,
+    KEY_EVENTS_DUMMY = MAXINT
   );
 
   KEY_PARAMS = packed record
@@ -603,7 +668,8 @@ type
   FOCUS_EVENTS =
   (
     LOST_FOCUS,
-    GOT_FOCUS
+    GOT_FOCUS,
+    FOCUS_EVENTS_DUMMY = MAXINT
   );
 
   FOCUS_PARAMS = packed record
@@ -614,14 +680,22 @@ type
   end;
   PFOCUS_PARAMS = ^FOCUS_PARAMS;
 
-  DATA_ARRIVED_PARAMS = packed record end;
+  DATA_ARRIVED_PARAMS = packed record
+    initiator: HELEMENT;
+    data: PByte;
+    dataSize: UINT;
+    dataType: UINT;
+    status: UINT;
+    uri: PWideChar;
+  end;
   PDATA_ARRIVED_PARAMS = ^DATA_ARRIVED_PARAMS;
 
   DRAW_EVENTS =
   (
       DRAW_BACKGROUND = 0,
       DRAW_CONTENT = 1,
-      DRAW_FOREGROUND = 2
+      DRAW_FOREGROUND = 2,
+      DRAW_EVENTS_DUMMY = MAXINT
   );
 
   DRAW_PARAMS = packed record
@@ -653,8 +727,6 @@ type
   end;
   PTISCRIPT_METHOD_PARAMS = ^TISCRIPT_METHOD_PARAMS;
 
-
-
   SCROLL_EVENTS =
   (
     SCROLL_HOME,
@@ -666,7 +738,8 @@ type
     SCROLL_POS,
     SCROLL_SLIDER_RELEASED,
     SCROLL_CORNER_PRESSED,
-    SCROLL_CORNER_RELEASED
+    SCROLL_CORNER_RELEASED,
+    SCROLL_EVENTS_DUMMY = MAXINT
   );
 
   SCROLL_PARAMS = packed record
@@ -677,13 +750,25 @@ type
   end;
   PSCROLL_PARAMS = ^SCROLL_PARAMS;
 
+  ESciterException = class(Exception)
+  end;
+
+  ESciterNotImplementedException = class(ESciterException)
+  end;
+
 function _SciterAPI: PSciterApi; stdcall;
 function  S2V(Value: PSciterValue; var OleValue: OleVariant): UINT;
 function  V2S(const Value: OleVariant; SciterValue: PSciterValue): UINT;
 function  T2V(vm: HVM; Value: tiscript_value): OleVariant;
 function  V2T(vm: HVM; const Value: OleVariant): tiscript_value;
 function  API: PSciterApi;
-function  NI: ptiscript_native_interface;
+function NI: ptiscript_native_interface;
+function IsNameExists(vm: HVM; const Name: WideString): boolean;
+function RegisterNativeClass(vm: HVM; ClassDef: ptiscript_class_def; ThrowIfExists: Boolean; ReplaceClassDef: Boolean): tiscript_value;
+function CreateObjectInstance(vm: HVM; Obj: Pointer; OfClass: tiscript_value): tiscript_value;
+procedure RegisterObject(vm: HVM; Obj: tiscript_value; const VarName: WideString);
+procedure ThrowError(vm: HVM; const Message: AnsiString); overload;
+procedure ThrowError(vm: HVM; const Message: WideString); overload;
 
 implementation
 
@@ -691,14 +776,95 @@ var
   FAPI: PSciterApi;
   FNI: ptiscript_native_interface;
 
-function API: PSciterApi;
-begin
-  Result := FAPI;
-end;
 
 function NI: ptiscript_native_interface;
 begin
   Result := FNI;
+end;
+
+procedure ThrowError(vm: HVM; const Message: AnsiString);
+begin
+  NI.throw_error(vm, PWideChar(WideString(Message)));
+end;
+
+procedure ThrowError(vm: HVM; const Message: WideString);
+begin
+  NI.throw_error(vm, PWideChar(Message));
+end;
+
+function IsNameExists(vm: HVM; const Name: WideString): boolean;
+var
+  var_name: tiscript_value;
+  var_value: tiscript_value;
+  zns: tiscript_value;
+begin
+  zns := NI.get_global_ns(vm);
+  var_name  := NI.string_value(vm, PWideChar(Name), Length(Name));
+  var_value := NI.get_prop(vm, zns, var_name);
+  Result := not NI.is_undefined(var_value);
+end;
+
+function RegisterNativeClass(vm: HVM; ClassDef: ptiscript_class_def; ThrowIfExists: Boolean; ReplaceClassDef: Boolean): tiscript_value;
+var
+  zns: tiscript_value;
+
+  wclass_name: WideString;
+  tclass_name: tiscript_value;
+
+  class_def: tiscript_value;
+begin
+  zns := NI.get_global_ns(vm);
+
+  wclass_name  := WideString(AnsiString(ClassDef.name));
+  tclass_name  := NI.string_value(vm, PWideChar(wclass_name), Length(wclass_name));
+  class_def    := NI.get_prop(vm, zns, tclass_name);
+
+  if NI.is_undefined(class_def) then
+  begin
+    class_def := NI.define_class(vm, ClassDef, zns);
+    Result := class_def;
+  end
+    else
+  if NI.is_class(vm, class_def) then
+  begin
+    if ThrowIfExists then
+    begin
+      raise ESciterException.CreateFmt('Class "%s" already exists.', [String(ClassDef.name)]);
+    end
+      else
+    begin
+      Result := class_def;
+    end;
+  end
+    else
+  begin
+    raise ESciterException.CreateFmt('Failed to register native class "%s": object with such name (constant, variable or function) already exists.', [String(ClassDef.name)]);
+  end;
+end;
+
+function CreateObjectInstance(vm: HVM; Obj: Pointer; OfClass: tiscript_value): tiscript_value;
+begin
+  if not NI.is_class(vm, OfClass) then
+    raise ESciterException.CreateFmt('Cannot create object instance. Provided value is not a class.', []);
+  Result := NI.create_object(vm, OfClass);
+  NI.set_instance_data(Result, Obj);
+end;
+
+procedure RegisterObject(vm: HVM; Obj: tiscript_value; const VarName: WideString);
+var
+  zns: tiscript_value;
+  var_name: tiscript_value;
+begin
+  if IsNameExists(vm, VarName) then
+    raise ESciterException.CreateFmt('Cannot register object instance. Object with such name (%s) already exists.', [VarName]);
+  var_name := NI.string_value(vm, PWideChar(VarName), Length(VarName));
+  zns := NI.get_global_ns(vm);
+  NI.set_prop(vm, zns, var_name, Obj);
+end;
+
+function API: PSciterApi;
+begin
+  Result := FAPI;
 end;
 
 function _SciterAPI: PSciterApi; external 'sciter32.dll' name 'SciterAPI'; stdcall;

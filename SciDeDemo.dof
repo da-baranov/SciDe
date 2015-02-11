@@ -90,7 +90,7 @@ MaxStackSize=1048576
 ImageBase=4194304
 ExeDescription=
 [Directories]
-OutputDir=
+OutputDir=C:\Parus856\Sciter3
 UnitOutputDir=dcu
 PackageDLLOutputDir=
 PackageDCPOutputDir=
@@ -155,3 +155,6 @@ Item0=$(DELPHI)\Lib\Debug;c:\Delphi7\Source\Jcl\lib\d7\debug;c:\Delphi7\Source\J
 [HistoryLists\hlUnitOutputDirectory]
 Count=1
 Item0=dcu
+[HistoryLists\hlOutputDirectorry]
+Count=1
+Item0=C:\Parus856\Sciter3

@@ -32,7 +32,9 @@ type
     cmdUnsubscribe: TButton;
     cmdRegisterOLE: TButton;
     Button1: TButton;
+    Button2: TButton;
     procedure Button1Click(Sender: TObject);
+    procedure Button2Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure cmd12Click(Sender: TObject);
     procedure cmd1Click(Sender: TObject);
@@ -70,7 +72,7 @@ var
 
 implementation
 
-uses ComObj;
+uses ComObj, SciterOleProxy;
 
 {$R *.dfm}
 
@@ -91,8 +93,11 @@ var
   pBody: TElement;
 begin
   pBody := sctr1.Root.Select('body');
-  pBody.OnMouse := OnElementMouse;
-  pBody.OnControlEvent := OnElementControlEvent;
+  if pBody <> nil then
+  begin
+    pBody.OnMouse := OnElementMouse;
+    pBody.OnControlEvent := OnElementControlEvent;
+  end;
 end;
 
 function SayHelloNative(c: HVM): tiscript_value; cdecl;
@@ -207,9 +212,20 @@ begin
   sctr1.Call('r', []);
 end;
 
-procedure TMainForm.FormCreate(Sender: TObject);
+procedure TMainForm.Button2Click(Sender: TObject);
 begin
+  ShowMessage(IntToStr(SizeOf(BUTTON_PRESS)));
+end;
+
+procedure TMainForm.FormCreate(Sender: TObject);
+var
+  axClassInfo: TActiveXObjectImpl;
+begin
+  axClassInfo := TActiveXObjectImpl.Create;
+  axClassInfo.Build(nil);
+
   sctr1.LoadHtml(DEFAULT_HTML, '');
+  tv1.Root := ExtractFileDir(Application.ExeName) + '\samples';
 end;
 
 procedure TMainForm.cmd12Click(Sender: TObject);

@@ -28,6 +28,10 @@ type
   tiscript_VM = record
   end;
 
+  { TIScript iterator }
+  tiscript_iterator = function(c: HVM; index: ptiscript_value; obj: tiscript_value): tiscript_value; cdecl;
+  ptiscript_iterator = ^tiscript_iterator;
+
   { TIScript method callback }
   tiscript_method = function(c: HVM): tiscript_value; cdecl;
   ptiscript_method = ^tiscript_method;
@@ -88,7 +92,7 @@ type
     get_item:   tiscript_get_item;
     set_item:   tiscript_set_item;
     finalizer:  tiscript_finalizer;
-    iterator:   Pointer; // ptiscript_iterator;
+    iterator:   tiscript_iterator;
     on_gc_copy: tiscript_on_gc_copy;
     prototype:  tiscript_value;
   end;

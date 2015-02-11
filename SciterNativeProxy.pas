@@ -17,22 +17,24 @@ type
     FFinalizerHandler: tiscript_finalizer;
     FGCCopyHandler: tiscript_on_gc_copy;
     FGetItemHandler: tiscript_get_item;
+    FGetterHandler: tiscript_tagged_get_prop;
+    FIteratorHandler: tiscript_iterator;
+    FMethodHandler: tiscript_tagged_method;
     FMethods: TSciterMethodList;
     FObj: Pointer;
     FProps: TSciterMethodList;
     FSetItemHandler: tiscript_set_item;
-    FTypeName: AnsiString;
-    FGetterHandler: tiscript_tagged_get_prop;
-    FMethodHandler: tiscript_tagged_method;
     FSetterHandler: tiscript_tagged_set_prop;
+    FTypeName: AnsiString;
     function SelectMethods: TSciterMethodList;
     function SelectProperties: TSciterMethodList;
     procedure SetFinalizerHandler(const Value: tiscript_finalizer);
     procedure SetGCCopyHandler(const Value: tiscript_on_gc_copy);
     procedure SetGetItemHandler(const Value: tiscript_get_item);
-    procedure SetSetItemHandler(const Value: tiscript_set_item);
     procedure SetGetterHandler(const Value: tiscript_tagged_get_prop);
+    procedure SetIteratorHandler(const Value: tiscript_iterator);
     procedure SetMethodHandler(const Value: tiscript_tagged_method);
+    procedure SetSetItemHandler(const Value: tiscript_set_item);
     procedure SetSetterHandler(const Value: tiscript_tagged_set_prop);
   protected
     procedure PopulateMethods(const List: TSciterMethodList); virtual;
@@ -41,15 +43,16 @@ type
     destructor Destroy; override;
     procedure Build(Obj: Pointer);
     class procedure FreeClassDef(var ClassDef: tiscript_class_def);
-    procedure GetClassDef(var ClassDef: tiscript_class_def);
+    procedure GetClassDef(var ClassDef: tiscript_class_def); virtual;
     property FinalizerHandler: tiscript_finalizer read FFinalizerHandler write SetFinalizerHandler;
     property GCCopyHandler: tiscript_on_gc_copy read FGCCopyHandler write SetGCCopyHandler;
     property GetItemHandler: tiscript_get_item read FGetItemHandler write SetGetItemHandler;
     property GetterHandler: tiscript_tagged_get_prop read FGetterHandler write SetGetterHandler;
-    property SetterHandler: tiscript_tagged_set_prop read FSetterHandler write SetSetterHandler;
+    property IteratorHandler: tiscript_iterator read FIteratorHandler write SetIteratorHandler;
     property MethodHandler: tiscript_tagged_method read FMethodHandler write SetMethodHandler;
     property Obj: Pointer read FObj;
     property SetItemHandler: tiscript_set_item read FSetItemHandler write SetSetItemHandler;
+    property SetterHandler: tiscript_tagged_set_prop read FSetterHandler write SetSetterHandler;
     property TypeName: AnsiString read FTypeName write FTypeName;
   end;
 
@@ -101,19 +104,68 @@ end;
 
 procedure TSciterClassInfo.Build(Obj: Pointer);
 begin
-  if FObj <> Obj then
-  begin
-    FProps.Clear;
-    FMethods.Clear;
-    FAllMethods.Clear;
-
-    PopulateMethods(FAllMethods);
-  end;
+  FObj := Obj;
+  FProps.Clear;
+  FMethods.Clear;
+  FAllMethods.Clear;
+  PopulateMethods(FAllMethods);
 end;
 
 class procedure TSciterClassInfo.FreeClassDef(var ClassDef: tiscript_class_def);
+var
+  pMethods: ptiscript_method_def;
+  pProps: ptiscript_prop_def;
+  szMethods: Integer;
+  szProps: Integer;
+label a, b;
 begin
-  // TODO:
+  StrDispose(ClassDef.name);
+  ClassDef.consts := nil;
+  ClassDef.get_item := nil;
+  ClassDef.set_item := nil;
+  ClassDef.finalizer := nil;
+  ClassDef.iterator := nil;
+  ClassDef.on_gc_copy := nil;
+  ClassDef.prototype := 0;
+
+  // TODO: AV
+  Exit;
+
+  // Dispose methods
+  pMethods := ClassDef.methods;
+  szMethods := 0;
+  while true do
+  begin
+    if pMethods = nil then goto a;
+    Inc(szMethods, SizeOf(tiscript_method_def));
+    Inc(pMethods);
+    if (pMethods.dispatch = nil) and
+       (pMethods.name = nil) and
+       (pMethods.handler = nil) and
+       (pMethods.tag = nil) then
+      break;
+  end;
+  FreeMem(ClassDef.methods, szMethods);
+  ClassDef.methods := nil;
+a:
+  // Dispose properties
+  pProps := ClassDef.props;
+  szProps := 0;
+  while true do
+  begin
+    if pProps = nil then goto b;
+    Inc(szProps, SizeOf(tiscript_prop_def));
+    Inc(pProps);
+    if (pProps.dispatch = nil) and
+       (pProps.name = nil) and
+       (pProps.getter = nil) and
+       (pProps.setter = nil) and
+       (pProps.tag = nil) then
+      break;
+  end;
+  FreeMem(ClassDef.props, szProps);
+  ClassDef.props := nil;
+b:
 end;
 
 procedure TSciterClassInfo.GetClassDef(var ClassDef: tiscript_class_def);
@@ -135,11 +187,11 @@ begin
   end;
   ClassDef.methods   := nil;
   ClassDef.props     := nil;
-  ClassDef.consts    := nil; // Not implemented yet
+  ClassDef.consts    := nil; // Not implemented
   ClassDef.get_item  := FGetItemHandler;
   ClassDef.set_item  := FSetItemHandler;
   ClassDef.finalizer := FFinalizerHandler;
-  ClassDef.iterator  := nil; // Not implemented
+  ClassDef.iterator  := FIteratorHandler;
   ClassDef.on_gc_copy := FGCCopyHandler;
   ClassDef.prototype := 0;   // Not implemented
   ClassDef.name := StrNew(PChar(Self.TypeName));
@@ -251,10 +303,34 @@ begin
   FGetItemHandler := Value;
 end;
 
+procedure TSciterClassInfo.SetGetterHandler(
+  const Value: tiscript_tagged_get_prop);
+begin
+  FGetterHandler := Value;
+end;
+
+procedure TSciterClassInfo.SetIteratorHandler(
+  const Value: tiscript_iterator);
+begin
+  FIteratorHandler := Value;
+end;
+
+procedure TSciterClassInfo.SetMethodHandler(
+  const Value: tiscript_tagged_method);
+begin
+  FMethodHandler := Value;
+end;
+
 procedure TSciterClassInfo.SetSetItemHandler(
   const Value: tiscript_set_item);
 begin
   FSetItemHandler := Value;
+end;
+
+procedure TSciterClassInfo.SetSetterHandler(
+  const Value: tiscript_tagged_set_prop);
+begin
+  FSetterHandler := Value;
 end;
 
 { TSciterMethodList }
@@ -286,24 +362,6 @@ begin
   Result := TSciterMethodInfo.Create;
   Result.Name := MethodName;
   Add(Result);
-end;
-
-procedure TSciterClassInfo.SetGetterHandler(
-  const Value: tiscript_tagged_get_prop);
-begin
-  FGetterHandler := Value;
-end;
-
-procedure TSciterClassInfo.SetMethodHandler(
-  const Value: tiscript_tagged_method);
-begin
-  FMethodHandler := Value;
-end;
-
-procedure TSciterClassInfo.SetSetterHandler(
-  const Value: tiscript_tagged_set_prop);
-begin
-  FSetterHandler := Value;
 end;
 
 end.

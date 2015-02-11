@@ -1,0 +1,39 @@
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <title>OLE Demo</title>
+  <script type="text/tiscript">
+  function testMSXML()
+  {
+    var doc = CreateObject("MSXML2.DOMDocument");
+    doc.loadXML("<div />");
+    
+    var root = doc.documentElement;  
+    
+    for (var i = 0; i < 10; i++)
+    {
+      var heading = root.appendChild(doc.createElement("h"));
+      var textNode = heading.appendChild(doc.createTextNode("Heading " + i));
+    }  
+    self.select("#out").text = doc.xml;
+  }
+  
+  function self#cmd.onClick()
+  {
+    testMSXML();
+  }
+  </script>
+</head>
+<body>
+<div>
+  Demonstrates Sciter/OLE integration. Click the button to create and populate a well-formed XML document using MSXML.
+</div>
+<div>
+  <button id="cmd">Run</button>
+</div>
+
+<pre id="out">
+
+</pre>
+</body>
+</html>
