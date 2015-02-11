@@ -34,6 +34,8 @@ requires
 contains
   SciterApi in 'SciterApi.pas',
   TiScriptApi in 'TiScriptApi.pas',
-  Sciter in 'Sciter.pas';
+  Sciter in 'Sciter.pas',
+  SciterNativeProxy in 'SciterNativeProxy.pas',
+  SciterOleProxy in 'SciterOleProxy.pas';
 
 end.

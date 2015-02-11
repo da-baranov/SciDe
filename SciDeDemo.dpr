@@ -13,6 +13,7 @@ uses
 
 begin
   Application.Initialize;
+  Application.Title := 'SciDe - Sciter for Delphi';
   Application.CreateForm(TMainForm, MainForm);
   Application.Run;
 end.

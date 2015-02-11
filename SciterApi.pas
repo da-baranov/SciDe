@@ -133,6 +133,15 @@ type
   SciterElementCallback = function(he: HELEMENT; Param: Pointer ): BOOL; stdcall;
   PSciterElementCallback = ^SciterElementCallback;
 
+  VALUE_STRING_CVT_TYPE =
+  (
+    CVT_SIMPLE,        ///< simple conversion of terminal values
+    CVT_JSON_LITERAL,  ///< json literal parsing/emission
+    CVT_JSON_MAP,      ///< json parsing/emission, it parses as if token '{' already recognized
+    CVT_XJSON_LITERAL, ///< x-json parsing/emission, date is emitted as ISO8601 date literal, currency is emitted in the form DDDD$CCC
+    VALUE_STRING_CVT_TYPE_DUMMY = MAXINT
+  );
+
   TSciterValueType =
   (
     T_UNDEFINED,
@@ -173,7 +182,11 @@ type
 
       HANDLE_ALL                   = $FFFF,
 
-      SUBSCRIPTIONS_REQUEST        = $FFFFFFFF
+      // SUBSCRIPTIONS_REQUEST        = $FFFFFFFF // -1?
+      SUBSCRIPTIONS_REQUEST        = -1,
+
+      EVENT_GROUPS_DUMMY           = MAXINT
+
   );
 
   ELEMENT_STATE_BITS =
@@ -549,7 +562,7 @@ type
     ValueEnumElements: TProcPointer;
     ValueSetValueToKey: TProcPointer;
     ValueGetValueOfKey: TProcPointer;
-    ValueToString: function(Value: PSciterValue; How: UINT): UINT; stdcall;
+    ValueToString: function(Value: PSciterValue; How: VALUE_STRING_CVT_TYPE): UINT; stdcall;
     ValueFromString: function(Value: PSciterValue; str: PWideChar; strLength: UINT; how: UINT): UINT; stdcall;
     ValueInvoke: TProcPointer;
     ValueNativeFunctorSet: TProcPointer;
@@ -575,6 +588,19 @@ type
   end;
 
   PSciterApi = ^ISciterAPI;
+
+    INITIALIZATION_EVENTS =
+    (
+      BEHAVIOR_DETACH = 0,
+      BEHAVIOR_ATTACH = 1,
+      INITIALIZATION_EVENTS_DUMMY = MAXINT
+    );
+
+    INITIALIZATION_PARAMS = packed record
+      cmd: INITIALIZATION_EVENTS;
+    end;
+    PINITIALIZATION_PARAMS = ^INITIALIZATION_PARAMS;
+
 
   KEYBOARD_STATES =
   (
@@ -838,7 +864,7 @@ begin
   end
     else
   begin
-    raise ESciterException.CreateFmt('Failed to register native class "%s": object with such name (constant, variable or function) already exists.', [String(ClassDef.name)]);
+    raise ESciterException.CreateFmt('Failed to register native class "%s". Object with such name (class, namespace, constant, variable or function) already exists.', [String(ClassDef.name)]);
   end;
 end;
 
@@ -856,7 +882,7 @@ var
   var_name: tiscript_value;
 begin
   if IsNameExists(vm, VarName) then
-    raise ESciterException.CreateFmt('Cannot register object instance. Object with such name (%s) already exists.', [VarName]);
+    raise ESciterException.CreateFmt('Cannot register object instance. Object with name "%s" (class, namespace, constant, variable or function) already exists.', [VarName]);
   var_name := NI.string_value(vm, PWideChar(VarName), Length(VarName));
   zns := NI.get_global_ns(vm);
   NI.set_prop(vm, zns, var_name, Obj);
@@ -919,7 +945,7 @@ begin
       end;
     T_BYTES:
       begin
-        raise ESciterNotImplementedException.CreateFmt('Cannot convert T_BYTES to Variant (E_NOT_IMPLEMENTED).', []);
+        raise ESciterNotImplementedException.CreateFmt('Cannot convert T_BYTES to Variant (not implemented).', []);
       end;
     T_CURRENCY:
       begin
@@ -939,22 +965,29 @@ begin
       end;
     T_DOM_OBJECT:
       begin
-        raise ESciterNotImplementedException.CreateFmt('Cannot convert T_DOM_OBJECT to Variant (E_NOT_IMPLEMENTED).', []);
+        raise ESciterNotImplementedException.CreateFmt('Cannot convert T_DOM_OBJECT to Variant (not implemented).', []);
       end;
     T_FLOAT:
       begin
-        Result := FAPI.ValueFloatData(Value, dResult);
+        Result := API.ValueFloatData(Value, dResult);
         OleValue := dResult;
       end;
     T_STRING:
       begin
-        Result := FAPI.ValueStringData(Value, pWStr, iNum);
-        sWStr := WideCharLenToString(pWStr, iNum);
+        Result := API.ValueStringData(Value, pWStr, iNum);
+        sWStr := WideString(pWStr);
+        OleValue := sWStr;
+      end;
+    T_MAP:  // TODO:
+      begin
+        API.ValueToString(Value, CVT_JSON_LITERAL);
+        Result := API.ValueStringData(Value, pWStr, iNum);
+        sWStr := WideString(pWstr);
         OleValue := sWStr;
       end;
     T_FUNCTION:
       begin
-        raise ESciterNotImplementedException.CreateFmt('Cannot convert T_FUNCTION to Variant (E_NOT_IMPLEMENTED).', []);
+        raise ESciterNotImplementedException.CreateFmt('Cannot convert T_FUNCTION to Variant (not implemented).', []);
       end;
     T_INT:
       begin
@@ -963,12 +996,9 @@ begin
       end;
     T_LENGTH:
       begin
-        raise ESciterNotImplementedException.CreateFmt('Cannot convert T_LENGTH to Variant (E_NOT_IMPLEMENTED).', []);
+        raise ESciterNotImplementedException.CreateFmt('Cannot convert T_LENGTH to Variant (not implemented).', []);
       end;
-    T_MAP:
-      begin
-        raise ESciterNotImplementedException.CreateFmt('Cannot convert T_MAP to Variant (E_NOT_IMPLEMENTED).', []);
-      end;
+    
     T_NULL:
       begin
         OleValue := Null;

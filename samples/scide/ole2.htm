@@ -22,11 +22,12 @@
   </script>
 </head>
 <body>
+<h1>Sciter/OLE integration</h1>
+<h2>Click the button below to extract numbers from a text fragment using VBScript.RegExp</h2>
 <div>
-  Demonstrates Sciter/OLE integration. Click the button below to extract numbers from a text fragment using Microsoft Regular Expressions.
+  <button id="cmd">Run</button>
 </div>
-<textarea id="inp" style="width:600px; height: 300px">
-US oilfield services firm Halliburton has said it will cut up to 8% of its global workforce of 80,000, citing a "challenging market environment" as the oil price continues to tumble.
+<textarea id="inp" style="width:90%; margin: auto" wrap="hard">US oilfield services firm Halliburton has said it will cut up to 8% of its global workforce of 80,000, citing a "challenging market environment" as the oil price continues to tumble.
 Halliburton says the cuts will be across all operations of the company.
 Shares in Halliburton - the world's second-largest oilfield services company - fell nearly 3%.
 The oil price has nearly halved since June as a global supply glut and weak demand push prices down.
@@ -34,10 +35,6 @@ The oil price has nearly halved since June as a global supply glut and weak dema
 Halliburton had previously announced that it was planning job cuts in a conference call to discuss earnings on 20 January.
 The company reported fourth quarter profits of $901m (£591m), a 14% increase from the same period a year earlier.
 </textarea>
-<div>
-  <button id="cmd">Run</button>
-</div>
-
 <pre id="out">
 
 </pre>

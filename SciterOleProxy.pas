@@ -399,7 +399,7 @@ var
 begin
   Result := NI.nothing_value;
   try
-    pMethodInfo := TSciterMethodInfo(tag);
+    pMethodInfo := TObject(tag) as TSciterMethodInfo;
 
     pSender := NI.get_instance_data(obj);
     pDispatch := IDispatch(pSender);
@@ -426,7 +426,7 @@ begin
   try
     pSender := NI.get_instance_data(obj);
     pDispatch := IDispatch(pSender);
-    pMethodInfo := TSciterMethodInfo(tag);
+    pMethodInfo := TObject(tag) as TSciterMethodInfo;
     oValue := T2V(vm, value);
     ComObj.SetDispatchPropValue(pDispatch, pMethodInfo.Name, oValue);
   except
