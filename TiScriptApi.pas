@@ -36,7 +36,6 @@ type
   tiscript_method = function(c: HVM): tiscript_value; cdecl;
   ptiscript_method = ^tiscript_method;
 
-  { non-documented }
   tiscript_tagged_method = function(vm: HVM; self: tiscript_value; tag: Pointer): tiscript_value; cdecl;
   ptiscript_tagged_method = ^tiscript_tagged_method;
 
@@ -45,7 +44,8 @@ type
     dispatch: Pointer;
     name: PAnsiChar;
     handler: Pointer; // can be either tiscript_method or tiscript_tagged_method
-    tag: Pointer;
+    // tag: Pointer;
+    tag: PAnsiChar;   // to store method name
   end;
   ptiscript_method_def = ^tiscript_method_def;
 
@@ -79,13 +79,14 @@ type
     name: PAnsiChar;
     getter: ptiscript_get_prop;
     setter: ptiscript_set_prop;
-    tag: Pointer;
+    // tag: Pointer;
+    tag: PAnsiChar; // to store property name
   end;
   ptiscript_prop_def = ^tiscript_prop_def;
 
   { TOScript class definition }
   tiscript_class_def = record
-    name: PAnsiChar;
+    name:       PAnsiChar;
     methods:    ptiscript_method_def;
     props:      ptiscript_prop_def;
     consts:     Pointer; // ptiscript_const_def;
@@ -95,6 +96,10 @@ type
     iterator:   tiscript_iterator;
     on_gc_copy: tiscript_on_gc_copy;
     prototype:  tiscript_value;
+
+    // added by da-baranov to simplify memory management
+    methodsc:   UINT; // including null-terminated record
+    propsc:     UINT; // including null-terminated record
   end;
   ptiscript_class_def = ^tiscript_class_def;
 

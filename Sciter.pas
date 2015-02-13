@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, Forms, Dialogs, Messages, ComObj, ActiveX, OleCtrls, Controls, Classes, SysUtils, SciterApi, TiScriptApi,
-  Contnrs, Variants, Math, Graphics, SciterNativeProxy;
+  Contnrs, Variants, Math, Graphics, SciterNative;
 
 type
 
@@ -243,6 +243,7 @@ type
     FOnStdErr: TSciterOnStdErr;
     FOnStdOut: TSciterOnStdOut;
     FOnStdWarn: TSciterOnStdOut;
+    FOnHandleCreated: TNotifyEvent;
     FUrl: WideString;
     function GetHVM: HVM;
     function Get_Html: WideString;
@@ -255,6 +256,7 @@ type
     procedure CreateWindowHandle(const Params: TCreateParams); override;
     procedure CreateWnd; override;
     procedure DestroyWnd; override;
+    function DesignMode: boolean;
     function HandleAttachBehavior(data: LPSCN_ATTACH_BEHAVIOR): UINT; virtual;
     function HandleDataLoaded(data: LPSCN_DATA_LOADED): UINT; virtual;
     function HandleDocumentComplete(const Url: WideString): UINT; virtual;
@@ -338,6 +340,7 @@ type
     property OnStdErr: TSciterOnStdErr read FOnStdErr write SetOnStdErr;
     property OnStdOut: TSciterOnStdOut read FOnStdOut write SetOnStdOut;
     property OnStdWarn: TSciterOnStdOut read FOnStdWarn write SetOnStdWarn;
+    property OnHandleCreated: TNotifyEvent read FOnHandleCreated write FOnHandleCreated;
 end;
 
 procedure SciterDebug(param: Pointer; subsystem: UINT; severity: UINT; text: PWideChar; text_length: UINT); stdcall;
@@ -345,7 +348,7 @@ procedure Register;
 
 implementation
 
-uses SciterOleProxy;
+uses SciterOle;
 
 function CreateObjectNative(vm: HVM): tiscript_value; cdecl;
 var
@@ -769,6 +772,10 @@ end;
 procedure TSciter.CreateWindowHandle(const Params: TCreateParams);
 begin
   inherited;
+
+  if DesignMode then
+    Exit;
+    
   if HandleAllocated then
   begin
     API.SciterSetCallback(Handle, @HostCallback, Self);
@@ -789,7 +796,8 @@ begin
       FBaseUrl := '';
       FUrl := '';
     end;
-
+    if Assigned(FOnHandleCreated) then
+      FOnHandleCreated(Self);
   end;
 end;
 
@@ -907,8 +915,11 @@ end;
 
 function TSciter.HandleEngineDestroyed(data: LPSCN_ENGINE_DESTROYED): UINT;
 begin
-  if Assigned(FOnEngineDestroyed) then
-    FOnEngineDestroyed(Self);
+  if data.hwnd = Handle then
+  begin
+    if Assigned(FOnEngineDestroyed) then
+      FOnEngineDestroyed(Self);
+  end;
   Result := 0;
 end;
 
@@ -937,7 +948,7 @@ var
   pHtml: PAnsiChar;
   iLen: UINT;
 begin
-  if (csDesigning in ComponentState) then
+  if DesignMode then
     Exit;
 
   if not HandleAllocated then
@@ -957,7 +968,7 @@ end;
 
 procedure TSciter.LoadURL(const URL: Widestring);
 begin
-  if (csDesigning in ComponentState) then
+  if DesignMode then
     Exit;
 
   if not HandleAllocated then
@@ -993,13 +1004,24 @@ begin
 end;
 
 procedure TSciter.Paint;
+var
+  sCaption: AnsiString;
+  iWidth: Integer;
+  iHeight: Integer;
+  X, Y: Integer;
 begin
   inherited;
-  if csDesigning in ComponentState then
+  sCaption := Name;
+
+  if DesignMode then
   begin
     Canvas.Brush.Color := clWindow;
+    iWidth := Canvas.TextWidth(sCaption);
+    iHeight := Canvas.TextHeight(sCaption);
+    X := Round(ClientWidth / 2) - Round(iWidth / 2);
+    Y := Round(ClientHeight / 2) - Round(iHeight / 2);
     Canvas.FillRect(ClientRect);
-    Canvas.TextOut(10, 10, 'Sciter: ' + Name);
+    Canvas.TextOut(X, Y, Name);
   end;
 end;
 
@@ -1009,7 +1031,7 @@ var
   vm: TiScriptApi.HVM;
 begin
   vm := API.SciterGetVM(Handle);
-  SciterOleProxy.RegisterOleObject(vm, Obj, Name);
+  SciterOle.RegisterOleObject(vm, Obj, Name);
 end;
 
 function TSciter.RegisterNativeClass(ClassDef: ptiscript_class_def; ThrowIfExists: Boolean; ReplaceClassDef: Boolean): tiscript_value;
@@ -1673,6 +1695,11 @@ procedure TElementList.Remove(const Element: TElement);
 begin
   if inherited IndexOf(Element) <> -1 then
     inherited Remove(Element);
+end;
+
+function TSciter.DesignMode: boolean;
+begin
+  Result := csDesigning in ComponentState;
 end;
 
 initialization

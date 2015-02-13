@@ -29,6 +29,8 @@ type
     txtLog: TMemo;
     cmdSetInnerText: TButton;
     cmdInnerHtml: TButton;
+    tsNative: TTabSheet;
+    cmdCallNativeForm: TButton;
     procedure cmd12Click(Sender: TObject);
     procedure cmd1Click(Sender: TObject);
     procedure cmd2Click(Sender: TObject);
@@ -39,6 +41,7 @@ type
     procedure cmd7Click(Sender: TObject);
     procedure cmd8Click(Sender: TObject);
     procedure cmd9Click(Sender: TObject);
+    procedure cmdCallNativeFormClick(Sender: TObject);
     procedure cmdChangeHeadingsTextClick(Sender: TObject);
     procedure cmdInnerHtmlClick(Sender: TObject);
     procedure cmdRegisterOLEClick(Sender: TObject);
@@ -48,9 +51,12 @@ type
     procedure DumpHTML1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure NavigatetoSciterwebsite1Click(Sender: TObject);
+    procedure sctr1HandleCreated(Sender: TObject);
     procedure sctr1StdErr(ASender: TObject; const msg: WideString);
     procedure tv1Change(Sender: TObject; Node: TTreeNode);
   private
+    FExamplesBase: WideString;
+    FHomeUrl: WideString;
     procedure OnElementControlEvent(ASender: TObject; const target: IElement; eventType: BEHAVIOR_EVENTS;
                              reason: Integer; const source: IElement);
     { Private declarations }
@@ -66,7 +72,7 @@ var
 
 implementation
 
-uses ComObj, SciterOleProxy;
+uses ComObj, SciterOle, SciterNative, NativeForm;
 
 {$R *.dfm}
 
@@ -170,6 +176,15 @@ begin
     pH[i].InnerHtml := '<img src="theme:button-defaulted"/ >Heading ' + IntToStr(i);
 end;
 
+procedure TMainForm.cmdCallNativeFormClick(Sender: TObject);
+var
+  nf: TNativeForm;
+begin
+  // nf := TNativeForm.Create;
+  // RegisterNativeClass(sctr1.VM, nf.SciterClassDef, false, false);
+  sctr1.LoadURL(FExamplesBase + 'native-form.htm');
+end;
+
 procedure TMainForm.cmdChangeHeadingsTextClick(Sender: TObject);
 var
   i: Integer;
@@ -237,14 +252,14 @@ begin
 end;
 
 procedure TMainForm.FormCreate(Sender: TObject);
-var
-  sDefaultPath: AnsiString;
 begin
   pc.ActivePage := tsBrowser;
-  
-  sDefaultPath := ExtractFileDir(Application.ExeName) + '\samples\scide\index.htm';
-  sDefaultPath := 'file:///' + StringReplace(sDefaultPath, '\', '/', [rfReplaceAll]);
-  sctr1.LoadUrl(sDefaultPath);
+
+  FExamplesBase := ExtractFileDir(Application.ExeName);
+  FExamplesBase := 'file:///' + StringReplace(FExamplesBase, '\', '/', [rfReplaceAll]) + '/samples/scide/';
+
+  FHomeURL := FExamplesBase + 'index.htm';
+  sctr1.LoadUrl(FHomeURL);
   tv1.Root := ExtractFileDir(Application.ExeName) + '\samples';
 end;
 
@@ -273,6 +288,14 @@ procedure TMainForm.OnElementSize(ASender: TObject;
   const target: IElement);
 begin
   txtLog.Lines.Add(Format('Size event', []));
+end;
+
+procedure TMainForm.sctr1HandleCreated(Sender: TObject);
+var
+  nf: TNativeForm;
+begin
+  nf := TNativeForm.Create;
+  ClassBag.RegisterClassInfo(sctr1.VM, nf);
 end;
 
 procedure TMainForm.sctr1StdErr(ASender: TObject; const msg: WideString);

@@ -6,8 +6,9 @@ uses
   Sciter in 'Sciter.pas',
   SciterApi in 'SciterApi.pas',
   TiScriptApi in 'TiScriptApi.pas',
-  SciterNativeProxy in 'SciterNativeProxy.pas',
-  SciterOleProxy in 'SciterOleProxy.pas';
+  SciterNative in 'SciterNative.pas',
+  SciterOle in 'SciterOle.pas',
+  NativeForm in 'NativeForm.pas';
 
 {$R *.res}
 
