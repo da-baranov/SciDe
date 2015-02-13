@@ -1,8 +1,8 @@
 object MainForm: TMainForm
-  Left = 289
-  Top = 160
-  Width = 1198
-  Height = 648
+  Left = 475
+  Top = 316
+  Width = 919
+  Height = 624
   Caption = 'SciDe - test form'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -13,22 +13,23 @@ object MainForm: TMainForm
   KeyPreview = True
   Menu = mm1
   OldCreateOrder = False
+  Position = poScreenCenter
   OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
   object pnlContainer: TPanel
     Left = 289
     Top = 0
-    Width = 893
-    Height = 590
+    Width = 614
+    Height = 566
     Align = alClient
     BevelOuter = bvNone
     Caption = 'pnlContainer'
     TabOrder = 0
     object spl1: TSplitter
       Left = 0
-      Top = 401
-      Width = 893
+      Top = 377
+      Width = 614
       Height = 5
       Cursor = crVSplit
       Align = alBottom
@@ -36,8 +37,8 @@ object MainForm: TMainForm
     object sctr1: TSciter
       Left = 0
       Top = 0
-      Width = 893
-      Height = 401
+      Width = 614
+      Height = 377
       Align = alClient
       BevelInner = bvSpace
       BevelKind = bkSoft
@@ -47,11 +48,13 @@ object MainForm: TMainForm
       TabOrder = 0
       OnStdErr = sctr1StdErr
       OnStdOut = sctr1StdErr
+      OnStdWarn = sctr1StdErr
+      OnHandleCreated = sctr1HandleCreated
     end
     object txtLog: TMemo
       Left = 0
-      Top = 406
-      Width = 893
+      Top = 382
+      Width = 614
       Height = 184
       Align = alBottom
       Font.Charset = RUSSIAN_CHARSET
@@ -68,8 +71,8 @@ object MainForm: TMainForm
     Left = 0
     Top = 0
     Width = 289
-    Height = 590
-    ActivePage = tsDOM
+    Height = 566
+    ActivePage = tsNative
     Align = alLeft
     MultiLine = True
     TabOrder = 1
@@ -79,7 +82,7 @@ object MainForm: TMainForm
         Left = 0
         Top = 0
         Width = 281
-        Height = 562
+        Height = 520
         AutoContextMenus = False
         ObjectTypes = [otFolders, otNonFolders]
         Root = 'C:\'
@@ -164,6 +167,19 @@ object MainForm: TMainForm
         Caption = 'Set inner HTML'
         TabOrder = 4
         OnClick = cmdInnerHtmlClick
+      end
+    end
+    object tsNative: TTabSheet
+      Caption = 'Native'
+      ImageIndex = 3
+      object cmdCallNativeForm: TButton
+        Left = 10
+        Top = 10
+        Width = 261
+        Height = 25
+        Caption = 'Call native form'
+        TabOrder = 0
+        OnClick = cmdCallNativeFormClick
       end
     end
   end

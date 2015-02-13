@@ -35,7 +35,7 @@ contains
   SciterApi in 'SciterApi.pas',
   TiScriptApi in 'TiScriptApi.pas',
   Sciter in 'Sciter.pas',
-  SciterNativeProxy in 'SciterNativeProxy.pas',
-  SciterOleProxy in 'SciterOleProxy.pas';
+  SciterNative in 'SciterNative.pas',
+  SciterOle in 'SciterOle.pas';
 
 end.

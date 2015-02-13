@@ -785,16 +785,19 @@ type
 function _SciterAPI: PSciterApi; stdcall;
 function  S2V(Value: PSciterValue; var OleValue: OleVariant): UINT;
 function  V2S(const Value: OleVariant; SciterValue: PSciterValue): UINT;
-function  T2V(vm: HVM; Value: tiscript_value): OleVariant;
-function  V2T(vm: HVM; const Value: OleVariant): tiscript_value;
+function  T2V(const vm: HVM; Value: tiscript_value): OleVariant;
+function  V2T(const vm: HVM; const Value: OleVariant): tiscript_value;
 function  API: PSciterApi;
 function NI: ptiscript_native_interface;
 function IsNameExists(vm: HVM; const Name: WideString): boolean;
-function RegisterNativeClass(vm: HVM; ClassDef: ptiscript_class_def; ThrowIfExists: Boolean; ReplaceClassDef: Boolean): tiscript_value;
-function CreateObjectInstance(vm: HVM; Obj: Pointer; OfClass: tiscript_value): tiscript_value;
-procedure RegisterObject(vm: HVM; Obj: tiscript_value; const VarName: WideString);
-procedure ThrowError(vm: HVM; const Message: AnsiString); overload;
-procedure ThrowError(vm: HVM; const Message: WideString); overload;
+function GetNativeClass(const vm: HVM; const ClassName: WideString): tiscript_value;
+function RegisterNativeClass(const vm: HVM; ClassDef: ptiscript_class_def; ThrowIfExists: Boolean; ReplaceClassDef: Boolean): tiscript_value;
+function CreateObjectInstance(const vm: HVM; Obj: Pointer; OfClass: tiscript_value): tiscript_value; overload;
+function CreateObjectInstance(const vm: HVM; Obj: Pointer; OfClass: WideString): tiscript_value; overload;
+procedure RegisterObject(const vm: HVM; Obj: tiscript_value; const VarName: WideString); overload;
+procedure RegisterObject(const vm: HVM; Obj: Pointer; const OfClass: WideString; const VarName: WideString); overload;
+procedure ThrowError(const vm: HVM; const Message: AnsiString); overload;
+procedure ThrowError(const vm: HVM; const Message: WideString); overload;
 
 implementation
 
@@ -808,12 +811,12 @@ begin
   Result := FNI;
 end;
 
-procedure ThrowError(vm: HVM; const Message: AnsiString);
+procedure ThrowError(const vm: HVM; const Message: AnsiString);
 begin
   NI.throw_error(vm, PWideChar(WideString(Message)));
 end;
 
-procedure ThrowError(vm: HVM; const Message: WideString);
+procedure ThrowError(const vm: HVM; const Message: WideString);
 begin
   NI.throw_error(vm, PWideChar(Message));
 end;
@@ -830,7 +833,22 @@ begin
   Result := not NI.is_undefined(var_value);
 end;
 
-function RegisterNativeClass(vm: HVM; ClassDef: ptiscript_class_def; ThrowIfExists: Boolean; ReplaceClassDef: Boolean): tiscript_value;
+function GetNativeClass(const vm: HVM; const ClassName: WideString): tiscript_value;
+var
+  zns: tiscript_value;
+  tclass_name: tiscript_value;
+  class_def: tiscript_value;
+begin
+  zns := NI.get_global_ns(vm);
+  tclass_name  := NI.string_value(vm, PWideChar(ClassName), Length(ClassName));
+  class_def    := NI.get_prop(vm, zns, tclass_name);
+  if NI.is_class(vm, class_def) then
+    Result := class_def
+  else
+    Result := NI.undefined_value;
+end;
+
+function RegisterNativeClass(const vm: HVM; ClassDef: ptiscript_class_def; ThrowIfExists: Boolean; ReplaceClassDef: Boolean): tiscript_value;
 var
   zns: tiscript_value;
 
@@ -848,6 +866,8 @@ begin
   if NI.is_undefined(class_def) then
   begin
     class_def := NI.define_class(vm, ClassDef, zns);
+    if not NI.is_class(vm, class_def) then
+      raise ESciterException.CreateFmt('Failed to register class definition.', []);
     Result := class_def;
   end
     else
@@ -868,7 +888,7 @@ begin
   end;
 end;
 
-function CreateObjectInstance(vm: HVM; Obj: Pointer; OfClass: tiscript_value): tiscript_value;
+function CreateObjectInstance(const vm: HVM; Obj: Pointer; OfClass: tiscript_value): tiscript_value;
 begin
   if not NI.is_class(vm, OfClass) then
     raise ESciterException.CreateFmt('Cannot create object instance. Provided value is not a class.', []);
@@ -876,16 +896,36 @@ begin
   NI.set_instance_data(Result, Obj);
 end;
 
-procedure RegisterObject(vm: HVM; Obj: tiscript_value; const VarName: WideString);
+function CreateObjectInstance(const vm: HVM; Obj: Pointer; OfClass: WideString): tiscript_value;
+var
+  t_class: tiscript_value;
+begin
+  t_class := GetNativeClass(vm, OfClass);
+  Result := CreateObjectInstance(vm, Obj, t_class);
+end;
+
+procedure RegisterObject(const vm: HVM; Obj: tiscript_value; const VarName: WideString);
 var
   zns: tiscript_value;
   var_name: tiscript_value;
 begin
+  if not NI.is_object(Obj) then
+    raise ESciterException.CreateFmt('Cannot register object instance. Provided value is not an object.', []);
+
   if IsNameExists(vm, VarName) then
     raise ESciterException.CreateFmt('Cannot register object instance. Object with name "%s" (class, namespace, constant, variable or function) already exists.', [VarName]);
+    
   var_name := NI.string_value(vm, PWideChar(VarName), Length(VarName));
   zns := NI.get_global_ns(vm);
   NI.set_prop(vm, zns, var_name, Obj);
+end;
+
+procedure RegisterObject(const vm: HVM; Obj: Pointer; const OfClass: WideString; const VarName: WideString); overload;
+var
+  o: tiscript_value;
+begin
+  o := CreateObjectInstance(vm, Obj, OfClass);
+  RegisterObject(vm, o, VarName);
 end;
 
 function API: PSciterApi;
@@ -1138,7 +1178,7 @@ begin
   end;
 end;
 
-function T2V(vm: HVM; Value: tiscript_value): OleVariant;
+function T2V(const vm: HVM; Value: tiscript_value): OleVariant;
 var
   sValue: TSciterValue;
 begin
@@ -1146,7 +1186,7 @@ begin
   S2V(@sValue, Result);
 end;
 
-function V2T(vm: HVM; const Value: OleVariant): tiscript_value;
+function V2T(const vm: HVM; const Value: OleVariant): tiscript_value;
 var
   sValue: TSciterValue;
   tResult: tiscript_value;

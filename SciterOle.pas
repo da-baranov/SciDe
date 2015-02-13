@@ -1,35 +1,33 @@
-unit SciterOleProxy;
+unit SciterOle;
 
 interface
 
 uses
-  Windows, Messages, Classes, Variants, Contnrs, SciterApi, TiScriptApi, SysUtils, SciterNativeProxy,
+  Windows, Messages, Classes, Variants, Contnrs, SciterApi, TiScriptApi, SysUtils, SciterNative,
   ComObj, ActiveX;
 
 type
   ESciterOleException = class(ESciterException)
   end;
 
-  TSciterOleWrapper = class(TSciterClassInfo)
-  private
-    FDispatch: IDispatch;
-  protected
-    procedure PopulateMethods(const List: TSciterMethodList); override;
-  public
-    constructor Create; override;
-    destructor Destroy; override;
-    procedure Build(const Obj: IDispatch);
+  ISciterOleClassInfo = interface(ISciterClassInfo)
+    procedure Build(Ptr: Pointer); overload;
+    procedure Build(const Value: OleVariant); overload;
+    procedure Build(const Dispatch: IDispatch); overload;
+    procedure Build(const TypeInfo: ITypeInfo); overload;
   end;
 
-  TActiveXObjectImpl = class(TSciterClassInfo)
-  protected
-    procedure PopulateMethods(const List: TSciterMethodList); override;
+  TSciterOleNative = class(TSciterClassInfo, ISciterOleClassInfo)
   public
     constructor Create; override;
+    procedure Build(Ptr: Pointer); overload;
+    procedure Build(const Value: OleVariant); overload;
+    procedure Build(const Dispatch: IDispatch); overload;
+    procedure Build(const TypeInfo: ITypeInfo); overload;
   end;
 
 function GetOleObjectGuid(const Obj: IDispatch): AnsiString;
-function RegisterOleObjectClass(vm: HVM; const Dispatch: IDispatch): tiscript_value;
+function FindOrCreateOleObjectClass(vm: HVM; const Dispatch: IDispatch): tiscript_value;
 function RegisterOleObject(vm: HVM; const Dispatch: IDispatch; const Name: WideString): tiscript_value;
 function WrapOleObject(vm: HVM; const Dispatch: IDispatch): tiscript_value;
 
@@ -58,23 +56,36 @@ begin
   end;
 end;
 
-function RegisterOleObjectClass(vm: HVM; const Dispatch: IDispatch): tiscript_value;
+function FindOrCreateOleObjectClass(vm: HVM; const Dispatch: IDispatch): tiscript_value;
 var
-  sciter_class_def: tiscript_class_def;
-  pClassInfo: TSciterOleWrapper;
+  pOleClassInfo: ISciterOleClassInfo;
+  sGuid: AnsiString;
 begin
-  pClassInfo := TSciterOleWrapper.Create;
-  pClassInfo.Build(Dispatch);
-  pClassInfo.GetClassDef(sciter_class_def);
-  Result := RegisterNativeClass(vm, @sciter_class_def, False, False);
-  pClassInfo.FreeClassDef(sciter_class_def);
+  sGuid := GetOleObjectGuid(Dispatch);
+  
+  if not ClassBag.ClassInfoExists(vm, sGuid) then
+  begin
+    pOleClassInfo := TSciterOleNative.Create;
+    pOleClassInfo.Build(Dispatch);
+    Result := ClassBag.RegisterClassInfo(vm, pOleClassInfo);
+  end
+    else
+  begin
+    Result := SciterApi.GetNativeClass(vm, sGuid);
+  end;
 end;
 
 function WrapOleObject(vm: HVM; const Dispatch: IDispatch): tiscript_value;
 var
   ole_class_def: tiscript_value;
 begin
-  ole_class_def := RegisterOleObjectClass(vm, Dispatch);
+  if Dispatch = nil then
+  begin
+    Result := NI.undefined_value;
+    Exit;
+  end;
+  
+  ole_class_def := FindOrCreateOleObjectClass(vm, Dispatch);
   Dispatch._AddRef;
   Result := SciterApi.CreateObjectInstance(vm, Pointer(Dispatch), ole_class_def);
 end;
@@ -86,8 +97,10 @@ var
 begin
   if SciterApi.IsNameExists(vm, Name) then
     raise ESciterOleException.CreateFmt('Cannot register OLE Object: variable with name %s already exists.', [Name]);
-    
-  ole_class_def := RegisterOleObjectClass(vm, Dispatch);
+
+  Assert(Dispatch <> nil, 'OLE object is undefined');
+      
+  ole_class_def := FindOrCreateOleObjectClass(vm, Dispatch);
   class_instance := SciterApi.CreateObjectInstance(vm, Pointer(Dispatch), ole_class_def);
   SciterApi.RegisterObject(vm, class_instance, Name);
 
@@ -394,17 +407,17 @@ function OleGetterHandler(vm: HVM; obj: tiscript_value; tag: Pointer): tiscript_
 var
   pSender: Pointer;
   pDispatch: IDispatch;
-  pMethodInfo: TSciterMethodInfo;
+  sMethodName: AnsiString;
   oValue: OleVariant;
 begin
   Result := NI.nothing_value;
   try
-    pMethodInfo := TObject(tag) as TSciterMethodInfo;
+    sMethodName := AnsiString(PAnsiChar(tag));
 
     pSender := NI.get_instance_data(obj);
     pDispatch := IDispatch(pSender);
 
-    oValue := ComObj.GetDispatchPropValue(pDispatch, pMethodInfo.Name);
+    oValue := ComObj.GetDispatchPropValue(pDispatch, sMethodName);
 
     if VarType(oValue) = varDispatch then
       Result := WrapOleObject(vm, IDispatch(oValue))
@@ -418,17 +431,17 @@ end;
 
 procedure OleSetterHandler(vm: HVM; obj, value: tiscript_value; tag: Pointer); cdecl;
 var
-  pMethodInfo: TSciterMethodInfo;
   pSender: Pointer;
   pDispatch: IDispatch;
   oValue: OleVariant;
+  sMethodName: AnsiString;
 begin
+  sMethodName := AnsiString(PAnsiChar(tag));
   try
     pSender := NI.get_instance_data(obj);
     pDispatch := IDispatch(pSender);
-    pMethodInfo := TObject(tag) as TSciterMethodInfo;
     oValue := T2V(vm, value);
-    ComObj.SetDispatchPropValue(pDispatch, pMethodInfo.Name, oValue);
+    ComObj.SetDispatchPropValue(pDispatch, sMethodName, oValue);
   except
     on E:Exception do
       ThrowError(vm, E.Message);
@@ -439,7 +452,7 @@ function OleMethodHandler(vm: HVM; obj: tiscript_value; tag: Pointer): tiscript_
 var
   pSender: Pointer;
   pDisp: IDispatch;
-  pInfo: TSciterMethodInfo;
+  sMethodName: AnsiString;
   argc: Integer;
   arg: tiscript_value;
   sarg: TSciterValue;
@@ -448,10 +461,10 @@ var
   oresult: OleVariant;
 begin
   Result := NI.nothing_value;
+  sMethodName := AnsiString(PAnsiChar(tag));
   try
     pSender    := NI.get_instance_data(obj);
     pDisp      := IDispatch(pSender);
-    pInfo      := TSciterMethodInfo(tag);
 
     argc := NI.get_arg_count(vm);
 
@@ -465,7 +478,7 @@ begin
     end;
 
     // Call method
-    oResult := DispatchInvoke(pDisp, pInfo.Name, oargs);
+    oResult := DispatchInvoke(pDisp, sMethodName, oargs);
 
     if VarType(oResult) = varDispatch then
       Result := WrapOleObject(vm, IDispatch(oResult))
@@ -477,7 +490,7 @@ begin
   end;
 end;
 
-constructor TSciterOleWrapper.Create;
+constructor TSciterOleNative.Create;
 begin
   inherited;
   Self.GetItemHandler   := OleGetItemHandler;
@@ -490,38 +503,40 @@ begin
   Self.IteratorHandler  := OleIteratorHandler;
 end;
 
-destructor TSciterOleWrapper.Destroy;
-begin
-  FDispatch := nil;
-  inherited;
-end;
-
 { TSciterOleWrapper }
 
-procedure TSciterOleWrapper.Build(const Obj: IDispatch);
+procedure TSciterOleNative.Build(Ptr: Pointer);
 begin
-  FDispatch := Obj;
-  Self.TypeName := GetOleObjectGuid(Obj);
-  inherited Build(Pointer(Obj));
+  Build(IDispatch(Ptr));
 end;
 
-procedure TSciterOleWrapper.PopulateMethods(const List: TSciterMethodList);
+procedure TSciterOleNative.Build(const Value: OleVariant);
+begin
+  Build(IDispatch(Value));
+end;
+
+procedure TSciterOleNative.Build(const Dispatch: IDispatch);
 var
-  typeInfo: ITypeInfo;
+  pTypeInfo: ITypeInfo;
+begin
+  OleCheck(Dispatch.GetTypeInfo(0, LOCALE_USER_DEFAULT, pTypeInfo));
+  Build(pTypeInfo);
+end;
+
+procedure TSciterOleNative.Build(const TypeInfo: ITypeInfo);
+var
   typeAttr: PTypeAttr;
   funcDesc: PFuncDesc;
   sfuncName: PWideChar;
   funcName: WideString;
   i: Integer;
   cNames: Integer;
-  pMethodInfo: TSciterMethodInfo;
+  pMethodInfo: ISciterMethodInfo;
 begin
   try
-    if FDispatch = nil then
-      Exit;
+    OleCheck(TypeInfo.GetTypeAttr(typeAttr));
 
-    OleCheck(FDispatch.GetTypeInfo(0, LOCALE_USER_DEFAULT, typeInfo));
-    OleCheck(typeInfo.GetTypeAttr(typeAttr));
+    Self.TypeName := GUIDToString(typeAttr.guid);
 
     for i := 0 to typeAttr.cFuncs - 1 do
     try
@@ -532,7 +547,7 @@ begin
       typeInfo.GetNames(funcDesc.memid, @sfuncName, 1, cNames);
       funcName := WideString(sfuncName);
 
-      pMethodInfo := List.LookupMethod(funcName);
+      pMethodInfo := Methods.LookupMethod(funcName);
 
       if funcDesc.invkind = INVOKE_FUNC then
       begin
@@ -583,44 +598,6 @@ begin
       if typeInfo <> nil then
         typeInfo.ReleaseTypeAttr(typeAttr);
   end;
-end;
-
-{ TActiveXObjectImpl }
-
-function ActiveXObjectCtor(vm: HVM; self: tiscript_value; tag: Pointer): tiscript_value; cdecl;
-var
-  nArgc: Integer;
-  tProgId: tiscript_value;
-  sProgId: OleVariant;
-  oDisp: OleVariant;
-  pDisp: IDispatch;
-begin
-  nArgc := NI.get_arg_count(vm);
-  if nArgc <> 3 then
-    raise ESciterOleException.CreateFmt('Cannot initialize ActiveXObject. Required constructor parameter (ProgID) is missing.', []);
-  tProgId := NI.get_arg_n(vm, 2);
-  sProgId := T2V(vm, tProgId);
-
-  oDisp := CreateOleObject(sProgId);
-  pDisp := IDispatch(oDisp);
-
-  Result := WrapOleObject(vm, pDisp);
-end;
-
-constructor TActiveXObjectImpl.Create;
-begin
-  inherited;
-  Self.TypeName := 'ActiveXObject';
-  Self.MethodHandler := @ActiveXObjectCtor;
-end;
-
-procedure TActiveXObjectImpl.PopulateMethods(
-  const List: TSciterMethodList);
-var
-  pMethod: TSciterMethodInfo;
-begin
-  pMethod := List.LookupMethod('this');
-  pMethod.CallArgsCount := 1;
 end;
 
 end.
