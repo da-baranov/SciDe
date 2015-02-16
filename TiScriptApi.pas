@@ -15,6 +15,11 @@ type
   tiscript_value = type Int64;
   ptiscript_value = ^tiscript_value;
 
+  { TIScript value handy synonyms }
+  tiscript_class = type tiscript_value;
+  tiscript_object = type tiscript_value;
+  tiscript_string = type tiscript_value;
+
   { TIScript pinned value }
   tiscript_pvalue = record
     val: tiscript_value;
@@ -44,8 +49,7 @@ type
     dispatch: Pointer;
     name: PAnsiChar;
     handler: Pointer; // can be either tiscript_method or tiscript_tagged_method
-    // tag: Pointer;
-    tag: PAnsiChar;   // to store method name
+    tag: Pointer;
   end;
   ptiscript_method_def = ^tiscript_method_def;
 
@@ -79,8 +83,7 @@ type
     name: PAnsiChar;
     getter: ptiscript_get_prop;
     setter: ptiscript_set_prop;
-    // tag: Pointer;
-    tag: PAnsiChar; // to store property name
+    tag: Pointer;
   end;
   ptiscript_prop_def = ^tiscript_prop_def;
 
@@ -148,15 +151,15 @@ type
     bytes_value : function(pvm: HVM; data: PByte; data_length: UINT): tiscript_value; cdecl;
     datetime_value : function(pvm: HVM; ft: FILETIME): tiscript_value; cdecl;
 
-    to_string : function(pvm: HVM; v: tiscript_value): tiscript_value; cdecl;
+    to_string : function(pvm: HVM; v: tiscript_value): tiscript_string; cdecl;
 
-    define_class : function(pvm: HVM; cls: ptiscript_class_def; zns: tiscript_value): tiscript_value; cdecl; // 45
-    create_object : function(pvm: HVM; cls: tiscript_value): tiscript_value; cdecl;
-    set_prop : function(pvm: HVM; obj: tiscript_value; key: tiscript_value; value: tiscript_value): WordBool; cdecl;
-    get_prop : function(pvm: HVM; obj: tiscript_value; key: tiscript_value): tiscript_value; cdecl;
+    define_class : function(pvm: HVM; cls: ptiscript_class_def; zns: tiscript_value): tiscript_class; cdecl; // 45
+    create_object : function(pvm: HVM; cls: tiscript_class): tiscript_object; cdecl;
+    set_prop : function(pvm: HVM; obj: tiscript_object; key: tiscript_value; value: tiscript_value): WordBool; cdecl;
+    get_prop : function(pvm: HVM; obj: tiscript_object; key: tiscript_value): tiscript_value; cdecl;
     for_each_prop : function(pvm: HVM; obj: tiscript_value; cb: {tiscript_object_enum* cb} Pointer; tag: Pointer): BOOL; cdecl;
-    get_instance_data : function(obj: tiscript_value): Pointer; cdecl;    // 50
-    set_instance_data : procedure(obj: tiscript_value; data: Pointer); cdecl;
+    get_instance_data : function(obj: tiscript_object): Pointer; cdecl;    // 50
+    set_instance_data : procedure(obj: tiscript_object; data: Pointer); cdecl;
 
     create_array : procedure; cdecl;
     set_elem : procedure; cdecl;

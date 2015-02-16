@@ -231,7 +231,7 @@ type
     destructor Destroy; override;
   end;
   
-  { Key-value pair where key is HVM and value is a list of class definitions }
+  { Key-value pair where key is a HVM and value is a list of class definitions registered for that VM }
   IVMClassBag = interface
     ['{BC375E40-BB49-4B0A-A4F4-C61ADA94ED03}']
     function GetClassInfoList: ISciterClassInfoList;
@@ -417,7 +417,7 @@ begin
     pclass_methods.name := StrNew(PAnsiChar(smethod_name));
     pclass_methods.handler := @FMethodHandler;
     pclass_methods.dispatch := nil;
-    pclass_methods.tag := pclass_methods.name;
+    pclass_methods.tag := Pointer(pInfo);
     Inc(pclass_methods);
   end;
   // null-terminating record
@@ -451,7 +451,7 @@ begin
     else
       pclass_props.setter := nil;
 
-    pclass_props.tag := pclass_props.name;
+    pclass_props.tag := Pointer(pInfo);
 
     Inc(pclass_props);
   end;

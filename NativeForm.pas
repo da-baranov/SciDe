@@ -17,14 +17,14 @@ implementation
 
 function _MethodHandler(vm: HVM; self: tiscript_value; tag: Pointer): tiscript_value; cdecl;
 var
-  sMethodName: AnsiString;
+  pInfo: ISciterMethodInfo;
   pForm: TForm;
 begin
   pForm := NI.get_instance_data(self);
+  pInfo := ISciterMethodInfo(tag); 
+
   
-  sMethodName := AnsiString(PChar(tag));
-  
-  if sMethodName = 'this' then
+  if pInfo.Name = 'this' then
   begin
     pForm := TForm.Create(Forms.Application);
     pForm.Caption := 'Sciter';
@@ -34,13 +34,13 @@ begin
     NI.set_instance_data(self, pForm);
   end
 
-  else if sMethodName = 'Show' then
+  else if pInfo.Name = 'Show' then
   begin
     if pForm <> nil then
       pForm.Show;
   end
 
-  else if sMethodName = 'Close' then
+  else if pInfo.Name = 'Close' then
   begin
     pForm.Close;
     pForm.Free;

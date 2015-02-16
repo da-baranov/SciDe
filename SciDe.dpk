@@ -3,6 +3,7 @@
 package SciDe;
 
 {$R *.res}
+{$R 'Sciter.dcr'}
 {$ALIGN 8}
 {$ASSERTIONS ON}
 {$BOOLEVAL OFF}
@@ -34,8 +35,8 @@ requires
 contains
   SciterApi in 'SciterApi.pas',
   TiScriptApi in 'TiScriptApi.pas',
-  Sciter in 'Sciter.pas',
   SciterNative in 'SciterNative.pas',
-  SciterOle in 'SciterOle.pas';
+  SciterOle in 'SciterOle.pas',
+  Sciter in 'Sciter.pas';
 
 end.

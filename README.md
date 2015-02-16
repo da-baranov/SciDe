@@ -5,9 +5,9 @@ Sciter component for Delphi
 Delphi 7 or newer, 32-bit platform
 
 *** INSTALLATION ***
-1. Open project group file (SciDe.bpg or SciDe.bsdproj) in Delphi IDE
+1. Open project group file (SciDe.bpg) in Delphi IDE
 2. Activate the SciDe package
-3. Click Compile (or Build), then Install
+3. Click Compile (or Build), then Install. The component will be placed to the Samples tab of the Component Palette.
 4. Copy sciter32.dll and sciter64.dll to %DELPHI%\Projects\Bpl directory
 
 *** RUNTIME DEPENDENCIES ***

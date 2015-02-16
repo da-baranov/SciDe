@@ -135,10 +135,10 @@ type
 
   VALUE_STRING_CVT_TYPE =
   (
-    CVT_SIMPLE,        ///< simple conversion of terminal values
-    CVT_JSON_LITERAL,  ///< json literal parsing/emission
-    CVT_JSON_MAP,      ///< json parsing/emission, it parses as if token '{' already recognized
-    CVT_XJSON_LITERAL, ///< x-json parsing/emission, date is emitted as ISO8601 date literal, currency is emitted in the form DDDD$CCC
+    CVT_SIMPLE,
+    CVT_JSON_LITERAL,
+    CVT_JSON_MAP,
+    CVT_XJSON_LITERAL,
     VALUE_STRING_CVT_TYPE_DUMMY = MAXINT
   );
 
@@ -779,6 +779,11 @@ type
   ESciterException = class(Exception)
   end;
 
+  ESciterNullPointerException = class(Exception)
+  public
+    constructor Create;
+  end;
+
   ESciterNotImplementedException = class(ESciterException)
   end;
 
@@ -790,11 +795,12 @@ function  V2T(const vm: HVM; const Value: OleVariant): tiscript_value;
 function  API: PSciterApi;
 function NI: ptiscript_native_interface;
 function IsNameExists(vm: HVM; const Name: WideString): boolean;
-function GetNativeClass(const vm: HVM; const ClassName: WideString): tiscript_value;
-function RegisterNativeClass(const vm: HVM; ClassDef: ptiscript_class_def; ThrowIfExists: Boolean; ReplaceClassDef: Boolean): tiscript_value;
-function CreateObjectInstance(const vm: HVM; Obj: Pointer; OfClass: tiscript_value): tiscript_value; overload;
-function CreateObjectInstance(const vm: HVM; Obj: Pointer; OfClass: WideString): tiscript_value; overload;
-procedure RegisterObject(const vm: HVM; Obj: tiscript_value; const VarName: WideString); overload;
+function GetNativeClass(const vm: HVM; const ClassName: WideString): tiscript_class;
+function RegisterNativeFunction(const vm: HVM; const Name: WideString; Handler: ptiscript_method; ThrowIfExists: Boolean = False): Boolean;
+function RegisterNativeClass(const vm: HVM; ClassDef: ptiscript_class_def; ThrowIfExists: Boolean; ReplaceClassDef: Boolean): tiscript_class;
+function CreateObjectInstance(const vm: HVM; Obj: Pointer; OfClass: tiscript_class): tiscript_object; overload;
+function CreateObjectInstance(const vm: HVM; Obj: Pointer; OfClass: WideString): tiscript_object; overload;
+procedure RegisterObject(const vm: HVM; Obj: tiscript_object; const VarName: WideString); overload;
 procedure RegisterObject(const vm: HVM; Obj: Pointer; const OfClass: WideString; const VarName: WideString); overload;
 procedure ThrowError(const vm: HVM; const Message: AnsiString); overload;
 procedure ThrowError(const vm: HVM; const Message: WideString); overload;
@@ -821,10 +827,12 @@ begin
   NI.throw_error(vm, PWideChar(Message));
 end;
 
+{ Returns true if an object (class, variable, constant etc) exists in the global namespace,
+  false otherwise }
 function IsNameExists(vm: HVM; const Name: WideString): boolean;
 var
-  var_name: tiscript_value;
-  var_value: tiscript_value;
+  var_name: tiscript_string;
+  var_value: tiscript_object;
   zns: tiscript_value;
 begin
   zns := NI.get_global_ns(vm);
@@ -833,11 +841,12 @@ begin
   Result := not NI.is_undefined(var_value);
 end;
 
-function GetNativeClass(const vm: HVM; const ClassName: WideString): tiscript_value;
+{ Returns tiscript value of type "class" having }
+function GetNativeClass(const vm: HVM; const ClassName: WideString): tiscript_class;
 var
   zns: tiscript_value;
-  tclass_name: tiscript_value;
-  class_def: tiscript_value;
+  tclass_name: tiscript_string;
+  class_def: tiscript_class;
 begin
   zns := NI.get_global_ns(vm);
   tclass_name  := NI.string_value(vm, PWideChar(ClassName), Length(ClassName));
@@ -848,14 +857,55 @@ begin
     Result := NI.undefined_value;
 end;
 
-function RegisterNativeClass(const vm: HVM; ClassDef: ptiscript_class_def; ThrowIfExists: Boolean; ReplaceClassDef: Boolean): tiscript_value;
+{ Returns true if a function registration was successfull,
+  false if a function with such name was already registered,
+  throws an exception otherwise }
+function RegisterNativeFunction(const vm: HVM; const Name: WideString; Handler: ptiscript_method; ThrowIfExists: Boolean = False): Boolean;
+var
+  method_def: ptiscript_method_def;
+  smethod_name: AnsiString;
+  func_def: tiscript_value;
+  func_name: tiscript_value;
+  zns: tiscript_value;
+begin
+  zns := NI.get_global_ns(vm);
+
+  smethod_name := Name;
+  func_name := NI.string_value(vm, PWideChar(Name), Length(Name));
+  func_def := NI.get_prop(vm, zns, func_name);
+
+  if NI.is_undefined(func_def) then
+  begin
+    New(method_def);
+    method_def.dispatch := nil;
+    method_def.name := StrNew(PAnsiChar(smethod_name));
+    method_def.handler := Handler;
+    method_def.tag := nil;
+    func_def := NI.native_function_value(vm, method_def);
+    if not NI.is_native_function(func_def) then
+    begin
+      raise Exception.CreateFmt('Failed to register native function "%s".', [Name]);
+    end;
+    NI.set_prop(vm, zns, func_name, func_def);
+    Result := True;
+  end
+    else
+  if NI.is_native_function(func_def) then
+  begin
+    Result := False;
+  end
+    else
+  begin
+    raise ESciterException.CreateFmt('Cannot register native function %s (unexprected error). Seems that object with such name already exists.', [Name]);
+  end;
+end;
+
+function RegisterNativeClass(const vm: HVM; ClassDef: ptiscript_class_def; ThrowIfExists: Boolean; ReplaceClassDef: Boolean): tiscript_class;
 var
   zns: tiscript_value;
-
   wclass_name: WideString;
-  tclass_name: tiscript_value;
-
-  class_def: tiscript_value;
+  tclass_name: tiscript_string;
+  class_def: tiscript_class;
 begin
   zns := NI.get_global_ns(vm);
 
@@ -888,7 +938,7 @@ begin
   end;
 end;
 
-function CreateObjectInstance(const vm: HVM; Obj: Pointer; OfClass: tiscript_value): tiscript_value;
+function CreateObjectInstance(const vm: HVM; Obj: Pointer; OfClass: tiscript_class): tiscript_object;
 begin
   if not NI.is_class(vm, OfClass) then
     raise ESciterException.CreateFmt('Cannot create object instance. Provided value is not a class.', []);
@@ -896,15 +946,15 @@ begin
   NI.set_instance_data(Result, Obj);
 end;
 
-function CreateObjectInstance(const vm: HVM; Obj: Pointer; OfClass: WideString): tiscript_value;
+function CreateObjectInstance(const vm: HVM; Obj: Pointer; OfClass: WideString): tiscript_object;
 var
-  t_class: tiscript_value;
+  t_class: tiscript_class;
 begin
   t_class := GetNativeClass(vm, OfClass);
   Result := CreateObjectInstance(vm, Obj, t_class);
 end;
 
-procedure RegisterObject(const vm: HVM; Obj: tiscript_value; const VarName: WideString);
+procedure RegisterObject(const vm: HVM; Obj: tiscript_object; const VarName: WideString);
 var
   zns: tiscript_value;
   var_name: tiscript_value;
@@ -934,7 +984,7 @@ begin
 end;
 
 function _SciterAPI: PSciterApi; external 'sciter32.dll' name 'SciterAPI'; stdcall;
-
+{ SciterValue to Variant conversion }
 function S2V(Value: PSciterValue; var OleValue: OleVariant): UINT;
 var
   pType: TSciterValueType;
@@ -989,6 +1039,7 @@ begin
       end;
     T_CURRENCY:
       begin
+        // TODO:
         Result := FAPI.ValueInt64Data(Value, i64Result);
         cResult := CompToCurrency(i64Result);
         //cResult := PCurrency(i64Result)^;
@@ -1073,11 +1124,11 @@ begin
       end;
     else
       begin
-        raise ESciterNotImplementedException.CreateFmt('Not implemented (%d)', [Integer(pType)]);
+        raise ESciterNotImplementedException.CreateFmt('Conversion from Sciter type %d to Variant is not implemented.', [Integer(pType)]);
       end;
   end;
 end;
-
+{ Variant to SciterValue conversion }
 function V2S(const Value: OleVariant; SciterValue: PSciterValue): UINT;
 var
   sWStr: WideString;
@@ -1178,6 +1229,7 @@ begin
   end;
 end;
 
+{ tiscript value to Variant conversion }
 function T2V(const vm: HVM; Value: tiscript_value): OleVariant;
 var
   sValue: TSciterValue;
@@ -1186,6 +1238,7 @@ begin
   S2V(@sValue, Result);
 end;
 
+{ Variant to tiscript value conversion }
 function V2T(const vm: HVM; const Value: OleVariant): tiscript_value;
 var
   sValue: TSciterValue;
@@ -1196,7 +1249,12 @@ begin
   Result := tResult;
 end;
 
-{ TSciter }
+{ ESciterNullPointerException }
+
+constructor ESciterNullPointerException.Create;
+begin
+  inherited Create('The argument cannot be null.');
+end;
 
 initialization
   FAPI := _SciterAPI;

@@ -1,7 +1,7 @@
 object MainForm: TMainForm
-  Left = 475
-  Top = 316
-  Width = 919
+  Left = 413
+  Top = 237
+  Width = 814
   Height = 624
   Caption = 'SciDe - test form'
   Color = clBtnFace
@@ -20,7 +20,7 @@ object MainForm: TMainForm
   object pnlContainer: TPanel
     Left = 289
     Top = 0
-    Width = 614
+    Width = 509
     Height = 566
     Align = alClient
     BevelOuter = bvNone
@@ -29,7 +29,7 @@ object MainForm: TMainForm
     object spl1: TSplitter
       Left = 0
       Top = 377
-      Width = 614
+      Width = 509
       Height = 5
       Cursor = crVSplit
       Align = alBottom
@@ -37,7 +37,7 @@ object MainForm: TMainForm
     object sctr1: TSciter
       Left = 0
       Top = 0
-      Width = 614
+      Width = 509
       Height = 377
       Align = alClient
       BevelInner = bvSpace
@@ -46,15 +46,16 @@ object MainForm: TMainForm
       BorderWidth = 1
       Caption = 'Sciter1'
       TabOrder = 0
+      OnHandleCreated = sctr1HandleCreated
       OnStdErr = sctr1StdErr
       OnStdOut = sctr1StdErr
       OnStdWarn = sctr1StdErr
-      OnHandleCreated = sctr1HandleCreated
+      Html = '<h1>'#1055#1088#1080#1074#1077#1090'</h1>'
     end
     object txtLog: TMemo
       Left = 0
       Top = 382
-      Width = 614
+      Width = 509
       Height = 184
       Align = alBottom
       Font.Charset = RUSSIAN_CHARSET
@@ -72,7 +73,7 @@ object MainForm: TMainForm
     Top = 0
     Width = 289
     Height = 566
-    ActivePage = tsNative
+    ActivePage = tsDOM
     Align = alLeft
     MultiLine = True
     TabOrder = 1
@@ -180,6 +181,15 @@ object MainForm: TMainForm
         Caption = 'Call native form'
         TabOrder = 0
         OnClick = cmdCallNativeFormClick
+      end
+      object cmdCallNativeFunction: TButton
+        Left = 10
+        Top = 40
+        Width = 261
+        Height = 25
+        Caption = 'Call native function'
+        TabOrder = 1
+        OnClick = cmdCallNativeFunctionClick
       end
     end
   end

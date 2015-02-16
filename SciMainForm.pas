@@ -31,6 +31,8 @@ type
     cmdInnerHtml: TButton;
     tsNative: TTabSheet;
     cmdCallNativeForm: TButton;
+    cmdCallNativeFunction: TButton;
+    procedure Button1Click(Sender: TObject);
     procedure cmd12Click(Sender: TObject);
     procedure cmd1Click(Sender: TObject);
     procedure cmd2Click(Sender: TObject);
@@ -42,6 +44,7 @@ type
     procedure cmd8Click(Sender: TObject);
     procedure cmd9Click(Sender: TObject);
     procedure cmdCallNativeFormClick(Sender: TObject);
+    procedure cmdCallNativeFunctionClick(Sender: TObject);
     procedure cmdChangeHeadingsTextClick(Sender: TObject);
     procedure cmdInnerHtmlClick(Sender: TObject);
     procedure cmdRegisterOLEClick(Sender: TObject);
@@ -75,6 +78,11 @@ implementation
 uses ComObj, SciterOle, SciterNative, NativeForm;
 
 {$R *.dfm}
+
+procedure TMainForm.Button1Click(Sender: TObject);
+begin
+  sctr1.Parent := tsNative;
+end;
 
 procedure TMainForm.cmd12Click(Sender: TObject);
 begin
@@ -185,6 +193,12 @@ begin
   sctr1.LoadURL(FExamplesBase + 'native-form.htm');
 end;
 
+procedure TMainForm.cmdCallNativeFunctionClick(Sender: TObject);
+begin
+  sctr1.RegisterNativeFunction('SayHello', @SayHelloNative);
+  sctr1.LoadURL(FExamplesBase + 'native-function.htm');
+end;
+
 procedure TMainForm.cmdChangeHeadingsTextClick(Sender: TObject);
 var
   i: Integer;
@@ -256,7 +270,7 @@ begin
   pc.ActivePage := tsBrowser;
 
   FExamplesBase := ExtractFileDir(Application.ExeName);
-  FExamplesBase := 'file:///' + StringReplace(FExamplesBase, '\', '/', [rfReplaceAll]) + '/samples/scide/';
+  FExamplesBase := sctr1.FilePathToURL(FExamplesBase) + '/samples/scide/';
 
   FHomeURL := FExamplesBase + 'index.htm';
   sctr1.LoadUrl(FHomeURL);
@@ -317,7 +331,7 @@ end;
 
 function SayHelloNative(c: HVM): tiscript_value; cdecl;
 begin
-  ShowMessage('OK');
+  ShowMessage('Hello!');
   Result := NI.int_value(0);
 end;
 

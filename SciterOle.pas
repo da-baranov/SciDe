@@ -27,9 +27,9 @@ type
   end;
 
 function GetOleObjectGuid(const Obj: IDispatch): AnsiString;
-function FindOrCreateOleObjectClass(vm: HVM; const Dispatch: IDispatch): tiscript_value;
-function RegisterOleObject(vm: HVM; const Dispatch: IDispatch; const Name: WideString): tiscript_value;
-function WrapOleObject(vm: HVM; const Dispatch: IDispatch): tiscript_value;
+function FindOrCreateOleObjectClass(vm: HVM; const Dispatch: IDispatch): tiscript_class;
+function RegisterOleObject(vm: HVM; const Dispatch: IDispatch; const Name: WideString): tiscript_object;
+function WrapOleObject(vm: HVM; const Dispatch: IDispatch): tiscript_object;
 
 implementation
 
@@ -56,7 +56,7 @@ begin
   end;
 end;
 
-function FindOrCreateOleObjectClass(vm: HVM; const Dispatch: IDispatch): tiscript_value;
+function FindOrCreateOleObjectClass(vm: HVM; const Dispatch: IDispatch): tiscript_class;
 var
   pOleClassInfo: ISciterOleClassInfo;
   sGuid: AnsiString;
@@ -75,9 +75,9 @@ begin
   end;
 end;
 
-function WrapOleObject(vm: HVM; const Dispatch: IDispatch): tiscript_value;
+function WrapOleObject(vm: HVM; const Dispatch: IDispatch): tiscript_object;
 var
-  ole_class_def: tiscript_value;
+  ole_class_def: tiscript_class;
 begin
   if Dispatch = nil then
   begin
@@ -90,10 +90,10 @@ begin
   Result := SciterApi.CreateObjectInstance(vm, Pointer(Dispatch), ole_class_def);
 end;
 
-function RegisterOleObject(vm: HVM; const Dispatch: IDispatch; const Name: WideString): tiscript_value;
+function RegisterOleObject(vm: HVM; const Dispatch: IDispatch; const Name: WideString): tiscript_object;
 var
-  ole_class_def: tiscript_value;
-  class_instance: tiscript_value;
+  ole_class_def: tiscript_class;
+  class_instance: tiscript_object;
 begin
   if SciterApi.IsNameExists(vm, Name) then
     raise ESciterOleException.CreateFmt('Cannot register OLE Object: variable with name %s already exists.', [Name]);
@@ -351,7 +351,6 @@ begin
     begin
       pDisp := IDispatch(pSelf);
 
-      // Key
       oKey := T2V(vm, key);
 
       oValue := DispatchGetItem(pDisp, oKey);
@@ -412,7 +411,7 @@ var
 begin
   Result := NI.nothing_value;
   try
-    sMethodName := AnsiString(PAnsiChar(tag));
+    sMethodName := ISciterMethodInfo(tag).Name;
 
     pSender := NI.get_instance_data(obj);
     pDispatch := IDispatch(pSender);
@@ -436,7 +435,7 @@ var
   oValue: OleVariant;
   sMethodName: AnsiString;
 begin
-  sMethodName := AnsiString(PAnsiChar(tag));
+  sMethodName := ISciterMethodInfo(tag).Name;
   try
     pSender := NI.get_instance_data(obj);
     pDispatch := IDispatch(pSender);
@@ -461,7 +460,7 @@ var
   oresult: OleVariant;
 begin
   Result := NI.nothing_value;
-  sMethodName := AnsiString(PAnsiChar(tag));
+  sMethodName := ISciterMethodInfo(tag).Name;
   try
     pSender    := NI.get_instance_data(obj);
     pDisp      := IDispatch(pSender);
@@ -506,7 +505,20 @@ end;
 { TSciterOleWrapper }
 
 procedure TSciterOleNative.Build(Ptr: Pointer);
+var
+  pDisp: IDispatch;
 begin
+  if Ptr = nil then
+    raise ESciterNullPointerException.Create;
+
+  try
+    pDisp := IDispatch(Ptr);
+    pDisp._AddRef;
+    pDisp._Release;
+  except
+    on E:Exception do
+      raise ESciterException.Create('Cannot cast pointer to IDispatch.');
+  end;
   Build(IDispatch(Ptr));
 end;
 
@@ -519,6 +531,9 @@ procedure TSciterOleNative.Build(const Dispatch: IDispatch);
 var
   pTypeInfo: ITypeInfo;
 begin
+  if Dispatch = nil then
+    raise ESciterNullPointerException.Create;
+    
   OleCheck(Dispatch.GetTypeInfo(0, LOCALE_USER_DEFAULT, pTypeInfo));
   Build(pTypeInfo);
 end;
@@ -533,6 +548,9 @@ var
   cNames: Integer;
   pMethodInfo: ISciterMethodInfo;
 begin
+  if TypeInfo = nil then
+    raise ESciterNullPointerException.Create;
+    
   try
     OleCheck(TypeInfo.GetTypeAttr(typeAttr));
 
