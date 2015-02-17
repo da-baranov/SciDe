@@ -101,6 +101,7 @@ begin
   Assert(Dispatch <> nil, 'OLE object is undefined');
       
   ole_class_def := FindOrCreateOleObjectClass(vm, Dispatch);
+  Dispatch._AddRef;
   class_instance := SciterApi.CreateObjectInstance(vm, Pointer(Dispatch), ole_class_def);
   SciterApi.RegisterObject(vm, class_instance, Name);
 
@@ -325,10 +326,11 @@ end;
 procedure OleFinalizerHandler(vm: HVM; obj: tiscript_value); cdecl;
 var
   pDisp: IDispatch;
+  iCounter: Integer;
 begin
   try
     pDisp := IDispatch(NI.get_instance_data(obj));
-    pDisp._Release;
+    iCounter := pDisp._Release;
     NI.set_instance_data(obj, nil);
   except
     on E:Exception do
@@ -397,7 +399,7 @@ begin
   if instance_data <> nil then
   begin
     pthis := IDispatch(instance_data);
-    pthis._AddRef();
+    //pthis._AddRef();
     NI.set_instance_data(new_self, Pointer(pthis));
   end;
 end;
@@ -454,6 +456,7 @@ var
   sMethodName: AnsiString;
   argc: Integer;
   arg: tiscript_value;
+  pthis: tiscript_object;
   sarg: TSciterValue;
   oargs: array of OleVariant;
   i: Integer;
@@ -462,7 +465,10 @@ begin
   Result := NI.nothing_value;
   sMethodName := ISciterMethodInfo(tag).Name;
   try
-    pSender    := NI.get_instance_data(obj);
+    pthis := NI.get_arg_n(vm, 0);
+    // super = arg(1)
+    //
+    pSender    := NI.get_instance_data(pthis);
     pDisp      := IDispatch(pSender);
 
     argc := NI.get_arg_count(vm);

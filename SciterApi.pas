@@ -397,39 +397,33 @@ type
     SciterVersion: function(major: Integer): UINT; stdcall;
     SciterDataReady: function(hwnd: HWINDOW; uri: PWideChar; data: PByte; dataLength: UINT): BOOL; stdcall;
     SciterDataReadyAsync: function(hwnd: HWINDOW; uri: PWideChar; data: PByte; dataLength: UINT; requestId: LPVOID): BOOL; stdcall;
-{$ifdef WINDOWS}
     SciterProc: function(hwnd: HWINDOW; msg: Cardinal; wParam: Integer; lParam: Integer): LRESULT; stdcall;
     SciterProcND: function(hwnd: HWINDOW; msg: Cardinal; wParam: Integer; lParam: Integer; var pbHANDLED: Integer): LRESULT; stdcall;
-{$endif}
-    SciterLoadFile: function(hWndSciter: HWND; filename:LPCWSTR): Integer; stdcall;
-    SciterLoadHtml: function(hWndSciter: HWINDOW; html: PByte; htmlSize: UINT; baseUrl: PWideChar): SCDOM_RESULT; stdcall;
-    SciterSetCallback: function(hWndSciter: HWINDOW; cb: LPSciterHostCallback; cbParam: Pointer): SCDOM_RESULT; stdcall;
+    SciterLoadFile: function(hWndSciter: HWINDOW; filename:LPCWSTR): BOOL; stdcall;
+    SciterLoadHtml: function(hWndSciter: HWINDOW; html: PByte; htmlSize: UINT; baseUrl: PWideChar): BOOL; stdcall;
+    SciterSetCallback: procedure(hWndSciter: HWINDOW; cb: LPSciterHostCallback; cbParam: Pointer); stdcall;
     SciterSetMasterCSS: function(utf: PAnsiChar; numBytes: UINT): BOOL; stdcall;
     SciterAppendMasterCSS: function(utf: PAnsiChar; numBytes: UINT): BOOL; stdcall;
     SciterSetCSS: function(hWndSciter: HWindow; utf8: PAnsiChar; numBytes: UINT; baseUrl: PWideChar; mediaType: PWideChar): BOOL; stdcall;
     SciterSetMediaType: function(hWndSciter: HWINDOW; mediaTYpe: PWideChar): BOOL; stdcall;
-    SciterSetMediaVars: function(hWndSciter: HWND; const mediaVars: PSciterValue): BOOL; stdcall;
+    SciterSetMediaVars: function(hWndSciter: HWINDOW; const mediaVars: PSciterValue): BOOL; stdcall;
     SciterGetMinWidth: function(hwnd: HWINDOW): UINT; stdcall;
     SciterGetMinHeight: function(hwnd: HWINDOW; width: UINT): UINT; stdcall;
     SciterCall: function(hWnd: HWINDOW; functionName: PAnsiChar; argc: UINT; argv: PSciterValue; var retval: TSciterValue): BOOL; stdcall;
     SciterEval: function(hwnd: HWINDOW; script: PWideChar; scriptLength: UINT; var pretval: TSciterValue): BOOL; stdcall;
     SciterUpdateWindow: procedure(hwnd: HWINDOW); stdcall;
-{$ifdef WINDOWS}
     SciterTranslateMessage: function(var lpMsg: TMsg): BOOL; stdcall;
-{$endif}
     SciterSetOption: function(hwnd: HWINDOW; option: UINT; value: PUINT): BOOL; stdcall;
     SciterGetPPI: procedure(hWndSciter: HWINDOW; var px: UINT; var py: UINT); stdcall;
     SciterGetViewExpando: function( hwnd: HWINDOW; pval: PSciterValue ): BOOL; stdcall;
     SciterEnumUrlData: Pointer;  // TODO:
-{$ifdef WINDOWS}
     SciterRenderD2D: TProcPointer;
     SciterD2DFactory: TProcPointer;
     SciterDWFactory: TProcPointer;
-{$endif}
     SciterGraphicsCaps: function(var pcaps: UINT): BOOL; stdcall;
     SciterSetHomeURL: function(hWndSciter: HWINDOW; baseUrl: PWideChar): BOOL; stdcall;
     SciterCreateWindow: function( creationFlags: UINT; var frame: TRect; delegate: PSciterWindowDelegate; delegateParam: LPVOID; parent: HWINDOW): HWINDOW; stdcall;
-    SciterSetupDebugOutput: function(hwndOrNull: HWINDOW; param: Pointer; pfOutput: PDEBUG_OUTPUT_PROC): SCDOM_RESULT; stdcall;
+    SciterSetupDebugOutput: procedure(hwndOrNull: HWINDOW; param: Pointer; pfOutput: PDEBUG_OUTPUT_PROC); stdcall;
     SciterDebugSetupClient: TProcPointer;
     SciterDebugAddBreakpoint: TProcPointer;
     SciterDebugRemoveBreakpoint: TProcPointer;
@@ -588,6 +582,10 @@ type
   end;
 
   PSciterApi = ^ISciterAPI;
+
+  
+  SciterApiFunc = function: PSciterApi; stdcall;
+  PSciterApiFunc = ^SciterApiFunc;
 
     INITIALIZATION_EVENTS =
     (
@@ -810,6 +808,7 @@ implementation
 var
   FAPI: PSciterApi;
   FNI: ptiscript_native_interface;
+  HSCITER: HMODULE;
 
 
 function NI: ptiscript_native_interface;
@@ -959,7 +958,7 @@ var
   zns: tiscript_value;
   var_name: tiscript_value;
 begin
-  if not NI.is_object(Obj) then
+  if not NI.is_native_object(Obj) then
     raise ESciterException.CreateFmt('Cannot register object instance. Provided value is not an object.', []);
 
   if IsNameExists(vm, VarName) then
@@ -979,11 +978,27 @@ begin
 end;
 
 function API: PSciterApi;
+var
+  pFuncPtr: SciterApiFunc;
 begin
+  if FAPI = nil then
+  begin
+    HSCITER := LoadLibrary('sciter32.dll');
+    if HSCITER = 0 then
+      raise ESciterException.Create('Failed to load Sciter DLL.');
+    pFuncPtr := GetProcAddress(HSCITER, 'SciterAPI');
+    if pFuncPtr = nil then
+      raise ESciterException.Create('Failed to get Sciter entry function.');
+
+    FAPI := pFuncPtr();
+    FNI := FAPI.TIScriptAPI;
+  end;
   Result := FAPI;
 end;
 
+
 function _SciterAPI: PSciterApi; external 'sciter32.dll' name 'SciterAPI'; stdcall;
+
 { SciterValue to Variant conversion }
 function S2V(Value: PSciterValue; var OleValue: OleVariant): UINT;
 var
@@ -1104,7 +1119,7 @@ begin
           if pbResult <> nil then
           begin
             pDispValue := IDispatch(Pointer(pbResult));
-            pDispValue._AddRef;
+            //pDispValue._AddRef;
             OleValue := OleVariant(pDispValue);
           end
             else
@@ -1219,7 +1234,7 @@ begin
     varDispatch:
       begin
         pDisp := IDispatch(Value);
-        pDisp._AddRef;
+        //pDisp._AddRef;
         Result := FAPI.ValueBinaryDataSet(SciterValue, PByte(pDisp), 1, T_OBJECT, 0);
       end;
     else
@@ -1257,7 +1272,11 @@ begin
 end;
 
 initialization
-  FAPI := _SciterAPI;
-  FNI  := FAPI.TIScriptAPI;
+  HSCITER := 0;
+
+finalization
+  if HSCITER <> 0 then
+    FreeLibrary(HSCITER);
+
 
 end.

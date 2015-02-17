@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+  <title>SciDe examples</title>
+  <style>
+  @import url(res:richtext.css);
+  
+  div.out
+  {
+    padding: 10px;
+    margin: 10px;
+    min-height: 40px;
+    border: 1px dotted #000000;
+  }
+  </style>
+  <script type="text/tiscript">
+  function self#cmdMSXML.onClick()
+  {
+    var doc = CreateObject("MSXML2.DOMDocument");
+    doc.loadXML("<div />");
+    var root = doc.documentElement;  
+    for (var i = 0; i < 10; i++)
+    {
+      var heading = root.appendChild(doc.createElement("h"));
+      var textNode = heading.appendChild(doc.createTextNode("Heading " + i));
+    }  
+    var doc1 = doc;
+    self.select("#oleOut1").text = doc1.xml;
+    doc1 = null;
+    doc = null;
+  }
+  
+  function self#cmdRegExp.onClick()
+  {
+    var re = CreateObject("VBScript.RegExp");
+    re.Pattern = "\\d+";
+    re.Global = true;
+    var arr = [];
+    var matches = re.Execute(self#txtRegExpInp.text);
+    for (var match in matches)
+    {
+      arr.push(match.Value);
+    }
+    self.select("#oleOut2").text = "Found numeric values: " + arr.join(", ");
+    matches = null;
+    re = null;
+  }
+  
+  var word;
+  function self#cmdOpenWord.onClick()
+  {
+    word = CreateObject("Word.Application");
+    word.Visible = true;
+    var doc = word.Documents.Add();
+    doc.Paragraphs[doc.Paragraphs.Count].Range.Text = "Hello from Sciter! Привет от Sciter!";
+  }
+  
+  function self#cmdCloseWord.onClick()
+  {
+    if (word)
+    {
+      word.Quit(false);
+      word = null;
+    }
+  }
+  
+  function self#cmdTestSayHello.onClick()
+  {
+    Test.SayHello();
+  }
+  
+  function self#cmdCallNativeFunction.onClick()
+  {
+    SayHello();
+  }
+  
+  var frm;
+  function self#cmdShowNativeForm.onClick()
+  {
+    if (frm == null)
+    {
+      frm = new NativeForm();
+      frm.Show();
+    }
+  }
+  
+  function self#cmdCloseNativeForm.onClick()
+  {
+    if (frm)
+    {
+      frm.Close();
+      frm = null;
+    }
+  }
+  
+  function self#cmdShowRichText.onClick()
+  {
+    self#richOut.text = self#txtRich.text;
+  }
+  
+  function self#cmdShowRichHTML.onClick()
+  {
+    self#richOut.text = self#txtRich.value;
+  }
+  
+  function self#cmdPrintOut.onClick()
+  {
+    stdout.println("An info message from Sciter");
+  }
+  
+  function self#cmdPrintError.onClick()
+  {
+    stderr.println("An error from Sciter");
+  }
+  
+  </script>
+</head>
+<body>
+  <h1>SCIDE - Sciter for Delphi</h1>
+  <section>
+    <h2>Basic DOM manipulations</h2>
+    <button id="cmdCreateHeadings">Create headings</button>
+    <button id="cmdChangeHeadingsText">Change headings text</button>
+    <button id="cmdRemoveHeadings">Remove headings</button>
+    <div id="divHeadings" class="out">
+    
+    </div>
+  </section>
+  
+  <section>
+    <h2>OLE Example 1. Creating and manipulating XML document using MSXML</h2>
+    <button id="cmdMSXML">Run MSXML</button>
+    <div id="oleOut1" class="out">
+    
+    </div>
+  </section>
+  
+  <section>
+    <h2>OLE Example 2. Parsing text with regular expressions</h2>
+    <div>
+      <button id="cmdRegExp">Run VBScript.RegExp</button>
+    </div>
+    <div>
+      <textarea id="txtRegExpInp" style="width: 80%; height: 200px">
+      US oilfield services firm Halliburton has said it will cut up to 8% of its global workforce of 80,000, 
+      citing a "challenging market environment" as the oil price continues to tumble. Halliburton says the 
+      cuts will be across all operations of the company. 
+      Shares in Halliburton - the world's second-largest oilfield services company - 
+      fell nearly 3%. The oil price has nearly halved since June as a global supply glut 
+      and weak demand push prices down. "We value every employee we have, but unfortunately we are
+      faced with the difficult reality that reductions are necessary to work through this challenging market environment," 
+      said Halliburton in a statement to the BBC. Halliburton had previously announced that it was planning job 
+      cuts in a conference call to discuss earnings on 20 January. The company reported fourth quarter profits 
+      of $901m (£591m), a 14% increase from the same period a year earlier.</textarea>
+    </div>
+    <div id="oleOut2" class="out">
+    
+    </div>
+  </section>
+  
+  <section>
+    <h2>OLE Example 3. Call Microsoft Word</h2>
+    <button id="cmdOpenWord">Run Microsoft Word</button>
+    <button id="cmdCloseWord">Close Microsoft Word</button>
+  </section>
+  
+  <section>
+    <h2>OLE Example 4. Invoke externally passed COM object</h2>
+    <button id="cmdTestSayHello">Invoke Test.SayHello</button>
+  </section>
+  
+  <section>
+    <h2>Call native function implemented in Delphi</h2>
+    <button id="cmdCallNativeFunction">Say hello</button>
+  </section>
+  
+  <section>
+    <h2>Call native class implemented in Delphi</h2>
+    <button id="cmdShowNativeForm">Show native form</button>
+    <button id="cmdCloseNativeForm">Close native form</button>
+  </section>
+  
+  <section>
+    <h2>Richtext</h2>
+    <div>
+      <button id="cmdShowRichText">Show richedit text</button>
+      <button id="cmdShowRichHTML">Show richedit HTML</button>
+      <richtext style="height: 150px" id="txtRich">
+        <h4>SciDe</h4>
+      </richtext>
+      <pre id="richOut" class="out">
+    
+      </pre>
+    </div>
+  </section>
+      
+  
+  <section>
+    <h2>Dump this Document DOM tree</h2>
+    <button id="cmdDump">Run</button>
+    <pre id="preDump" class="out">
+    
+    </pre>
+  </section>
+  
+  <section>
+    <h2>Print something</h2>
+    <button id="cmdPrintOut">An info message</button>
+    <button id="cmdPrintError">An error message</button>
+  </section>
+</body>
+</html>

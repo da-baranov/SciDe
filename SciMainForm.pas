@@ -5,58 +5,31 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, SciterApi, TiScriptApi, Sciter, StdCtrls, OleCtrls,
-  ExtCtrls, ComCtrls, ShellCtrls, Menus;
+  ExtCtrls, ComCtrls, ShellCtrls, Menus, ComObj, ActiveX, SciDeDemo_TLB,
+  ComServ;
 
 type
   TMainForm = class(TForm)
     Actions1: TMenuItem;
-    cmd1: TButton;
-    cmd4: TButton;
-    cmdChangeHeadingsText: TButton;
-    cmdRemoveHeadings: TButton;
-    cmdUnsubscribe: TButton;
+    ctxSciter: TPopupMenu;
     DumpHTML1: TMenuItem;
     mm1: TMainMenu;
+    mnuElementAtCursor: TMenuItem;
     NavigatetoSciterwebsite1: TMenuItem;
     pc: TPageControl;
     pnlContainer: TPanel;
-    sctr1: TSciter;
+    Sciter1: TSciter;
     spl1: TSplitter;
-    ts3: TTabSheet;
-    tsBrowser: TTabSheet;
     tsDOM: TTabSheet;
-    tv1: TShellTreeView;
     txtLog: TMemo;
-    cmdSetInnerText: TButton;
-    cmdInnerHtml: TButton;
-    tsNative: TTabSheet;
-    cmdCallNativeForm: TButton;
-    cmdCallNativeFunction: TButton;
-    procedure Button1Click(Sender: TObject);
-    procedure cmd12Click(Sender: TObject);
-    procedure cmd1Click(Sender: TObject);
-    procedure cmd2Click(Sender: TObject);
-    procedure cmd3Click(Sender: TObject);
-    procedure cmd4Click(Sender: TObject);
-    procedure cmd5Click(Sender: TObject);
-    procedure cmd6Click(Sender: TObject);
-    procedure cmd7Click(Sender: TObject);
-    procedure cmd8Click(Sender: TObject);
-    procedure cmd9Click(Sender: TObject);
-    procedure cmdCallNativeFormClick(Sender: TObject);
-    procedure cmdCallNativeFunctionClick(Sender: TObject);
-    procedure cmdChangeHeadingsTextClick(Sender: TObject);
-    procedure cmdInnerHtmlClick(Sender: TObject);
-    procedure cmdRegisterOLEClick(Sender: TObject);
-    procedure cmdRemoveHeadingsClick(Sender: TObject);
-    procedure cmdSetInnerTextClick(Sender: TObject);
-    procedure cmdUnsubscribeClick(Sender: TObject);
+    GC: TButton;
     procedure DumpHTML1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure GCClick(Sender: TObject);
+    procedure mnuElementAtCursorClick(Sender: TObject);
     procedure NavigatetoSciterwebsite1Click(Sender: TObject);
-    procedure sctr1HandleCreated(Sender: TObject);
-    procedure sctr1StdErr(ASender: TObject; const msg: WideString);
-    procedure tv1Change(Sender: TObject; Node: TTreeNode);
+    procedure OnSciterOut(ASender: TObject; const msg: WideString);
+    procedure Sciter1DocumentComplete(ASender: TObject; const url: WideString);
   private
     FExamplesBase: WideString;
     FHomeUrl: WideString;
@@ -68,6 +41,14 @@ type
     procedure OnElementSize(ASender: TObject; const target: IElement);
   end;
 
+  { For testing purposes }
+  TTest = class(TAutoIntfObject, ITest)
+  public
+    constructor Create;
+    destructor Destroy; override;
+    procedure SayHello; safecall;
+  end;
+
 function SayHelloNative(c: HVM): tiscript_value; cdecl;
 
 var
@@ -75,221 +56,114 @@ var
 
 implementation
 
-uses ComObj, SciterOle, SciterNative, NativeForm;
+uses SciterOle, SciterNative, NativeForm;
 
 {$R *.dfm}
-
-procedure TMainForm.Button1Click(Sender: TObject);
-begin
-  sctr1.Parent := tsNative;
-end;
-
-procedure TMainForm.cmd12Click(Sender: TObject);
-begin
-  sctr1.SetFocus;
-end;
-
-procedure TMainForm.cmd1Click(Sender: TObject);
-var
-  pBody: TElement;
-begin
-  pBody := sctr1.Root.Select('body');
-  if pBody <> nil then
-  begin
-    pBody.OnSize := OnElementSize;
-    pBody.OnMouse := OnElementMouse;
-    pBody.OnControlEvent := OnElementControlEvent;
-  end;
-end;
-
-procedure TMainForm.cmd2Click(Sender: TObject);
-begin
-  sctr1.RegisterNativeFunction('SayHello', @SayHelloNative);
-  sctr1.Call('SayHello', []);
-end;
-
-procedure TMainForm.cmd3Click(Sender: TObject);
-begin
-  try
-    ShowMessage(sctr1.Call('hello_from_sciter', []));
-  except
-    on E:Exception do
-      ShowMessage(E.Message);
-  end;
-end;
-
-procedure TMainForm.cmd4Click(Sender: TObject);
-var
-  pBody: IElement;
-  pH: IElement;
-  i: Integer;
-begin
-  pBody := sctr1.Select('body');
-  for i := 0 to 10 do
-  begin
-    pH := pBody.CreateElement('h2', 'Heading ' + IntToStr(i));
-    pBody.AppendChild(pH);
-  end;
-end;
-
-procedure TMainForm.cmd5Click(Sender: TObject);
-var
-  pBody: IElement;
-  pH: IElement;
-begin
-  pBody := sctr1.Root.Select('body');
-  pH := sctr1.Root.CreateElement('h1', 'Heading1');
-  pBody.AppendChild(pH);
-end;
-
-procedure TMainForm.cmd6Click(Sender: TObject);
-var
-  pBody: IElement;
-  sMessage: AnsiString;
-begin
-  pBody := sctr1.Select('body');
-  sMessage := Format('<body> has %d child nodes. First node tag is %s',
-    [pBody.ChildrenCount, pBody.GetChild(0).Tag]);
-  ShowMessage(sMessage);
-end;
-
-procedure TMainForm.cmd7Click(Sender: TObject);
-var
-  pBody: IElement;
-begin
-  pBody := sctr1.Root.Select('body');
-  pBody.Attr['lang'] := 'RU';
-  pBody.StyleAttr['background-color'] := '#FFFFFF';
-  ShowMessage(pBody.StyleAttr['width']);
-  ShowMessage(pBody.OuterHtml);
-end;
-
-procedure TMainForm.cmd8Click(Sender: TObject);
-var
-  pH: IElementCollection;
-  i: Integer;
-begin
-  pH := sctr1.Root.SelectAll('h1');
-  for i := 0 to pH.Count - 1 do
-    pH[i].Delete;
-end;
-
-procedure TMainForm.cmd9Click(Sender: TObject);
-var
-  pH: IElementCollection;
-  i: Integer;
-begin
-  pH := sctr1.Root.SelectAll('h1');
-  for i := 0 to pH.Count - 1 do
-    pH[i].InnerHtml := '<img src="theme:button-defaulted"/ >Heading ' + IntToStr(i);
-end;
-
-procedure TMainForm.cmdCallNativeFormClick(Sender: TObject);
-var
-  nf: TNativeForm;
-begin
-  // nf := TNativeForm.Create;
-  // RegisterNativeClass(sctr1.VM, nf.SciterClassDef, false, false);
-  sctr1.LoadURL(FExamplesBase + 'native-form.htm');
-end;
-
-procedure TMainForm.cmdCallNativeFunctionClick(Sender: TObject);
-begin
-  sctr1.RegisterNativeFunction('SayHello', @SayHelloNative);
-  sctr1.LoadURL(FExamplesBase + 'native-function.htm');
-end;
-
-procedure TMainForm.cmdChangeHeadingsTextClick(Sender: TObject);
-var
-  i: Integer;
-  pList: IElementCollection;
-  pItem: IElement;
-begin
-  pList := sctr1.SelectAll('h2');
-  for i := 0 to pList.Count - 1 do
-  begin
-    pItem := pList[i];
-    pItem.Text := 'Heading ' + IntToStr(i) + ' - text changed at ' + DateTimeToStr(Now);
-  end;
-end;
-
-procedure TMainForm.cmdInnerHtmlClick(Sender: TObject);
-var
-  pDiv: IElement;
-begin
-  pDiv := sctr1.Root.Select('#content');
-  if pDiv <> nil then
-    pDiv.InnerHtml := '<h3>Inner HTML set at ' + DateTimeToStr(Now) + '</h3>';
-end;
-
-procedure TMainForm.cmdRegisterOLEClick(Sender: TObject);
-var
-  oDisp: OleVariant;
-  pDisp: IDispatch;
-begin
-  oDisp := CreateOleObject('MSXML2.DOMDocument');
-  oDisp.LoadXml('<x />');
-  pDisp := IDispatch(oDisp);
-  sctr1.RegisterComObject('xml', pDisp);
-end;
-
-procedure TMainForm.cmdRemoveHeadingsClick(Sender: TObject);
-var
-  pList: IElementCollection;
-begin
-  pList := sctr1.SelectAll('h2');
-  pList.RemoveAll;
-end;
-
-procedure TMainForm.cmdSetInnerTextClick(Sender: TObject);
-var
-  pDiv: IElement;
-begin
-  pDiv := sctr1.Root.Select('#content');
-  if pDiv <> nil then
-    pDiv.Text := 'Inner text set at ' + DateTimeToStr(Now);
-end;
-
-procedure TMainForm.cmdUnsubscribeClick(Sender: TObject);
-var
-  pBody: TElement;
-begin
-  pBody := sctr1.Root.Select('body');
-  pBody.OnMouse := nil;
-  pBody.OnControlEvent := nil;
-end;
+{$R Richtext.res}
 
 procedure TMainForm.DumpHTML1Click(Sender: TObject);
 begin
   txtLog.Lines.Clear;
-  txtLog.Text := sctr1.Html;
+  txtLog.Text := Sciter1.Root.OuterHtml;
 end;
 
 procedure TMainForm.FormCreate(Sender: TObject);
+var
+  nf: TNativeForm;
+  pTest: ITest;
 begin
-  pc.ActivePage := tsBrowser;
-
   FExamplesBase := ExtractFileDir(Application.ExeName);
-  FExamplesBase := sctr1.FilePathToURL(FExamplesBase) + '/samples/scide/';
+  FExamplesBase := Sciter1.FilePathToURL(FExamplesBase) + '/';
 
-  FHomeURL := FExamplesBase + 'index.htm';
-  sctr1.LoadUrl(FHomeURL);
-  tv1.Root := ExtractFileDir(Application.ExeName) + '\samples';
+  FHomeURL := FExamplesBase + 'scide.htm';
+  Sciter1.LoadUrl(FHomeURL);
+
+  // Register native function
+  Sciter1.RegisterNativeFunction('SayHello', @SayHelloNative);
+
+  // Register native form
+  nf := TNativeForm.Create;
+  Sciter1.RegisterNativeClass(nf.SciterClassDef, false, false);
+
+  pTest := TTest.Create;
+  Sciter1.RegisterComObject('Test', pTest);
+end;
+
+procedure TMainForm.GCClick(Sender: TObject);
+begin
+  Sciter1.GC;
+end;
+
+procedure TMainForm.mnuElementAtCursorClick(Sender: TObject);
+var
+  pt: TPoint;
+  pEl: IElement;
+begin
+  pt := Mouse.CursorPos;
+  pt := Sciter1.ScreenToClient(pt);
+  pEl := Sciter1.FindElement(pt);
+  if pEl <> nil then
+    txtLog.Lines.Add(Format('Element at %d:%d is %s', [pt.X, pt.Y, pEl.Tag]));
 end;
 
 procedure TMainForm.NavigatetoSciterwebsite1Click(Sender: TObject);
 begin
-  sctr1.LoadURL('http://www.terrainformatica.com/sciter/main.whtm');
+  Sciter1.LoadURL('http://www.terrainformatica.com/sciter/main.whtm');
 end;
 
 procedure TMainForm.OnElementControlEvent(ASender: TObject;
   const target: IElement; eventType: BEHAVIOR_EVENTS; reason: Integer;
   const source: IElement);
+var
+  pDiv: IElement;
+  pCol: IElementCollection;
+  i: Integer;
+  pPre: IElement;
+  sText: WideString;
+
+  procedure Dump(const El: IElement; var Text: WideString);
+  var
+    i: Integer;
+  begin
+    Text := Text + El.Tag + #13#10;
+    for i := 0 to El.ChildrenCount - 1 do
+      Dump(El.GetChild(i), Text);
+  end;
 begin
-  if target <> nil then
-    txtLog.Lines.Add(Format('Control event of type %d, sender is %s, value is %s', [Integer(eventType), target.Tag, target.Value]))
-  else
-    txtLog.Lines.Add(Format('Control event of type %d', [Integer(eventType)]));
+  if eventType = BUTTON_CLICK then
+  begin
+    if target.ID = 'cmdCreateHeadings' then
+    begin
+      pDiv := Sciter1.Root.Select('#divHeadings');
+
+      for i := 1 to 10 do
+      begin
+        pDiv.AppendChild(pDiv.CreateElement('h4', 'Heading ' + IntToStr(i)));
+      end;
+    end;
+
+    if target.ID = 'cmdChangeHeadingsText' then
+    begin
+      pDiv := Sciter1.Root.Select('#divHeadings');
+      pCol := pDiv.SelectAll('h4');
+      for i := 0 to pCol.Count - 1 do
+        pCol[i].Text := 'Heading (text changed at ' + DateTimeToStr(Now) + ')';
+    end;
+
+    if target.ID = 'cmdRemoveHeadings' then
+    begin
+      pDiv := Sciter1.Root.Select('#divHeadings');
+      pDiv.SelectAll('h4').RemoveAll;
+    end;
+
+    if target.ID = 'cmdDump' then
+    begin
+      pPre := Sciter1.Root.Select('#preDump');
+      sText := '';
+      Dump(Sciter1.Root, sText);
+      pPre.Text := sText;
+    end;
+  end;
 end;
 
 procedure TMainForm.OnElementMouse(ASender: TObject; const target: IElement;
@@ -304,29 +178,19 @@ begin
   txtLog.Lines.Add(Format('Size event', []));
 end;
 
-procedure TMainForm.sctr1HandleCreated(Sender: TObject);
-var
-  nf: TNativeForm;
-begin
-  nf := TNativeForm.Create;
-  ClassBag.RegisterClassInfo(sctr1.VM, nf);
-end;
-
-procedure TMainForm.sctr1StdErr(ASender: TObject; const msg: WideString);
+procedure TMainForm.OnSciterOut(ASender: TObject; const msg: WideString);
 begin
   txtLog.Lines.Add(msg);
 end;
 
-procedure TMainForm.tv1Change(Sender: TObject; Node: TTreeNode);
+procedure TMainForm.Sciter1DocumentComplete(ASender: TObject; const url:
+    WideString);
+var
+  pBody: TElement;
 begin
-  try
-    if FileExists(tv1.Path) then
-    begin
-      txtLog.Clear;
-      sctr1.LoadURL('file://' + StringReplace(tv1.Path, '\', '/', [rfReplaceAll]));
-    end;
-  except
-  end;
+  txtLog.Lines.Add('Sciter OnDocumentComplete event');
+  pBody := Sciter1.Root.Select('body');
+  pBody.OnControlEvent := OnElementControlEvent;
 end;
 
 function SayHelloNative(c: HVM): tiscript_value; cdecl;
@@ -336,5 +200,21 @@ begin
 end;
 
 
+{ TTest }
+
+constructor TTest.Create;
+begin
+  inherited Create(ComServer.TypeLib, IID_ITest);
+end;
+
+destructor TTest.Destroy;
+begin
+  inherited;
+end;
+
+procedure TTest.SayHello;
+begin
+  ShowMessage('TTest: Hello!');
+end;
 
 end.

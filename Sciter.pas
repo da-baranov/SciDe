@@ -47,12 +47,14 @@ type
     function CreateElement(const Tag: WideString; const Text: WideString): IElement;
     procedure Delete;
     function Equals(const Element: IElement): WordBool;
+    function FindNearestParent(const Selector: WideString): TElement;
     function GetChild(Index: Integer): IElement;
     function GetEnabled: boolean;
     function GetVisible: boolean;
     function Get_Attr(const AttrName: WideString): WideString;
     function Get_ChildrenCount: Integer;
     function Get_Handle: Integer;
+    function Get_ID: WideString;
     function Get_Index: Integer;
     function Get_InnerHtml: WideString;
     function Get_OuterHtml: WideString;
@@ -68,6 +70,7 @@ type
     function SelectAll(const Selector: WideString): IElementCollection;
     procedure SendEvent(EventCode: BEHAVIOR_EVENTS);
     procedure Set_Attr(const AttrName: WideString; const Value: WideString);
+    procedure Set_ID(const Value: WideString);
     procedure Set_InnerHtml(const Value: WideString);
     procedure Set_OuterHtml(const Value: WideString);
     procedure Set_StyleAttr(const AttrName: WideString; const Value: WideString);
@@ -77,6 +80,7 @@ type
     property ChildrenCount: Integer read Get_ChildrenCount;
     property Enabled: boolean read GetEnabled;
     property Handle: Integer read Get_Handle;
+    property ID: WideString read Get_ID write Set_ID;
     property Index: Integer read Get_Index;
     property InnerHtml: WideString read Get_InnerHtml write Set_InnerHtml;
     property OuterHtml: WideString read Get_OuterHtml write Set_OuterHtml;
@@ -104,7 +108,7 @@ type
     function Get_Html: WideString;
     function Get_Root: TElement;
     procedure LoadHtml(const Html: WideString; const BaseURL: WideString);
-    procedure LoadURL(const URL: Widestring);
+    function LoadURL(const URL: WideString): Boolean;
     procedure RegisterComObject(const Name: WideString; const Obj: IDispatch);
     property Html: WideString read Get_Html;
     property Root: TElement read Get_Root;
@@ -133,6 +137,7 @@ type
     function Get_Attr(const AttrName: WideString): WideString;
     function Get_ChildrenCount: Integer;
     function Get_Handle: Integer;
+    function Get_ID: WideString;
     function Get_Index: Integer;
     function Get_InnerHtml: WideString;
     function Get_OnControlEvent: TElementOnControlEvent;
@@ -146,6 +151,7 @@ type
     function Get_Text: WideString;
     function Get_Value: OleVariant;
     procedure Set_Attr(const AttrName: WideString; const Value: WideString);
+    procedure Set_ID(const Value: WideString);
     procedure Set_InnerHtml(const Value: WideString);
     procedure Set_OnControlEvent(const Value: TElementOnControlEvent);
     procedure Set_OnMouse(const Value: TElementOnMouse);
@@ -166,6 +172,7 @@ type
     function HandleScrollEvents(params: PSCROLL_PARAMS): UINT; virtual;
     function HandleSize: UINT; virtual;
     function HandleTimer(params: PTIMER_PARAMS): UINT; virtual;
+    function IsValid: Boolean;
     property Sciter: TSciter read FSciter;
   public
     destructor Destroy; override;
@@ -175,6 +182,7 @@ type
     function CreateElement(const Tag: WideString; const Text: WideString): IElement;
     procedure Delete;
     function Equals(const Element: IElement): WordBool;
+    function FindNearestParent(const Selector: WideString): TElement;
     function GetChild(Index: Integer): IElement;
     procedure InsertElement(const Child: IElement; Index: Integer);
     procedure PostEvent(EventCode: BEHAVIOR_EVENTS);
@@ -186,6 +194,7 @@ type
     property ChildrenCount: Integer read Get_ChildrenCount;
     property Enabled: boolean read GetEnabled;
     property Handle: Integer read Get_Handle;
+    property ID: WideString read Get_ID write Set_ID;
     property InnerHtml: WideString read Get_InnerHtml write Set_InnerHtml;
     property OuterHtml: WideString read Get_OuterHtml write Set_OuterHtml;
     property StyleAttr[const AttrName: WideString]: WideString read Get_StyleAttr write Set_StyleAttr;
@@ -230,7 +239,6 @@ type
     FBaseUrl: WideString;
     FHtml: WideString;
     FInnerList: TElementList;
-    FOldHandle: HWnd;
     FOnDataLoaded: TSciterOnDataLoaded;
     FOnDocumentComplete: TSciterOnDocumentComplete;
     FOnEngineDestroyed: TNotifyEvent;
@@ -250,6 +258,7 @@ type
     procedure SetOnStdWarn(const Value: TSciterOnStdOut);
   protected
     procedure CreateParams(var Params: TCreateParams); override;
+    procedure CreateWindowHandle(const Params: TCreateParams); override;
     procedure CreateWnd; override;
     function DesignMode: boolean;
     procedure DestroyWnd; override;
@@ -277,17 +286,18 @@ type
     function GetMinHeight(Width: Integer): Integer;
     function GetMinWidth: Integer;
     procedure LoadHtml(const Html: WideString; const BaseURL: WideString);
-    procedure LoadURL(const URL: Widestring);
+    function LoadURL(const URL: WideString): Boolean;
     procedure MouseWheelHandler(var Message: TMessage); override;
     procedure RegisterComObject(const Name: WideString; const Obj: IDispatch);
     function RegisterNativeClass(ClassDef: ptiscript_class_def; ThrowIfExists: Boolean; ReplaceClassDef: Boolean { reserved } = False): tiscript_value;
     procedure RegisterNativeFunction(const Name: WideString; Handler: ptiscript_method);
     function Select(const Selector: WideString): TElement;
     function SelectAll(const Selector: WideString): IElementCollection;
-    procedure Test;
     procedure UpdateWindow;
+    property Html: WideString read GetHtml write SetHtml;
     property Root: TElement read Get_Root;
     property VM: HVM read GetHVM;
+    procedure GC;
   published
     property Action;
     property Align;
@@ -306,7 +316,6 @@ type
     property DragMode;
     property Enabled;
     property Font;
-    property Html: WideString read GetHtml write SetHtml;
     property OnClick;
     property OnContextPopup;
     property OnDragDrop;
@@ -342,11 +351,76 @@ type
 end;
 
 procedure SciterDebug(param: Pointer; subsystem: UINT; severity: UINT; text: PWideChar; text_length: UINT); stdcall;
+function LoadResourceAsStream(const ResName: AnsiString; const ResType: AnsiString): TCustomMemoryStream;
+function LoadResourceAsAnsiString(ResName: PAnsiChar; ResType: PAnsiChar): AnsiString; overload;
+function LoadResourceAsAnsiString(ResID: integer; ResType: PAnsiChar): AnsiString; overload;
+function LoadResourceAsWideString(ResID: integer; ResType: PAnsiChar): WideString;
+
 procedure Register;
 
 implementation
 
 uses SciterOle;
+
+function LoadResourceAsAnsiString(ResName: PAnsiChar; ResType: PAnsiChar): AnsiString;
+var
+  pStream: TResourceStream;
+  pStringStream: TStringStream;
+begin
+  pStream := nil;
+  pStringStream := nil;
+  try
+    pStream := TResourceStream.Create(HInstance, ResName, ResType);
+    pStream.Position := 0;
+    pStringStream := TStringStream.Create('');
+    pStringStream.CopyFrom(pStream, pStream.Size);
+    Result := pStringStream.DataString;
+  finally
+    if pStringStream <> nil then
+      pStringStream.Free;
+    if pStream <> nil then
+      pStream.Free;
+  end;
+end;
+
+function LoadResourceAsStream(const ResName: AnsiString; const ResType: AnsiString): TCustomMemoryStream;
+begin
+  try
+    Result := TResourceStream.Create(HInstance, ResName, PAnsiChar(ResType));
+    Result.Position := 0;
+  except
+    on E:Exception do
+    begin
+      Result := nil;
+    end;
+  end;
+end;
+
+function LoadResourceAsAnsiString(ResID: integer; ResType: PAnsiChar): AnsiString;
+var
+  pStream: TResourceStream;
+  pStringStream: TStringStream;
+begin
+  pStream := nil;
+  pStringStream := nil;
+  try
+    pStream := TResourceStream.CreateFromID(HINSTANCE, ResID, ResType);
+    pStream.Position := 0;
+    pStringStream := TStringStream.Create('');
+    pStringStream.CopyFrom(pStream, pStream.Size);
+    Result := pStringStream.DataString;
+  finally
+    if pStringStream <> nil then
+      pStringStream.Free;
+    if pStream <> nil then
+      pStream.Free;
+  end;
+end;
+
+function LoadResourceAsWideString(ResID: integer; ResType: PAnsiChar): WideString;
+begin
+  Result := UTF8Decode(LoadResourceAsAnsiString(ResID, ResType));
+end;
 
 function CreateObjectNative(vm: HVM): tiscript_value; cdecl;
 var
@@ -439,13 +513,13 @@ var
   pElement: TElement;
 begin
   pElement := TElement(param);
-  if str_length > 0 then
+  if (str = nil) or (str_length = 0) then
   begin
-    pElement.FText := WideString(str);
+    pElement.FText := '';
   end
     else
   begin
-    pElement.FText := '';
+    pElement.FText := WideString(str);
   end;
 end;
 
@@ -454,13 +528,13 @@ var
   pElement: TElement;
 begin
   pElement := TElement(param);
-  if str_length > 0 then
+  if (str = nil) or (str_length = 0) then
   begin
-    pElement.FAttrValue := WideString(str);
+    pElement.FAttrValue := '';
   end
     else
   begin
-    pElement.FAttrValue := '';
+    pElement.FAttrValue := WideString(str);
   end;
 end;
 
@@ -469,13 +543,13 @@ var
   pElement: TElement;
 begin
   pElement := TElement(param);
-  if str_length > 0 then
+  if (str = nil) or (str_length = 0) then
   begin
-    pElement.FStyleAttrValue := WideString(str);
+    pElement.FStyleAttrValue := '';
   end
     else
   begin
-    pElement.FStyleAttrValue := '';
+    pElement.FStyleAttrValue := WideString(str);
   end;
 end;
 
@@ -715,7 +789,6 @@ end;
 constructor TSciter.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FOldHandle := 0;
   FInnerList := TElementList.Create(False);
   Width := 300;
   Height := 300;
@@ -759,42 +832,42 @@ begin
 end;
 
 procedure TSciter.CreateParams(var Params: TCreateParams);
+var
+  sClassName: AnsiString;
 begin
   inherited CreateParams(Params);
+  sClassName := AnsiString(WideString(API.SciterClassName));
   Params.Style := Params.Style or WS_TABSTOP;
+  //CreateSubClass(Params, PAnsiChar(sClassName));
 end;
+
+procedure TSciter.CreateWindowHandle(const Params: TCreateParams);
+begin
+  inherited;
+end;
+
 
 procedure TSciter.CreateWnd;
 var
   SR: SCDOM_RESULT;
-  bHandled: Integer;
-  
 begin
-  inherited;
+  inherited CreateWnd;
 
   if DesignMode then
     Exit;
 
   if HandleAllocated then
   begin
-    FOldHandle := Handle;
-
-    API.SciterProcND(Handle, WM_CREATE, 0, 0, bHandled);
-
-    SR := API.SciterSetCallback(Handle, @HostCallback, Self);
-    //if SR <> SCDOM_OK then
-    //  raise ESciterException.Create('Failed to setup Sciter callback function.');
+    API.SciterSetCallback(Handle, @HostCallback, Self);
 
     SR := API.SciterWindowAttachEventHandler(Handle, @WindowElementEventProc, Self, UINT(HANDLE_ALL));
-    //if SR <> SCDOM_OK then
-    //  raise ESciterException.Create('Failed to setup Sciter window element callback function.');
+    if SR <> SCDOM_OK then
+      raise ESciterException.Create('Failed to setup Sciter window element callback function.');
 
-    SR := API.SciterSetupDebugOutput(Handle, Self, @SciterDebug);
-    //if SR <> SCDOM_OK then
-    //  raise ESciterException.Create('Failed to setup Sciter output callback function.');
-    
+    API.SciterSetupDebugOutput(Handle, Self, @SciterDebug);
+
     RegisterNativeFunction('CreateObject', @CreateObjectNative);
-    
+
     if FHtml <> '' then
     begin
       LoadHtml(FHtml, FBaseUrl);
@@ -818,9 +891,9 @@ procedure TSciter.DestroyWnd;
 var
   pbHandled: Integer;
 begin
-  API.SciterSetCallback(Handle, nil, nil);
-  API.SciterWindowAttachEventHandler(Handle, nil, nil, UINT(HANDLE_ALL));
-  API.SciterSetupDebugOutput(Handle, nil, nil);
+  //API.SciterSetCallback(Handle, nil, nil);
+  //API.SciterWindowAttachEventHandler(Handle, nil, nil, UINT(HANDLE_ALL));
+  //API.SciterSetupDebugOutput(Handle, nil, nil);
   API.SciterProcND(Handle, WM_DESTROY, 0, 0, pbHandled);
   inherited;
 end;
@@ -833,6 +906,11 @@ begin
     S2V(@pVal, Result)
   else
     Result := Unassigned;
+end;
+
+function TSciter.FilePathToURL(const FileName: AnsiString): AnsiString;
+begin
+  Result := 'file:///' + StringReplace(FileName, '\', '/', [rfReplaceAll]);
 end;
 
 function TSciter.FindElement(Point: TPoint): IElement;
@@ -914,7 +992,7 @@ var
   h: HWND;
 begin
   he := nil;
-  h := Self.WindowHandle;
+  h := Self.Handle;
   if API.SciterGetRootElement(h, he) = SCDOM_OK then
     Result := TElement.Create(Self, he)
   else
@@ -953,13 +1031,35 @@ end;
 function TSciter.HandleLoadData(data: LPSCN_LOAD_DATA): UINT;
 var
   discard: WordBool;
+  wUrl: WideString;
+  wResName: WideString;
+  pStream: TCustomMemoryStream;
 begin
   Result := LOAD_OK;
-  if Assigned(FOnLoadData) then
+
+  wUrl := WideString(data.uri);
+  if Pos('res:', wUrl) = 1 then
   begin
-    FOnLoadData(Self, WideString(data.uri), data.dataType, Integer(data.requestId), discard);
-    if discard then
-      Result := LOAD_DISCARD;
+    wResName := StringReplace(wUrl, 'res:', '', []);
+    wResName := StringReplace(wResName, '-', '_', [rfReplaceAll]);
+    wResName := StringReplace(wResName, '.', '_', [rfReplaceAll]);
+    pStream := LoadResourceAsStream(wResName, 'HTML');
+    if pStream <> nil then
+    begin
+      API.SciterDataReady(Handle, data.uri, pStream.Memory, pStream.Size);
+      Result := LOAD_OK;
+      pStream.Free;
+      Exit;
+    end;
+  end;
+
+  begin
+    if Assigned(FOnLoadData) then
+    begin
+      FOnLoadData(Self, WideString(data.uri), data.dataType, Integer(data.requestId), discard);
+      if discard then
+        Result := LOAD_DISCARD;
+    end;
   end;
 end;
 
@@ -975,6 +1075,7 @@ var
   pHtml: PAnsiChar;
   iLen: UINT;
 begin
+  FHtml := Html;
   sHtml := UTF8Encode(Html);
   pHtml := PAnsiChar(sHtml);
   iLen := Length(sHtml);
@@ -983,21 +1084,28 @@ begin
   FUrl := '';
 
   if HandleAllocated then
-    API.SciterLoadHtml(Handle, PByte(pHtml), iLen, PWideChar(BaseURL));
+  begin
+    if not API.SciterLoadHtml(Handle, PByte(pHtml), iLen, PWideChar(BaseURL)) then
+      raise ESciterException.CreateFmt('Failed to load HTML.', []);
+  end;
 end;
 
-procedure TSciter.LoadURL(const URL: Widestring);
+function TSciter.LoadURL(const URL: WideString): Boolean;
 begin
+  Result := False;
   if DesignMode then
     Exit;
 
   FUrl := URL;
-
   FHtml := '';
   FBaseUrl := '';
 
   if HandleAllocated then
-    API.SciterLoadFile(Self.Handle, PWideChar(URL));
+  begin
+    // if not API.SciterLoadFile(Handle, PWideChar(URL)) then
+    //  raise ESciterException.CreateFmt('Failed to load URL %s', [URL]);
+    Result := API.SciterLoadFile(Handle, PWideChar(URL));
+  end;
 end;
 
 { Tweaking TWinControl focus behavior }
@@ -1030,10 +1138,11 @@ var
   hBmp: HBITMAP;
 begin
   inherited;
-  sCaption := Name;
 
   if DesignMode then
   begin
+    sCaption := Name;
+     
     pIcon := nil;
     
     hBMP := LoadBitmap(hInstance, 'TSCITER');
@@ -1135,11 +1244,6 @@ begin
   inherited SetParent(AParent);
 end;
 
-procedure TSciter.Test;
-begin
-
-end;
-
 procedure TSciter.UpdateWindow;
 begin
   API.SciterUpdateWindow(Self.Handle);
@@ -1151,7 +1255,7 @@ var
   bHandled: Integer;
   M: PMsg;
 begin
-  if not (csDesigning in ComponentState) then
+  if not DesignMode then
   begin
     // Tweaking arrow keys handling (VCL-specific)
     if Message.Msg = WM_GETDLGCODE then
@@ -1170,11 +1274,18 @@ begin
       end;
       Exit;
     end;
-    
-    llResult := API.SciterProcND(Self.WindowHandle, Message.Msg, Message.WParam, Message.LParam, bHandled);
-    if bHandled <> 0 then
+
+    if HandleAllocated then
     begin
-      Message.Result := llResult;
+      llResult := API.SciterProcND(Handle, Message.Msg, Message.WParam, Message.LParam, bHandled);
+      if bHandled <> 0 then
+      begin
+        Message.Result := llResult;
+      end
+        else
+      begin
+        inherited WndProc(Message);
+      end;
     end
       else
     begin
@@ -1184,7 +1295,7 @@ begin
     else
   begin
     inherited WndProc(Message);
-  end;
+  end
 end;
 
 constructor TElement.Create(ASciter: TSciter; h: HELEMENT);
@@ -1249,6 +1360,19 @@ begin
   Result := (Element <> nil) and (Self.Handle = Element.Handle);
 end;
 
+function TElement.FindNearestParent(const Selector: WideString): TElement;
+var
+  pHE: HELEMENT;
+  SR: SCDOM_RESULT;
+begin
+  pHE := nil;
+  SR := API.SciterSelectParentW(FElement, PWideChar(Selector), 0, pHE);
+  if (SR <> SCDOM_OK) or (pHE = nil) then
+    Result := nil
+  else
+    Result := TElement.Create(Sciter, pHE);
+end;
+
 function TElement.GetChild(Index: Integer): IElement;
 var
   hResult: HELEMENT;
@@ -1301,6 +1425,11 @@ end;
 function TElement.Get_Handle: Integer;
 begin
   Result := Integer(FELEMENT);
+end;
+
+function TElement.Get_ID: WideString;
+begin
+  Result := Attr['id'];
 end;
 
 function TElement.Get_Index: Integer;
@@ -1524,6 +1653,11 @@ begin
   API.SciterInsertElement(HELEMENT(Child.Handle), FElement, Index);
 end;
 
+function TElement.IsValid: Boolean;
+begin
+  Result := FElement <> nil;
+end;
+
 procedure TElement.PostEvent(EventCode: BEHAVIOR_EVENTS);
 begin
   API.SciterPostEvent(FELEMENT, UINT(EventCode), nil, nil);
@@ -1569,6 +1703,11 @@ var
 begin
   sAttrName := AttrName;
   API.SciterSetAttributeByName(FElement, PAnsiChar(sAttrName), PWideChar(Value));
+end;
+
+procedure TElement.Set_ID(const Value: WideString);
+begin
+  Attr['id'] := Value;
 end;
 
 procedure TElement.Set_InnerHtml(const Value: WideString);
@@ -1722,9 +1861,9 @@ begin
     inherited Remove(Element);
 end;
 
-function TSciter.FilePathToURL(const FileName: AnsiString): AnsiString;
+procedure TSciter.GC;
 begin
-  Result := 'file:///' + StringReplace(FileName, '\', '/', [rfReplaceAll]);
+  NI.invoke_gc(VM);
 end;
 
 initialization

@@ -8,7 +8,10 @@ uses
   TiScriptApi in 'TiScriptApi.pas',
   SciterNative in 'SciterNative.pas',
   SciterOle in 'SciterOle.pas',
-  NativeForm in 'NativeForm.pas';
+  NativeForm in 'NativeForm.pas',
+  SciDeDemo_TLB in 'SciDeDemo_TLB.pas';
+
+{$R *.TLB}
 
 {$R *.res}
 
