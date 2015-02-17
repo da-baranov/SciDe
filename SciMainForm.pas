@@ -16,13 +16,17 @@ type
     mm1: TMainMenu;
     mnuElementAtCursor: TMenuItem;
     NavigatetoSciterwebsite1: TMenuItem;
-    pc: TPageControl;
     pnlContainer: TPanel;
     Sciter1: TSciter;
     spl1: TSplitter;
-    tsDOM: TTabSheet;
     txtLog: TMemo;
+    pnlCommands: TPanel;
     GC: TButton;
+    txt1: TEdit;
+    txt2: TEdit;
+    Label1: TLabel;
+    cmdEval: TButton;
+    procedure cmdEvalClick(Sender: TObject);
     procedure DumpHTML1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure GCClick(Sender: TObject);
@@ -39,6 +43,7 @@ type
     procedure OnElementMouse(ASender: TObject; const target: IElement;
       eventType: MOUSE_EVENTS; x, y: Integer; buttons: MOUSE_BUTTONS; keys: KEYBOARD_STATES);
     procedure OnElementSize(ASender: TObject; const target: IElement);
+    procedure OnNativeButtonClick(Sender: TObject);
   end;
 
   { For testing purposes }
@@ -60,6 +65,11 @@ uses SciterOle, SciterNative, NativeForm;
 
 {$R *.dfm}
 {$R Richtext.res}
+
+procedure TMainForm.cmdEvalClick(Sender: TObject);
+begin
+  ShowMessage(Sciter1.Call('sciter_sum', [txt1.Text, txt2.Text]));
+end;
 
 procedure TMainForm.DumpHTML1Click(Sender: TObject);
 begin
@@ -85,6 +95,7 @@ begin
   nf := TNativeForm.Create;
   Sciter1.RegisterNativeClass(nf.SciterClassDef, false, false);
 
+  // Register external object
   pTest := TTest.Create;
   Sciter1.RegisterComObject('Test', pTest);
 end;
@@ -124,8 +135,14 @@ var
   procedure Dump(const El: IElement; var Text: WideString);
   var
     i: Integer;
+    j: Integer;
   begin
-    Text := Text + El.Tag + #13#10;
+    Text := Text + El.Tag + ' [ ';
+    for j := 0 to El.AttrCount - 1 do
+    begin
+      Text := Text + El.GetAttributeName(j) + '="' + El.GetAttributeValue(j) + '" ';
+    end;
+    Text := Text + ' ] ' + #13#10;
     for i := 0 to El.ChildrenCount - 1 do
       Dump(El.GetChild(i), Text);
   end;
@@ -178,6 +195,11 @@ begin
   txtLog.Lines.Add(Format('Size event', []));
 end;
 
+procedure TMainForm.OnNativeButtonClick(Sender: TObject);
+begin
+  ShowMessage('It works');
+end;
+
 procedure TMainForm.OnSciterOut(ASender: TObject; const msg: WideString);
 begin
   txtLog.Lines.Add(msg);
@@ -187,10 +209,24 @@ procedure TMainForm.Sciter1DocumentComplete(ASender: TObject; const url:
     WideString);
 var
   pBody: TElement;
+  pButton: TButton;
+
+  pDivContainer: TElement;
 begin
   txtLog.Lines.Add('Sciter OnDocumentComplete event');
   pBody := Sciter1.Root.Select('body');
   pBody.OnControlEvent := OnElementControlEvent;
+
+  pDivContainer := Sciter1.Root.Select('#divContainer');
+  if pDivContainer <> nil then
+  begin
+    pButton := TButton.Create(Self);
+    pButton.Parent := Sciter1;
+    pButton.Caption := 'Native button';
+    pButton.OnClick := OnNativeButtonClick;
+    pButton.Font.Color := clGreen;
+    pDivContainer.AttachHwndToElement(pButton.Handle);
+  end;
 end;
 
 function SayHelloNative(c: HVM): tiscript_value; cdecl;

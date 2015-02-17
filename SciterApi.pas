@@ -1186,6 +1186,11 @@ begin
         API.ValueInit(SciterValue);
         Result := 0;
       end;
+    varString:
+      begin
+        sWStr := Value;
+        Result:= FAPI.ValueStringDataSet(SciterValue, PWideChar(sWStr), Length(sWStr), 0);
+      end;
     varOleStr:
       begin
         sWStr := Value;

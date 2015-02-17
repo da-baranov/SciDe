@@ -1,8 +1,8 @@
 object MainForm: TMainForm
-  Left = 240
-  Top = 272
-  Width = 1223
-  Height = 723
+  Left = 568
+  Top = 207
+  Width = 1191
+  Height = 775
   Caption = 'SciDe - test form'
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -18,26 +18,26 @@ object MainForm: TMainForm
   PixelsPerInch = 96
   TextHeight = 13
   object pnlContainer: TPanel
-    Left = 289
+    Left = 193
     Top = 0
-    Width = 918
-    Height = 665
+    Width = 982
+    Height = 717
     Align = alClient
     BevelOuter = bvNone
     Caption = 'pnlContainer'
     TabOrder = 0
     object spl1: TSplitter
       Left = 0
-      Top = 476
-      Width = 918
+      Top = 528
+      Width = 982
       Height = 5
       Cursor = crVSplit
       Align = alBottom
     end
     object txtLog: TMemo
       Left = 0
-      Top = 481
-      Width = 918
+      Top = 533
+      Width = 982
       Height = 184
       Align = alBottom
       Font.Charset = RUSSIAN_CHARSET
@@ -52,8 +52,8 @@ object MainForm: TMainForm
     object Sciter1: TSciter
       Left = 0
       Top = 0
-      Width = 918
-      Height = 476
+      Width = 982
+      Height = 528
       Align = alClient
       Caption = 'Sciter'
       PopupMenu = ctxSciter
@@ -64,27 +64,54 @@ object MainForm: TMainForm
       OnStdWarn = OnSciterOut
     end
   end
-  object pc: TPageControl
+  object pnlCommands: TPanel
     Left = 0
     Top = 0
-    Width = 289
-    Height = 665
-    ActivePage = tsDOM
+    Width = 193
+    Height = 717
     Align = alLeft
-    MultiLine = True
+    BevelOuter = bvNone
     TabOrder = 1
-    object tsDOM: TTabSheet
-      Caption = 'DOM manipulations'
-      ImageIndex = 3
-      object GC: TButton
-        Left = 10
-        Top = 10
-        Width = 75
-        Height = 25
-        Caption = 'GC'
-        TabOrder = 0
-        OnClick = GCClick
-      end
+    object Label1: TLabel
+      Left = 56
+      Top = 58
+      Width = 6
+      Height = 13
+      Caption = '+'
+    end
+    object GC: TButton
+      Left = 10
+      Top = 8
+      Width = 175
+      Height = 25
+      Caption = 'Invoke GC'
+      TabOrder = 0
+      OnClick = GCClick
+    end
+    object txt1: TEdit
+      Left = 16
+      Top = 56
+      Width = 33
+      Height = 21
+      TabOrder = 1
+      Text = '2'
+    end
+    object txt2: TEdit
+      Left = 72
+      Top = 56
+      Width = 41
+      Height = 21
+      TabOrder = 2
+      Text = '2'
+    end
+    object cmdEval: TButton
+      Left = 120
+      Top = 54
+      Width = 65
+      Height = 25
+      Caption = 'Eval'
+      TabOrder = 3
+      OnClick = cmdEvalClick
     end
   end
   object mm1: TMainMenu
