@@ -23,7 +23,7 @@
   <script type="text/tiscript">
   function sciter_sum(a, b)
   {
-    return new Integer(a) + new Integer(b);
+    return a + b;
   }
   
   function self#cmdMSXML.onClick()
@@ -130,6 +130,16 @@
     view.msgbox(#alert, "Can't close this with mouse!");
   }
   
+  function self#cmdViewFoo.onClick()
+  {
+    view.Foo("Hello World!");
+  }
+  
+  function self#cmdBar.onClick()
+  {
+    Bar("Hello World!");
+  }
+  
   </script>
 </head>
 <body>
@@ -184,6 +194,16 @@
   <section>
     <h2>OLE Example 4. Invoke externally passed COM object</h2>
     <button id="cmdTestSayHello">Invoke Test.SayHello</button>
+  </section>
+  
+  <section>
+    <h2>Intercept non-existing view method call</h2>
+    <button id="cmdViewFoo">Call view.Foo()</button>
+  </section>
+  
+  <section>
+    <h2>Intercept non-existing tiscript method call</h2>
+    <button id="cmdBar">Call Bar()</button>
   </section>
   
   <section>

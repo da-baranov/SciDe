@@ -1,3 +1,14 @@
+{*******************************************************}
+{                                                       }
+{  Helper classes for Sciter/OLE interaction            }
+{  Copyright (c) Dmitry Baranov                         }
+{                                                       }
+{  This unit uses Sciter Engine,                        }
+{  copyright Terra Informatica Software, Inc.           }
+{  (http://terrainformatica.com/).                      }
+{                                                       }
+{*******************************************************}
+
 unit SciterOle;
 
 interface
@@ -26,9 +37,22 @@ type
     procedure Build(const TypeInfo: ITypeInfo); overload;
   end;
 
+function DispatchInvoke(const Dispatch: IDispatch; const DispID: integer;
+  const AParams: array of OleVariant): OleVariant; overload;
+
+function DispatchInvoke(const Dispatch: IDispatch; const MethodName: WideString;
+  const AParams: array of OleVariant): OleVariant; overload;
+
+function DispatchGetItem(const Dispatch: IDispatch; const Index: OleVariant): OleVariant;
+
+procedure DispatchSetItem(const Dispatch: IDispatch; const Index: OleVariant; const Value: OleVariant);
+
 function GetOleObjectGuid(const Obj: IDispatch): AnsiString;
+
 function FindOrCreateOleObjectClass(vm: HVM; const Dispatch: IDispatch): tiscript_class;
+
 function RegisterOleObject(vm: HVM; const Dispatch: IDispatch; const Name: WideString): tiscript_object;
+
 function WrapOleObject(vm: HVM; const Dispatch: IDispatch): tiscript_object;
 
 implementation

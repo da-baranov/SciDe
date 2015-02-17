@@ -1,6 +1,6 @@
 object MainForm: TMainForm
-  Left = 568
-  Top = 207
+  Left = 305
+  Top = 111
   Width = 1191
   Height = 775
   Caption = 'SciDe - test form'
@@ -55,13 +55,13 @@ object MainForm: TMainForm
       Width = 982
       Height = 528
       Align = alClient
-      Caption = 'Sciter'
       PopupMenu = ctxSciter
       TabOrder = 1
       OnDocumentComplete = Sciter1DocumentComplete
       OnStdErr = OnSciterOut
       OnStdOut = OnSciterOut
       OnStdWarn = OnSciterOut
+      OnMethodCall = Sciter1MethodCall
     end
   end
   object pnlCommands: TPanel
@@ -113,10 +113,19 @@ object MainForm: TMainForm
       TabOrder = 3
       OnClick = cmdEvalClick
     end
+    object cmdCallNative: TButton
+      Left = 16
+      Top = 96
+      Width = 169
+      Height = 25
+      Caption = 'Call native SayHello'
+      TabOrder = 4
+      OnClick = cmdCallNativeClick
+    end
   end
   object mm1: TMainMenu
-    Left = 369
-    Top = 56
+    Left = 209
+    Top = 104
     object Actions1: TMenuItem
       Caption = 'Actions'
       object NavigatetoSciterwebsite1: TMenuItem
@@ -130,8 +139,8 @@ object MainForm: TMainForm
     end
   end
   object ctxSciter: TPopupMenu
-    Left = 839
-    Top = 120
+    Left = 207
+    Top = 136
     object mnuElementAtCursor: TMenuItem
       Caption = 'Find element at cursor'
       OnClick = mnuElementAtCursorClick

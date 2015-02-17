@@ -11,21 +11,23 @@ uses
 type
   TMainForm = class(TForm)
     Actions1: TMenuItem;
+    cmdCallNative: TButton;
+    cmdEval: TButton;
     ctxSciter: TPopupMenu;
     DumpHTML1: TMenuItem;
+    GC: TButton;
+    Label1: TLabel;
     mm1: TMainMenu;
     mnuElementAtCursor: TMenuItem;
     NavigatetoSciterwebsite1: TMenuItem;
+    pnlCommands: TPanel;
     pnlContainer: TPanel;
     Sciter1: TSciter;
     spl1: TSplitter;
-    txtLog: TMemo;
-    pnlCommands: TPanel;
-    GC: TButton;
     txt1: TEdit;
     txt2: TEdit;
-    Label1: TLabel;
-    cmdEval: TButton;
+    txtLog: TMemo;
+    procedure cmdCallNativeClick(Sender: TObject);
     procedure cmdEvalClick(Sender: TObject);
     procedure DumpHTML1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -34,12 +36,14 @@ type
     procedure NavigatetoSciterwebsite1Click(Sender: TObject);
     procedure OnSciterOut(ASender: TObject; const msg: WideString);
     procedure Sciter1DocumentComplete(ASender: TObject; const url: WideString);
+    procedure Sciter1MethodCall(ASender: TObject; const MethodName: WideString;
+        const Args: array of OLEVariant; var ReturnValue: OLEVariant; var Handled:
+        Boolean);
   private
     FExamplesBase: WideString;
     FHomeUrl: WideString;
     procedure OnElementControlEvent(ASender: TObject; const target: IElement; eventType: BEHAVIOR_EVENTS;
                              reason: Integer; const source: IElement);
-    { Private declarations }
     procedure OnElementMouse(ASender: TObject; const target: IElement;
       eventType: MOUSE_EVENTS; x, y: Integer; buttons: MOUSE_BUTTONS; keys: KEYBOARD_STATES);
     procedure OnElementSize(ASender: TObject; const target: IElement);
@@ -66,9 +70,19 @@ uses SciterOle, SciterNative, NativeForm;
 {$R *.dfm}
 {$R Richtext.res}
 
+procedure TMainForm.cmdCallNativeClick(Sender: TObject);
+begin
+  Sciter1.Eval('SayHello()');
+  // Sciter1.Call('global::SayHello', []); // crashes here
+end;
+
 procedure TMainForm.cmdEvalClick(Sender: TObject);
 begin
-  ShowMessage(Sciter1.Call('sciter_sum', [txt1.Text, txt2.Text]));
+  try
+    ShowMessage(Sciter1.Call('sciter_sum', [StrToInt(txt1.Text), StrToInt(txt2.Text)]));
+  except
+    on E:Exception do ShowMessage(E.Message);
+  end;
 end;
 
 procedure TMainForm.DumpHTML1Click(Sender: TObject);
@@ -88,14 +102,14 @@ begin
   FHomeURL := FExamplesBase + 'scide.htm';
   Sciter1.LoadUrl(FHomeURL);
 
-  // Register native function
+  // Registering native function
   Sciter1.RegisterNativeFunction('SayHello', @SayHelloNative);
 
-  // Register native form
+  // Registering native form
   nf := TNativeForm.Create;
   Sciter1.RegisterNativeClass(nf.SciterClassDef, false, false);
 
-  // Register external object
+  // Registering external OLE object variable
   pTest := TTest.Create;
   Sciter1.RegisterComObject('Test', pTest);
 end;
@@ -227,6 +241,19 @@ begin
     pButton.Font.Color := clGreen;
     pDivContainer.AttachHwndToElement(pButton.Handle);
   end;
+end;
+
+{ Intercepting non-existing function call }
+procedure TMainForm.Sciter1MethodCall(ASender: TObject; const MethodName:
+    WideString; const Args: array of OLEVariant; var ReturnValue: OleVariant;
+    var Handled: Boolean);
+begin
+  if MethodName = 'Foo' then
+  begin
+    ShowMessage('Method ' + MethodName + ' is calling with argument ' + Args[0]);
+    Handled := True;
+  end;
+  // else Handled = False and Sciter will emit a warning message
 end;
 
 function SayHelloNative(c: HVM): tiscript_value; cdecl;

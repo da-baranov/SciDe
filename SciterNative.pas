@@ -1,3 +1,14 @@
+{*******************************************************}
+{                                                       }
+{  Helper classes for native integration with Sciter    }
+{  Copyright (c) Dmitry Baranov                         }
+{                                                       }
+{  This Application (or Component) uses Sciter Engine,  }
+{  copyright Terra Informatica Software, Inc.           }
+{  (http://terrainformatica.com/).                      }
+{                                                       }
+{*******************************************************}
+
 unit SciterNative;
 
 interface

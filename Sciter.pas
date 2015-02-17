@@ -1,3 +1,14 @@
+{*******************************************************}
+{                                                       }
+{  Sciter control                                       }
+{  Copyright (c) Dmitry Baranov                         }
+{                                                       }
+{  This component uses Sciter Engine,                   }
+{  copyright Terra Informatica Software, Inc.           }
+{  (http://terrainformatica.com/).                      }
+{                                                       }
+{*******************************************************}
+
 unit Sciter;
 
 interface
@@ -14,8 +25,8 @@ type
 
   IElement = interface;
   IElementCollection = interface;
-  
-    // Element events
+
+  { Element events }
   TElementOnMouse = procedure(ASender: TObject; const target: IElement; eventType: MOUSE_EVENTS;
                                                 x: Integer; y: Integer; buttons: MOUSE_BUTTONS;
                                                 keys: KEYBOARD_STATES) of object;
@@ -29,7 +40,7 @@ type
                                                  pos: Integer; isVertical: WordBool) of object;
   TElementOnSize = procedure(ASender: TObject; const target: IElement) of object;
 
-  // Sciter events
+  { Sciter events }
   TSciterOnStdOut = procedure(ASender: TObject; const msg: WideString) of object;
   TSciterOnStdErr = procedure(ASender: TObject; const msg: WideString) of object;
   TSciterOnLoadData = procedure(ASender: TObject; const url: WideString; resType: Integer;
@@ -38,6 +49,8 @@ type
                                                     data: PByte; dataLength: Integer;
                                                     requestId: Integer) of object;
   TSciterOnDocumentComplete = procedure(ASender: TObject; const url: WideString) of object;
+  TSciterOnMethodCall = procedure(ASender: TObject; const MethodName: WideString; const Args: array of OleVariant;
+    var ReturnValue: OleVariant; var Handled: boolean) of object;
 
 
   IElement = interface
@@ -106,18 +119,6 @@ type
     property Item[const Index: Integer]: TElement read Get_Item; default;
   end;
 
-  ISciter = interface
-  ['{76F8DE2D-14F0-409B-8478-F9E43A73BC3F}']
-    function Eval(const Script: WideString): OleVariant;
-    function Get_Html: WideString;
-    function Get_Root: TElement;
-    procedure LoadHtml(const Html: WideString; const BaseURL: WideString);
-    function LoadURL(const URL: WideString): Boolean;
-    procedure RegisterComObject(const Name: WideString; const Obj: IDispatch);
-    property Html: WideString read Get_Html;
-    property Root: TElement read Get_Root;
-  end;
-
   TElement = class(TInterfacedObject, IElement)
   private
     FAttrAnsiName: WideString;
@@ -184,6 +185,8 @@ type
     function HandleScrollEvents(params: PSCROLL_PARAMS): UINT; virtual;
     function HandleSize: UINT; virtual;
     function HandleTimer(params: PTIMER_PARAMS): UINT; virtual;
+    function HandleScriptingCall(params: PSCRIPTING_METHOD_PARAMS): UINT; overload; virtual;
+    function HandleScriptingCall(params: PTISCRIPT_METHOD_PARAMS): UINT; overload; virtual;
     function IsValid: Boolean;
     property Sciter: TSciter read FSciter;
   public
@@ -254,7 +257,7 @@ type
     property Item[const Index: Integer]: TElement read Get_Item;
   end;
 
-  TSciter = class(TCustomControl, ISciter)
+  TSciter = class(TCustomControl)
   private
     FBaseUrl: WideString;
     FHtml: WideString;
@@ -267,12 +270,11 @@ type
     FOnStdErr: TSciterOnStdErr;
     FOnStdOut: TSciterOnStdOut;
     FOnStdWarn: TSciterOnStdOut;
+    FOnMethodCall: TSciterOnMethodCall;
     FUrl: WideString;
-    function GetHtml: WideString;
     function GetHVM: HVM;
     function Get_Html: WideString;
     function Get_Root: TElement;
-    procedure SetHtml(const Value: WideString);
     procedure SetOnStdErr(const Value: TSciterOnStdErr);
     procedure SetOnStdOut(const Value: TSciterOnStdOut);
     procedure SetOnStdWarn(const Value: TSciterOnStdOut);
@@ -284,10 +286,12 @@ type
     procedure DestroyWnd; override;
     function HandleAttachBehavior(data: LPSCN_ATTACH_BEHAVIOR): UINT; virtual;
     function HandleDataLoaded(data: LPSCN_DATA_LOADED): UINT; virtual;
-    function HandleDocumentComplete(const Url: WideString): UINT; virtual;
+    function HandleDocumentComplete(const Url: WideString): BOOL; virtual;
     function HandleEngineDestroyed(data: LPSCN_ENGINE_DESTROYED): UINT; virtual;
     function HandleLoadData(data: LPSCN_LOAD_DATA): UINT; virtual;
     function HandlePostedNotification(data: LPSCN_POSTED_NOTIFICATION): UINT; virtual;
+    function HandleScriptingCall(params: PSCRIPTING_METHOD_PARAMS): BOOL; overload; virtual;
+    function HandleScriptingCall(params: PTISCRIPT_METHOD_PARAMS): BOOL; overload; virtual;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure Paint; override;
     procedure SetName(const NewName: TComponentName); override;
@@ -315,7 +319,7 @@ type
     function Select(const Selector: WideString): TElement;
     function SelectAll(const Selector: WideString): IElementCollection;
     procedure UpdateWindow;
-    property Html: WideString read GetHtml write SetHtml;
+    property Html: WideString read Get_Html;
     property Root: TElement read Get_Root;
     property VM: HVM read GetHVM;
   published
@@ -329,7 +333,6 @@ type
     property BevelWidth;
     property BiDiMode;
     property BorderWidth;
-    property Caption;
     property Constraints;
     property DragCursor;
     property DragKind;
@@ -368,6 +371,7 @@ type
     property OnStdErr: TSciterOnStdErr read FOnStdErr write SetOnStdErr;
     property OnStdOut: TSciterOnStdOut read FOnStdOut write SetOnStdOut;
     property OnStdWarn: TSciterOnStdOut read FOnStdWarn write SetOnStdWarn;
+    property OnMethodCall: TSciterOnMethodCall read FOnMethodCall write FOnMethodCall;
 end;
 
 procedure SciterDebug(param: Pointer; subsystem: UINT; severity: UINT; text: PWideChar; text_length: UINT); stdcall;
@@ -606,19 +610,21 @@ begin
   Result := False;
 end;
 
-function WindowElementEventProc(tag: Pointer; he: HELEMENT; evtg: UINT; prms: Pointer): SCDOM_RESULT; stdcall;
+function WindowElementEventProc(tag: Pointer; he: HELEMENT; evtg: UINT; prms: Pointer): BOOL; stdcall;
 const
   MAX_URL_LENGTH = 2048;
 var
   pSciter: TSciter;
   pBehaviorEventParams: PBEHAVIOR_EVENT_PARAMS;
+  pScriptingMethodParams: PSCRIPTING_METHOD_PARAMS;
+  pTiScriptMethodParams: PTISCRIPT_METHOD_PARAMS;
   arrUri: array[0..MAX_URL_LENGTH] of WideChar;
   sUri: WideString;
   i: UINT;
 begin
-  Result := SCDOM_OK;
+  Result := False;
   pSciter := TObject(tag) as TSciter;
-  if (evtg and UINT(HANDLE_BEHAVIOR_EVENT)) = UINT(HANDLE_BEHAVIOR_EVENT) then
+  if evtg = UINT(HANDLE_BEHAVIOR_EVENT) then
   begin
     pBehaviorEventParams := prms;
     if pBehaviorEventParams.cmd = DOCUMENT_COMPLETE then
@@ -630,8 +636,20 @@ begin
         sUri := arrUri
       else
         sUri := '';
-      Result := SCDOM_RESULT(pSciter.HandleDocumentComplete(sUri));
+      Result := pSciter.HandleDocumentComplete(sUri);
     end;
+  end
+
+  else if evtg = UINT(HANDLE_SCRIPTING_METHOD_CALL) then
+  begin
+    pScriptingMethodParams := prms;
+    Result := pSciter.HandleScriptingCall(pScriptingMethodParams);
+  end
+
+  else if evtg = UINT(HANDLE_TISCRIPT_METHOD_CALL) then
+  begin
+    pTiScriptMethodParams := prms;
+    Result := pSciter.HandleScriptingCall(pTiScriptMethodParams);
   end;
 end;
 
@@ -902,11 +920,6 @@ begin
   Result := TElement.Create(Self, HELEMENT(Handle));
 end;
 
-function TSciter.GetHtml: WideString;
-begin
-  Result := FHtml;
-end;
-
 function TSciter.GetHVM: HVM;
 begin
   Result := API.SciterGetVM(Self.Handle);
@@ -963,9 +976,9 @@ begin
   Result := 0;
 end;
 
-function TSciter.HandleDocumentComplete(const Url: WideString): UINT;
+function TSciter.HandleDocumentComplete(const Url: WideString): BOOL;
 begin
-  Result := 0;
+  Result := False;
   if Assigned(FOnDocumentComplete) then
     FOnDocumentComplete(Self, '');
 end;
@@ -1163,11 +1176,6 @@ var
 begin
   pRoot := Get_Root;
   Result := pRoot.SelectAll(Selector);
-end;
-
-procedure TSciter.SetHtml(const Value: WideString);
-begin
-  FHtml := Value;
 end;
 
 procedure TSciter.SetName(const NewName: TComponentName);
@@ -1810,6 +1818,18 @@ begin
   inherited;
 end;
 
+function TElement.HandleScriptingCall(
+  params: PSCRIPTING_METHOD_PARAMS): UINT;
+begin
+  Result := 0;
+end;
+
+function TElement.HandleScriptingCall(
+  params: PTISCRIPT_METHOD_PARAMS): UINT;
+begin
+  Result := 0;
+end;
+
 { TElementCollection }
 
 procedure TElementCollection.Add(const Item: TElement);
@@ -1873,6 +1893,80 @@ procedure TElementList.Remove(const Element: TElement);
 begin
   if inherited IndexOf(Element) <> -1 then
     inherited Remove(Element);
+end;
+
+function TSciter.HandleScriptingCall(
+  params: PSCRIPTING_METHOD_PARAMS): BOOL;
+var
+  pArgs: array of OleVariant;
+  sMethodName: WideString;
+  pResult: OleVariant;
+  bHandled: Boolean;
+  pSciterVal: PSciterValue;
+  i: Integer;
+begin
+  Result := False;
+  bHandled := False;
+
+  if Assigned(FOnMethodCall) then
+  try
+    sMethodName := WideString(AnsiString(params.name));
+    SetLength(pArgs, params.argc);
+    pSciterVal := params.argv;
+    for i := 0 to params.argc - 1 do
+    begin
+      S2V(pSciterVal, pArgs[i]);
+      Inc(pSciterVal);
+    end;
+    FOnMethodCall(Self, sMethodName, pArgs, pResult, bHandled);
+    if bHandled then
+      V2S(pResult, @params.result);
+    Result := bHandled;
+  except
+    Exit;
+  end;
+end;
+
+function TSciter.HandleScriptingCall(
+  params: PTISCRIPT_METHOD_PARAMS): BOOL;
+var
+  pArgs: array of OleVariant;
+  oArg: OleVariant;
+  sMethodName: WideString;
+  pResult: OleVariant;
+  bHandled: Boolean;
+  tname: tiscript_value;
+  tval: tiscript_value;
+  iArgc: Integer;
+  i: Integer;
+begin
+  Result := False;
+  bHandled := False;
+  Exit; { Don't know to get method name! }
+
+  {
+  if Assigned(FOnMethodCall) then
+  try
+    tname := NI.to_string(params.vm, params.tag);
+    sMethodName := T2V(vm, tname);
+    iArgc := NI.get_arg_count(params.vm);
+    SetLength(pArgs, iArgc);
+    for i := 0 to iArgc - 1 do
+    begin
+      tval := NI.get_arg_n(vm, i);
+      if NI.is_object(tval) then
+        oArg := Unassigned
+      else
+        oArg := T2V(vm, tval);
+      pArgs[i] := oArg;
+    end;
+    FOnMethodCall(Self, sMethodName, pArgs, pResult, bHandled);
+    if bHandled then
+      params.result := V2T(vm, pResult);
+    Result := bHandled;
+  except
+  end;
+  }
 end;
 
 initialization

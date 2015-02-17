@@ -1,6 +1,15 @@
-unit TiScriptApi;
+{*******************************************************}
+{                                                       }
+{  TIScript API                                         }
+{  Copyright (c) Dmitry Baranov                         }
+{                                                       }
+{  This unit uses Sciter Engine,                        }
+{  copyright Terra Informatica Software, Inc.           }
+{  (http://terrainformatica.com/).                      }
+{                                                       }
+{*******************************************************}
 
-{$A8}
+unit TiScriptApi;
 
 interface
 

@@ -1,3 +1,14 @@
+{*******************************************************}
+{                                                       }
+{  Sciter API                                           }
+{  Copyright (c) Dmitry Baranov                         }
+{                                                       }
+{  This unit uses Sciter Engine,                        }
+{  copyright Terra Informatica Software, Inc.           }
+{  (http://terrainformatica.com/).                      }
+{                                                       }
+{*******************************************************}
+
 unit SciterApi;
 
 interface
@@ -1119,8 +1130,15 @@ begin
           if pbResult <> nil then
           begin
             pDispValue := IDispatch(Pointer(pbResult));
-            //pDispValue._AddRef;
-            OleValue := OleVariant(pDispValue);
+            try
+              pDispValue._AddRef;
+              pDispValue._Release;
+              OleValue := OleVariant(pDispValue);
+            except
+              // not an IDispatch, probably native tiscript object
+              OleValue := Unassigned;
+              Result := HV_OK;
+            end;
           end
             else
           begin
