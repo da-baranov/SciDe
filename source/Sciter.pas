@@ -792,7 +792,8 @@ end;
 procedure TSciter.CreateParams(var Params: TCreateParams);
 begin
   inherited CreateParams(Params);
-  Params.Style := Params.Style or WS_TABSTOP;
+  Params.Style := Params.Style or WS_CHILD or WS_TABSTOP or WS_VISIBLE;
+  Params.ExStyle := Params.ExStyle or WS_EX_CONTROLPARENT;
 end;
 
 procedure TSciter.CreateWindowHandle(const Params: TCreateParams);
@@ -944,11 +945,15 @@ end;
 function TSciter.Get_Root: TElement;
 var
   he: HELEMENT;
-  h: HWND;
 begin
+  if not HandleAllocated then
+  begin
+    Result := nil;
+    Exit;
+  end;
+
   he := nil;
-  h := Self.Handle;
-  if API.SciterGetRootElement(h, he) = SCDOM_OK then
+  if API.SciterGetRootElement(Handle, he) = SCDOM_OK then
     Result := ElementFactoryClass.Create(Self, he)
   else
     Result := nil;
@@ -1134,12 +1139,14 @@ begin
   begin
     if not API.SciterLoadHtml(Handle, PByte(pHtml), iLen, PWideChar(BaseURL)) then
       raise ESciterException.CreateFmt('Failed to load HTML.', []);
-  end;
+  end
+    // else HTML will be loaded in CreateWnd
 end;
 
 function TSciter.LoadURL(const URL: WideString; Async: Boolean = False): Boolean;
 begin
   Result := False;
+  
   if DesignMode then
     Exit;
 
@@ -1149,10 +1156,9 @@ begin
 
   if HandleAllocated then
   begin
-    // if not API.SciterLoadFile(Handle, PWideChar(URL)) then
-    //  raise ESciterException.CreateFmt('Failed to load URL %s', [URL]);
     Result := API.SciterLoadFile(Handle, PWideChar(URL));
-  end;
+  end
+  // else URL will be loaded in CreateWnd
 end;
 
 { Tweaking TWinControl focus behavior }
@@ -1408,7 +1414,7 @@ begin
           WM_KEYDOWN, WM_KEYUP, WM_CHAR:
           begin
             Perform(M.message, M.wParam, M.lParam);
-            Message.Result := Message.Result or DLGC_WANTMESSAGE or DLGC_WANTTAB;
+            // Message.Result := Message.Result or DLGC_WANTMESSAGE or DLGC_WANTTAB;
           end;
         end;
       end;
@@ -2121,6 +2127,8 @@ begin
   if inherited IndexOf(Element) <> -1 then
     inherited Remove(Element);
 end;
+
+
 
 initialization
   ElementFactoryClass := TElement;
