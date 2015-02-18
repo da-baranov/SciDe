@@ -5,6 +5,7 @@
   <title>SciDe examples</title>
   <style>  
   @import url(res:richtext.css);
+  @import url(res:plus.css);
   
   h2
   {
@@ -28,6 +29,8 @@
   }
   </style>
   <script type="text/tiscript">
+  include "res:plus.tis";
+  
   function sciter_sum(a, b)
   {
     return a + b;
@@ -171,6 +174,22 @@
     }
   }
   
+  function self#frmCaseHistory.onControlEvent(e)
+  {
+    if (e.type == Event.EDIT_VALUE_CHANGED) 
+    {
+      self#preCaseHistory.text = String.printf("%V", caseHistory);
+    }
+  }
+
+  var caseHistory = {
+    id: "2015-1-12",
+    patient: {
+      firstName: "John",
+      lastName: "Doe"
+    }
+  };
+  
   </script>
 </head>
 <body>
@@ -194,6 +213,27 @@
   <section>
     <h2>Event handling</h2>
     <input type="text" id="txtEvents" style="width: 50%" value="This input has event handlers attached" />
+  </section>
+  
+  <section>
+    <h2>MVC demo (plus.tis - experimental)</h2>
+    
+    <form id="frmCaseHistory" model="caseHistory" >
+      <table>
+        <tr>
+          <td>ID</td><td><input type="text" name="id" /></td>
+        </tr>
+        <tr>
+          <td>Patient First Name</td><td><input type="text" name="patient.firstName" /></td>
+        </tr>
+        <tr>
+          <td>Patient Last Name</td><td><input type="text" name="patient.lastName" /></td>
+        </tr>
+      </table>
+    </form>
+    <pre class="out" id="preCaseHistory">
+    
+    </pre>
   </section>
   
   <section>
@@ -289,7 +329,7 @@ function self#cmd.onClick()
   </section>
   
   <section>
-    <h2>Intercept non-existing view method call</h2>
+    <h2>Intercept non-existing view methods calls</h2>
     <pre class="code">
 // The Foo function does not exist in the view context, but you 
 // can intercept and handle that function call
@@ -389,5 +429,6 @@ end;
     <h2>Popups from child windows issue</h2>
     <button id="cmdPopup">Show alert</button>
   </section>
+  
 </body>
 </html>

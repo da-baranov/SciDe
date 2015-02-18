@@ -43,9 +43,9 @@ type
   { Sciter events }
   TSciterOnStdOut = procedure(ASender: TObject; const msg: WideString) of object;
   TSciterOnStdErr = procedure(ASender: TObject; const msg: WideString) of object;
-  TSciterOnLoadData = procedure(ASender: TObject; const url: WideString; resType: Integer;
+  TSciterOnLoadData = procedure(ASender: TObject; const url: WideString; resType: SciterResourceType;
                                                   requestId: Integer; out discard: WordBool) of object;
-  TSciterOnDataLoaded = procedure(ASender: TObject; const url: WideString; resType: Integer;
+  TSciterOnDataLoaded = procedure(ASender: TObject; const url: WideString; resType: SciterResourceType;
                                                     data: PByte; dataLength: Integer;
                                                     requestId: Integer) of object;
   TSciterOnDocumentComplete = procedure(ASender: TObject; const url: WideString) of object;
@@ -868,7 +868,7 @@ var
   pVal: TSciterValue;
   pResult: OleVariant;
 begin
-  if API.SciterEval(Self.Handle, PWideChar(Script), Length(Script), pVal)  then
+  if API.SciterEval(Handle, PWideChar(Script), Length(Script), pVal)  then
     S2V(@pVal, pResult)
   else
     pResult := Unassigned;
@@ -974,7 +974,7 @@ end;
 function TSciter.HandleDataLoaded(data: LPSCN_DATA_LOADED): UINT;
 begin
   if Assigned(FOnDataLoaded) then
-    FOnDataLoaded(Self, WideString(data.uri), Integer(data.dataType), data.data, data.dataSize, 0);
+    FOnDataLoaded(Self, WideString(data.uri), data.dataType, data.data, data.dataSize, 0);
   Result := 0;
 end;
 
@@ -982,7 +982,7 @@ function TSciter.HandleDocumentComplete(const Url: WideString): BOOL;
 begin
   Result := False;
   if Assigned(FOnDocumentComplete) then
-    FOnDocumentComplete(Self, '');
+    FOnDocumentComplete(Self, Url);
 end;
 
 function TSciter.HandleEngineDestroyed(data: LPSCN_ENGINE_DESTROYED): UINT;
@@ -1005,6 +1005,8 @@ begin
   Result := LOAD_OK;
 
   wUrl := WideString(data.uri);
+
+  // Hadling res: URL scheme
   if Pos('res:', wUrl) = 1 then
   begin
     wResName := StringReplace(wUrl, 'res:', '', []);
@@ -1018,8 +1020,8 @@ begin
       pStream.Free;
       Exit;
     end;
-  end;
-
+  end
+    else
   begin
     if Assigned(FOnLoadData) then
     begin
@@ -1302,10 +1304,10 @@ var
 begin
   if not DesignMode then
   begin
-    // Tweaking arrow keys handling (VCL-specific)
+    // Tweaking arrow keys and TAB handling (VCL-specific)
     if Message.Msg = WM_GETDLGCODE then
     begin
-      Message.Result := DLGC_WANTALLKEYS or DLGC_WANTARROWS or DLGC_WANTCHARS or DLGC_HASSETSEL;
+      Message.Result := DLGC_WANTALLKEYS or DLGC_WANTTAB or DLGC_WANTARROWS or DLGC_WANTCHARS or DLGC_HASSETSEL;
       if Message.lParam <> 0 then
       begin
         M := PMsg(Message.lParam);
@@ -1313,7 +1315,7 @@ begin
           WM_KEYDOWN, WM_KEYUP, WM_CHAR:
           begin
             Perform(M.message, M.wParam, M.lParam);
-            Message.Result := Message.Result or DLGC_WANTMESSAGE;
+            Message.Result := Message.Result or DLGC_WANTMESSAGE or DLGC_WANTTAB;
           end;
         end;
       end;
@@ -1800,6 +1802,7 @@ end;
 function TElement.Select(const Selector: WideString): TElement;
 begin
   FHChild := nil;
+  Result := nil;
   if API.SciterSelectElementsW(FELEMENT, PWideChar(Selector), @SelectSingleNodeCallback, Self) = SCDOM_OK then
   begin
     if FHChild <> nil then
@@ -2020,6 +2023,7 @@ begin
   if inherited IndexOf(Element) <> -1 then
     inherited Remove(Element);
 end;
+
 
 initialization
   CoInitialize(nil);

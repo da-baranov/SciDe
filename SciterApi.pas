@@ -57,7 +57,6 @@ type
     SCDOM_DUMMY = MAXINT
   );
 
-
   HWINDOW = HWND;
 
   HELEMENT = Pointer;
@@ -86,13 +85,24 @@ type
   ElementEventProc = function(tag: Pointer; he: HELEMENT; evtg: UINT; prms: Pointer ): BOOL; stdcall;
   LPELEMENT_EVENT_PROC = ^ElementEventProc;
 
+  SciterResourceType { NB: UINT }  =
+  (
+    RT_DATA_HTML = 0,
+    RT_DATA_IMAGE = 1,
+    RT_DATA_STYLE = 2,
+    RT_DATA_CURSOR = 3,
+    RT_DATA_SCRIPT = 4,
+    RT_DATA_RAW = 5,
+    SciterResourceTypeDummy = MaxInt
+  );
+
   SCN_LOAD_DATA = packed record
     code: UINT;
     hwnd: HWINDOW;
     uri: LPCWSTR;
     outData: PBYTE;
     outDataSize: UINT;
-    dataType: UINT;
+    dataType: SciterResourceType;
     requestId: Pointer;
     principal: HELEMENT;
     initiator: HELEMENT;
@@ -105,7 +115,7 @@ type
     uri: LPCWSTR;
     data: PByte;
     dataSize: UINT;
-    dataType: UINT;
+    dataType: SciterResourceType;
     status: UINT;
   end;
   LPSCN_DATA_LOADED = ^SCN_DATA_LOADED;
@@ -797,10 +807,13 @@ type
   end;
 
 function _SciterAPI: PSciterApi; stdcall;
+
+{ Conversion functions. Mnemonics are: T - tiscript_value, S - TSciterValue, V - VARIANT }
 function  S2V(Value: PSciterValue; var OleValue: OleVariant): UINT;
 function  V2S(const Value: OleVariant; SciterValue: PSciterValue): UINT;
 function  T2V(const vm: HVM; Value: tiscript_value): OleVariant;
 function  V2T(const vm: HVM; const Value: OleVariant): tiscript_value;
+
 function  API: PSciterApi;
 function NI: ptiscript_native_interface;
 function IsNameExists(vm: HVM; const Name: WideString): boolean;
@@ -824,6 +837,12 @@ var
 
 function NI: ptiscript_native_interface;
 begin
+  if FNI = nil then
+  begin
+    if FAPI = nil then
+      raise ESciterException.Create('Sciter DLL is not loaded.');
+    FNI := FAPI.TIScriptAPI;
+  end;
   Result := FNI;
 end;
 
@@ -868,7 +887,7 @@ begin
 end;
 
 { Returns true if a function registration was successfull,
-  false if a function with such name was already registered,
+  false if a function with same name was already registered,
   throws an exception otherwise }
 function RegisterNativeFunction(const vm: HVM; const Name: WideString; Handler: ptiscript_method; ThrowIfExists: Boolean = False): Boolean;
 var
@@ -878,6 +897,9 @@ var
   func_name: tiscript_value;
   zns: tiscript_value;
 begin
+  if IsNameExists(vm, Name) and ThrowIfExists then
+    raise ESciterException.CreateFmt('Failed to register native function %s. Object with same name already exists.', [Name]);
+    
   zns := NI.get_global_ns(vm);
 
   smethod_name := Name;
@@ -906,7 +928,7 @@ begin
   end
     else
   begin
-    raise ESciterException.CreateFmt('Cannot register native function %s (unexprected error). Seems that object with such name already exists.', [Name]);
+    raise ESciterException.CreateFmt('Cannot register native function %s (unexprected error). Seems that object with same name already exists.', [Name]);
   end;
 end;
 
@@ -944,7 +966,7 @@ begin
   end
     else
   begin
-    raise ESciterException.CreateFmt('Failed to register native class "%s". Object with such name (class, namespace, constant, variable or function) already exists.', [String(ClassDef.name)]);
+    raise ESciterException.CreateFmt('Failed to register native class "%s". Object with same name (class, namespace, constant, variable or function) already exists.', [String(ClassDef.name)]);
   end;
 end;
 
@@ -1003,7 +1025,6 @@ begin
       raise ESciterException.Create('Failed to get pointer to SciterAPI function.');
 
     FAPI := pFuncPtr();
-    FNI := FAPI.TIScriptAPI;
   end;
   Result := FAPI;
 end;
@@ -1148,7 +1169,17 @@ begin
         end
           else
         begin
-          OleValue := Unassigned;
+          if API.ValueToString(Value, CVT_JSON_LITERAL) = HV_OK then
+          begin
+            Result := API.ValueStringData(Value, pWStr, iNum);
+            sWStr := WideString(pWstr);
+            OleValue := sWStr;
+          end
+            else
+          begin
+            Result := HV_INCOMPATIBLE_TYPE;
+            OleValue := Unassigned;
+          end;
         end;
       end;
     T_UNDEFINED:

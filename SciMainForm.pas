@@ -27,10 +27,13 @@ type
     txt1: TEdit;
     txt2: TEdit;
     txtLog: TMemo;
+    cmdGetCaseHistory: TButton;
     procedure cmdCallNativeClick(Sender: TObject);
     procedure cmdEvalClick(Sender: TObject);
+    procedure cmdGetCaseHistoryClick(Sender: TObject);
     procedure DumpHTML1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure FormShow(Sender: TObject);
     procedure GCClick(Sender: TObject);
     procedure mnuElementAtCursorClick(Sender: TObject);
     procedure NavigatetoSciterwebsite1Click(Sender: TObject);
@@ -72,6 +75,7 @@ uses SciterOle, SciterNative, NativeForm;
 
 {$R *.dfm}
 {$R Richtext.res}
+{$R Mvc.res}
 
 procedure TMainForm.cmdCallNativeClick(Sender: TObject);
 begin
@@ -86,6 +90,14 @@ begin
   except
     on E:Exception do ShowMessage(E.Message);
   end;
+end;
+
+procedure TMainForm.cmdGetCaseHistoryClick(Sender: TObject);
+var
+  s: OleVariant;
+begin
+  s := Sciter1.Eval('caseHistory');
+  ShowMessage(s);
 end;
 
 procedure TMainForm.DumpHTML1Click(Sender: TObject);
@@ -115,6 +127,11 @@ begin
   // Registering external OLE object variable
   pTest := TTest.Create;
   Sciter1.RegisterComObject('Test', pTest);
+end;
+
+procedure TMainForm.FormShow(Sender: TObject);
+begin
+  Sciter1.SetFocus;
 end;
 
 procedure TMainForm.GCClick(Sender: TObject);

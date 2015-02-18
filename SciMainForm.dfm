@@ -1,6 +1,6 @@
 object MainForm: TMainForm
-  Left = 383
-  Top = 136
+  Left = 399
+  Top = 250
   Width = 1191
   Height = 775
   Caption = 'SciDe - test form'
@@ -15,6 +15,7 @@ object MainForm: TMainForm
   OldCreateOrder = False
   Position = poScreenCenter
   OnCreate = FormCreate
+  OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 13
   object pnlContainer: TPanel
@@ -73,32 +74,32 @@ object MainForm: TMainForm
     BevelOuter = bvNone
     TabOrder = 1
     object Label1: TLabel
-      Left = 56
-      Top = 58
+      Left = 58
+      Top = 12
       Width = 6
       Height = 13
       Caption = '+'
     end
     object GC: TButton
       Left = 10
-      Top = 8
-      Width = 175
+      Top = 80
+      Width = 160
       Height = 25
       Caption = 'Invoke GC'
       TabOrder = 0
       OnClick = GCClick
     end
     object txt1: TEdit
-      Left = 16
-      Top = 56
+      Left = 20
+      Top = 10
       Width = 33
       Height = 21
       TabOrder = 1
       Text = '2'
     end
     object txt2: TEdit
-      Left = 72
-      Top = 56
+      Left = 70
+      Top = 10
       Width = 41
       Height = 21
       TabOrder = 2
@@ -106,21 +107,30 @@ object MainForm: TMainForm
     end
     object cmdEval: TButton
       Left = 120
-      Top = 54
-      Width = 65
+      Top = 10
+      Width = 61
       Height = 25
       Caption = 'Eval'
       TabOrder = 3
       OnClick = cmdEvalClick
     end
     object cmdCallNative: TButton
-      Left = 16
-      Top = 96
-      Width = 169
+      Left = 10
+      Top = 50
+      Width = 160
       Height = 25
       Caption = 'Call native SayHello'
       TabOrder = 4
       OnClick = cmdCallNativeClick
+    end
+    object cmdGetCaseHistory: TButton
+      Left = 10
+      Top = 110
+      Width = 160
+      Height = 25
+      Caption = 'Get Case History'
+      TabOrder = 5
+      OnClick = cmdGetCaseHistoryClick
     end
   end
   object mm1: TMainMenu
