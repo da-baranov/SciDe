@@ -382,7 +382,7 @@ var
 begin
   try
     pDisp := IDispatch(NI.get_instance_data(obj));
-    pDisp._Release;
+    iCounter := pDisp._Release; // in most cases should be 1 here
     NI.set_instance_data(obj, nil);
   except
     on E:Exception do

@@ -578,7 +578,7 @@ type
     ValueSetValueToKey: TProcPointer;
     ValueGetValueOfKey: TProcPointer;
     ValueToString: function(Value: PSciterValue; How: VALUE_STRING_CVT_TYPE): UINT; stdcall;
-    ValueFromString: function(Value: PSciterValue; str: PWideChar; strLength: UINT; how: UINT): UINT; stdcall;
+    ValueFromString: function(Value: PSciterValue; str: PWideChar; strLength: UINT; how: VALUE_STRING_CVT_TYPE): UINT; stdcall;
     ValueInvoke: TProcPointer;
     ValueNativeFunctorSet: TProcPointer;
     ValueIsNativeFunctor: TProcPointer;
@@ -816,7 +816,9 @@ function  V2T(const vm: HVM; const Value: OleVariant): tiscript_value;
 
 function  API: PSciterApi;
 function NI: ptiscript_native_interface;
-function IsNameExists(vm: HVM; const Name: WideString): boolean;
+function IsNameExists(const vm: HVM; const Name: WideString): boolean;
+function IsNativeClassExists(const vm: HVM; const Name: WideString): boolean;
+function GetNativeObject(const vm: HVM; const Name: WideString): tiscript_value;
 function GetNativeClass(const vm: HVM; const ClassName: WideString): tiscript_class;
 function RegisterNativeFunction(const vm: HVM; const Name: WideString; Handler: ptiscript_method; ThrowIfExists: Boolean = False): Boolean;
 function RegisterNativeClass(const vm: HVM; ClassDef: ptiscript_class_def; ThrowIfExists: Boolean; ReplaceClassDef: Boolean): tiscript_class;
@@ -856,9 +858,23 @@ begin
   NI.throw_error(vm, PWideChar(Message));
 end;
 
+function IsNativeClassExists(const vm: HVM; const Name: WideString): boolean;
+var
+  var_name: tiscript_string;
+  var_value: tiscript_object;
+  zns: tiscript_value;
+begin
+  Result := False;
+  zns := NI.get_global_ns(vm);
+  var_name  := NI.string_value(vm, PWideChar(Name), Length(Name));
+  var_value := NI.get_prop(vm, zns, var_name);
+  if NI.is_class(vm, var_value) then
+    Result := True;
+end;
+
 { Returns true if an object (class, variable, constant etc) exists in the global namespace,
   false otherwise }
-function IsNameExists(vm: HVM; const Name: WideString): boolean;
+function IsNameExists(const vm: HVM; const Name: WideString): boolean;
 var
   var_name: tiscript_string;
   var_value: tiscript_object;
@@ -870,7 +886,19 @@ begin
   Result := not NI.is_undefined(var_value);
 end;
 
-{ Returns tiscript value of type "class" having }
+function GetNativeObject(const vm: HVM; const Name: WideString): tiscript_value;
+var
+  var_name: tiscript_string;
+  var_value: tiscript_object;
+  zns: tiscript_value;
+begin
+  zns := NI.get_global_ns(vm);
+  var_name  := NI.string_value(vm, PWideChar(Name), Length(Name));
+  var_value := NI.get_prop(vm, zns, var_name);
+  Result := var_value;
+end;
+
+{ Returns tiscript value of type "class" }
 function GetNativeClass(const vm: HVM; const ClassName: WideString): tiscript_class;
 var
   zns: tiscript_value;
@@ -928,7 +956,7 @@ begin
   end
     else
   begin
-    raise ESciterException.CreateFmt('Cannot register native function %s (unexprected error). Seems that object with same name already exists.', [Name]);
+    raise ESciterException.CreateFmt('Cannot register native function "%s" (unexprected error). Seems that object with same name already exists.', [Name]);
   end;
 end;
 

@@ -234,6 +234,8 @@ type
     property OnTimer: TElementOnTimer read Get_OnTimer write Set_OnTimer;
   end;
 
+  TElementClass = class of TElement;
+
   TElementList = class(TObjectList)
   private
     function GetItem(const Index: Integer): TElement;
@@ -315,16 +317,23 @@ type
     function GetElementByHandle(Handle: Integer): IElement;
     function GetMinHeight(Width: Integer): Integer;
     function GetMinWidth: Integer;
+    function JsonToSciterValue(const Json: WideString): TSciterValue;
+    function JsonToTiScriptValue(const Json: WideString): tiscript_object;
     procedure LoadHtml(const Html: WideString; const BaseURL: WideString);
-    function LoadURL(const URL: WideString): Boolean;
+    function LoadURL(const URL: WideString; Async: Boolean = False { reserved }): Boolean;
     procedure MouseWheelHandler(var Message: TMessage); override;
-    procedure RegisterComObject(const Name: WideString; const Obj: IDispatch);
-    function RegisterNativeClass(ClassDef: ptiscript_class_def; ThrowIfExists: Boolean; ReplaceClassDef: Boolean { reserved } = False): tiscript_value;
+    procedure RegisterComObject(const Name: WideString; const Obj: OleVariant); overload;
+    procedure RegisterComObject(const Name: WideString; const Obj: IDispatch); overload;
+    function RegisterNativeClass(const ClassInfo: ISciterClassInfo; ThrowIfExists: Boolean; ReplaceClassDef: Boolean = False): tiscript_class; overload;
+    function RegisterNativeClass(const ClassDef: ptiscript_class_def; ThrowIfExists: Boolean; ReplaceClassDef: Boolean { reserved } = False): tiscript_class; overload;
     procedure RegisterNativeFunction(const Name: WideString; Handler: ptiscript_method);
+    function SciterValueToJson(Obj: TSciterValue): WideString;
     function Select(const Selector: WideString): TElement;
     function SelectAll(const Selector: WideString): IElementCollection;
     procedure SetHomeURL(const URL: WideString);
     procedure SetMasterCSS(const Value: WideString);
+    procedure SetObject(const Name: WideString; const Json: WideString); 
+    function TiScriptValueToJson(Obj: tiscript_value): WideString;
     procedure UpdateWindow;
     property Html: WideString read Get_Html;
     property Root: TElement read Get_Root;
@@ -382,6 +391,7 @@ type
 end;
 
 procedure SciterDebug(param: Pointer; subsystem: UINT; severity: UINT; text: PWideChar; text_length: UINT); stdcall;
+
 {$IFDEF UNICODE}
 function LoadResourceAsStream(const ResName: String; const ResType: String): TCustomMemoryStream;
 {$ELSE}
@@ -389,10 +399,14 @@ function LoadResourceAsStream(const ResName: AnsiString; const ResType: AnsiStri
 {$ENDIF}
 
 procedure Register;
+procedure SciterSetElementFactoryClass(Cls: TElementClass);
 
 implementation
 
 uses SciterOle;
+
+var
+  ElementFactoryClass: TElementClass;
 
 {$IFDEF UNICODE}
 function LoadResourceAsStream(const ResName: String; const ResType: String): TCustomMemoryStream;
@@ -561,7 +575,7 @@ var
   pElement: TElement;
 begin
   pElementCollection := TElementCollection(Param);
-  pElement := TElement.Create(pElementCollection.Sciter, he);
+  pElement := ElementFactoryClass.Create(pElementCollection.Sciter, he);
   pElementCollection.Add(pElement);
   Result := False; // Continue
 end;
@@ -572,7 +586,7 @@ var
 begin
   pElement := TElement(Param);
   pElement.FHChild := he;
-  Result := True; // Stop
+  Result := True; // Stop at first element
 end;
 
 function WindowElementEventProc(tag: Pointer; he: HELEMENT; evtg: UINT; prms: Pointer): BOOL; stdcall;
@@ -580,15 +594,16 @@ const
   MAX_URL_LENGTH = 2048;
 var
   pSciter: TSciter;
-  pBehaviorEventParams: PBEHAVIOR_EVENT_PARAMS;
+  pBehaviorEventParams:   PBEHAVIOR_EVENT_PARAMS;
   pScriptingMethodParams: PSCRIPTING_METHOD_PARAMS;
-  pTiScriptMethodParams: PTISCRIPT_METHOD_PARAMS;
+  pTiScriptMethodParams:  PTISCRIPT_METHOD_PARAMS;
   arrUri: array[0..MAX_URL_LENGTH] of WideChar;
   sUri: WideString;
   i: UINT;
 begin
   Result := False;
   pSciter := TObject(tag) as TSciter;
+  
   if evtg = UINT(HANDLE_BEHAVIOR_EVENT) then
   begin
     pBehaviorEventParams := prms;
@@ -870,7 +885,7 @@ begin
     end
       else
     begin
-      pResult := TElement.Create(Self, hResult);
+      pResult := ElementFactoryClass.Create(Self, hResult);
       Result := pResult;
     end;
   end;
@@ -892,7 +907,7 @@ end;
 
 function TSciter.GetElementByHandle(Handle: Integer): IElement;
 begin
-  Result := TElement.Create(Self, HELEMENT(Handle));
+  Result := ElementFactoryClass.Create(Self, HELEMENT(Handle));
 end;
 
 function TSciter.GetHVM: HVM;
@@ -934,7 +949,7 @@ begin
   he := nil;
   h := Self.Handle;
   if API.SciterGetRootElement(h, he) = SCDOM_OK then
-    Result := TElement.Create(Self, he)
+    Result := ElementFactoryClass.Create(Self, he)
   else
     Result := nil;
 end;
@@ -1080,6 +1095,27 @@ begin
   }
 end;
 
+function TSciter.JsonToSciterValue(const Json: WideString): TSciterValue;
+var
+  pObj: TSciterValue;
+begin
+  API.ValueInit(@pObj);
+  if API.ValueFromString(@pObj, PWideChar(Json), Length(Json), CVT_XJSON_LITERAL) <> 0 then
+    raise ESciterException.Create('Sciter failed parsing JSON string.');
+  Result := pObj;
+end;
+
+function TSciter.JsonToTiScriptValue(const Json: WideString): tiscript_object;
+var
+  sv: TSciterValue;
+  tv: tiscript_value;
+begin
+  sv := JsonToSciterValue(Json);
+  if not API.Sciter_S2T(VM, @sv, tv) then
+    raise ESciterException.Create('Sciter failed parsing JSON string.');
+  Result := tv;
+end;
+
 procedure TSciter.LoadHtml(const Html: WideString; const BaseURL: WideString);
 var
   sHtml: AnsiString;
@@ -1101,7 +1137,7 @@ begin
   end;
 end;
 
-function TSciter.LoadURL(const URL: WideString): Boolean;
+function TSciter.LoadURL(const URL: WideString; Async: Boolean = False): Boolean;
 begin
   Result := False;
   if DesignMode then
@@ -1186,15 +1222,54 @@ begin
 end;
 
 procedure TSciter.RegisterComObject(const Name: WideString;
-  const Obj: IDispatch);
-var
-  vm: TiScriptApi.HVM;
+  const Obj: OleVariant);
 begin
-  vm := API.SciterGetVM(Handle);
-  SciterOle.RegisterOleObject(vm, Obj, Name);
+  SciterOle.RegisterOleObject(VM, IDispatch(Obj), Name);
 end;
 
-function TSciter.RegisterNativeClass(ClassDef: ptiscript_class_def; ThrowIfExists: Boolean; ReplaceClassDef: Boolean): tiscript_value;
+procedure TSciter.RegisterComObject(const Name: WideString;
+  const Obj: IDispatch);
+begin
+  SciterOle.RegisterOleObject(VM, Obj, Name);
+end;
+
+function TSciter.RegisterNativeClass(const ClassInfo: ISciterClassInfo;
+  ThrowIfExists, ReplaceClassDef: Boolean): tiscript_class;
+begin
+  if ClassInfo = nil then
+    raise ESciterException.Create('Argument cannot be null');
+
+  if SciterApi.IsNativeClassExists(VM, ClassInfo.TypeName) then
+  begin
+    if ThrowIfExists then
+    begin
+      raise ESciterException.CreateFmt('Native class with such name ("%s") already exists.', [ClassInfo.TypeName]);
+    end
+      else
+    begin
+      Result := GetNativeClass(VM, ClassInfo.TypeName);
+      Exit;
+    end;
+  end;
+
+  if ClassBag.ClassInfoExists(VM, ClassInfo.TypeName) then
+  begin
+    if ThrowIfExists then
+    begin
+      raise ESciterException.CreateFmt('Definition of native class "%s" is already in cache.', [ClassInfo.TypeName])
+    end
+      else
+    begin
+      Result := ClassBag.ResolveClass(VM, ClassInfo.TypeName);
+    end;
+  end
+    else
+  begin
+    Result := ClassBag.RegisterClassInfo(VM, ClassInfo);
+  end;
+end;
+
+function TSciter.RegisterNativeClass(const ClassDef: ptiscript_class_def; ThrowIfExists: Boolean; ReplaceClassDef: Boolean): tiscript_class;
 var
   vm: HVM;
 begin
@@ -1206,6 +1281,20 @@ procedure TSciter.RegisterNativeFunction(const Name: WideString;
   Handler: ptiscript_method);
 begin
   SciterAPI.RegisterNativeFunction(VM, Name, Handler);
+end;
+
+function TSciter.SciterValueToJson(Obj: TSciterValue): WideString;
+var
+  pWStr: PWideChar;
+  iNum: UINT;
+  pCopy: TSciterValue;
+begin
+  pCopy := Obj;
+  if API.ValueToString(@pCopy, CVT_XJSON_LITERAL) <> 0 then
+    raise ESciterException.Create('Failed to convert SciterValue to JSON');
+  if API.ValueStringData(@pCopy, pWStr, iNum) <> 0 then
+    raise ESciterException.Create('Failed to convert SciterValue to JSON');
+  Result := WideString(pWstr);
 end;
 
 function TSciter.Select(const Selector: WideString): TElement;
@@ -1248,6 +1337,24 @@ begin
   Invalidate;
 end;
 
+{ Exprerimental }
+procedure TSciter.SetObject(const Name, Json: WideString);
+var
+  var_name: tiscript_string;
+  zns: tiscript_value;
+  obj: tiscript_value;
+  s: WideString;
+begin
+  zns := NI.get_global_ns(vm);
+  var_name  := NI.string_value(vm, PWideChar(Name), Length(Name));
+
+  obj := JsonToTiScriptValue(Json);
+  s := TiScriptValueToJson(obj);
+
+  if not NI.set_prop(VM, zns, var_name, obj) then
+    raise ESciterException.Create('Failed to set native object');
+end;
+
 procedure TSciter.SetOnStdErr(const Value: TSciterOnStdErr);
 begin
   FOnStdErr := Value;
@@ -1266,6 +1373,15 @@ end;
 procedure TSciter.SetParent(AParent: TWinControl);
 begin
   inherited SetParent(AParent);
+end;
+
+function TSciter.TiScriptValueToJson(Obj: tiscript_value): WideString;
+var
+  sv: TSciterValue;
+begin
+  if not API.Sciter_T2S(VM, Obj, sv, False) then
+    raise ESciterException.Create('Failed to convert tiscript_value to JSON.');
+  Result := SciterValueToJson(sv);
 end;
 
 procedure TSciter.UpdateWindow;
@@ -1364,7 +1480,7 @@ var
 begin
   Result := nil;
   if API.SciterCloneElement(FElement, phe) = SCDOM_OK then
-    Result := TElement.Create(Self.Sciter, phe);
+    Result := ElementFactoryClass.Create(Self.Sciter, phe);
 end;
 
 function TElement.CreateElement(const Tag: WideString; const Text: WideString): IElement;
@@ -1375,7 +1491,7 @@ var
 begin
   sTag := AnsiString(Tag);
   API.SciterCreateElement(PAnsiChar(sTag), PWideChar(Text), pHandle);
-  pElement := TElement.Create(Self.Sciter, pHandle);
+  pElement := ElementFactoryClass.Create(Self.Sciter, pHandle);
   Result := pElement;
 end;
 
@@ -1399,7 +1515,7 @@ begin
   if (SR <> SCDOM_OK) or (pHE = nil) then
     Result := nil
   else
-    Result := TElement.Create(Sciter, pHE);
+    Result := ElementFactoryClass.Create(Sciter, pHE);
 end;
 
 function TElement.GetAttrCount: Integer;
@@ -1462,7 +1578,7 @@ begin
     Result := nil
   else
   begin
-    pResult := TElement.Create(Self.Sciter, hResult);
+    pResult := ElementFactoryClass.Create(Self.Sciter, hResult);
     Result := pResult;
   end;
 end;
@@ -1581,7 +1697,7 @@ begin
   end
     else
   begin
-    pResult := TElement.Create(Self.Sciter, pParent);
+    pResult := ElementFactoryClass.Create(Self.Sciter, pParent);
     Result := pResult;
   end;
 end;
@@ -1635,11 +1751,11 @@ begin
   if Assigned(FOnControlEvent) then
   begin
     if params.heTarget <> nil then
-      pTarget := TElement.Create(Self.Sciter, params.heTarget)
+      pTarget := ElementFactoryClass.Create(Self.Sciter, params.heTarget)
     else
       pTarget := nil;
     if params.he <> nil then
-      pSource := TElement.Create(Self.Sciter, params.he)
+      pSource := ElementFactoryClass.Create(Self.Sciter, params.he)
     else
       pSource := nil;
 
@@ -1661,7 +1777,7 @@ begin
   if Assigned(FOnFocus) then
   begin
     if params.target <> nil then
-      pTarget := TElement.Create(Self.Sciter, params.target);
+      pTarget := ElementFactoryClass.Create(Self.Sciter, params.target);
     FOnFocus(Sciter, pTarget, params.cmd);
     if pTarget <> nil then
       pTarget.Free;
@@ -1683,7 +1799,7 @@ begin
   if Assigned(FOnKey) then
   begin
     if params.target <> nil then
-      pTarget := TElement.Create(Self.Sciter, params.target);
+      pTarget := ElementFactoryClass.Create(Self.Sciter, params.target);
     FOnKey(Sciter, pTarget, params.cmd, params.key_code, params.alt_state);
     if pTarget <> nil then
       pTarget.Free;
@@ -1704,7 +1820,7 @@ begin
   if Assigned(FOnMouse) then
   begin
     if params.target <> nil then
-      pTarget := TElement.Create(Self.Sciter, params.target);
+      pTarget := ElementFactoryClass.Create(Self.Sciter, params.target);
     FOnMouse(Sciter, pTarget, params.cmd, params.pos.x, params.pos.Y, params.button_state, params.alt_state);
     if pTarget <> nil then
       pTarget.Free;
@@ -1731,7 +1847,7 @@ begin
   if Assigned(FOnScroll) then
   begin
     if params.target <> nil then
-      pTarget := TElement.Create(Self.Sciter, params.target);
+      pTarget := ElementFactoryClass.Create(Self.Sciter, params.target);
     FOnScroll(Sciter, pTarget, params.cmd, params.pos, params.vertical);
     if pTarget <> nil then
       pTarget.Free;
@@ -1783,7 +1899,7 @@ begin
   if API.SciterSelectElementsW(FELEMENT, PWideChar(Selector), @SelectSingleNodeCallback, Self) = SCDOM_OK then
   begin
     if FHChild <> nil then
-      Result := TElement.Create(Sciter, FHChild)
+      Result := ElementFactoryClass.Create(Sciter, FHChild)
     else
       Result := nil;
   end
@@ -1982,6 +2098,11 @@ begin
   RegisterComponents('Samples', [TSciter]);
 end;
 
+procedure SciterSetElementFactoryClass(Cls: TElementClass);
+begin
+  ElementFactoryClass := Cls;
+end;
+
 
 { TElementList }
 
@@ -2001,8 +2122,8 @@ begin
     inherited Remove(Element);
 end;
 
-
 initialization
+  ElementFactoryClass := TElement;
   CoInitialize(nil);
   OleInitialize(nil);
 

@@ -43,7 +43,7 @@ type
     function GetSciterClassDef: ptiscript_class_def;
     function GetSetItemHandler: tiscript_set_item;
     function GetSetterHandler: tiscript_tagged_set_prop;
-    function GetTypeName: AnsiString;
+    function GetTypeName: WideString;
     procedure SetFinalizerHandler(const Value: tiscript_finalizer);
     procedure SetGCCopyHandler(const Value: tiscript_on_gc_copy);
     procedure SetGetItemHandler(const Value: tiscript_get_item);
@@ -52,7 +52,7 @@ type
     procedure SetMethodHandler(const Value: tiscript_tagged_method);
     procedure SetSetItemHandler(const Value: tiscript_set_item);
     procedure SetSetterHandler(const Value: tiscript_tagged_set_prop);
-    procedure SetTypeName(const Value: AnsiString);
+    procedure SetTypeName(const Value: WideString);
     function ToString: String;
     property FinalizerHandler: tiscript_finalizer read GetFinalizerHandler write SetFinalizerHandler;
     property GCCopyHandler: tiscript_on_gc_copy read GetGCCopyHandler write SetGCCopyHandler;
@@ -64,7 +64,7 @@ type
     property SciterClassDef: ptiscript_class_def read GetSciterClassDef;
     property SetItemHandler: tiscript_set_item read GetSetItemHandler write SetSetItemHandler;
     property SetterHandler: tiscript_tagged_set_prop read GetSetterHandler write SetSetterHandler;
-    property TypeName: AnsiString read GetTypeName write SetTypeName;
+    property TypeName: WideString read GetTypeName write SetTypeName;
   end;
 
   TSciterClassInfo = class(TInterfacedObject, ISciterClassInfo)
@@ -95,7 +95,7 @@ type
     function GetSciterClassDef: ptiscript_class_def;
     function GetSetItemHandler: tiscript_set_item;
     function GetSetterHandler: tiscript_tagged_set_prop;
-    function GetTypeName: AnsiString;
+    function GetTypeName: WideString;
     procedure SetFinalizerHandler(const Value: tiscript_finalizer);
     procedure SetGCCopyHandler(const Value: tiscript_on_gc_copy);
     procedure SetGetItemHandler(const Value: tiscript_get_item);
@@ -104,7 +104,7 @@ type
     procedure SetMethodHandler(const Value: tiscript_tagged_method);
     procedure SetSetItemHandler(const Value: tiscript_set_item);
     procedure SetSetterHandler(const Value: tiscript_tagged_set_prop);
-    procedure SetTypeName(const Value: AnsiString);
+    procedure SetTypeName(const Value: WideString);
     property FinalizerHandler: tiscript_finalizer read GetFinalizerHandler write SetFinalizerHandler;
     property GCCopyHandler: tiscript_on_gc_copy read GetGCCopyHandler write SetGCCopyHandler;
     property GetItemHandler: tiscript_get_item read GetGetItemHandler write SetGetItemHandler;
@@ -114,7 +114,7 @@ type
     property Methods: ISciterMethodInfoList read GetMethods;
     property SetItemHandler: tiscript_set_item read GetSetItemHandler write SetSetItemHandler;
     property SetterHandler: tiscript_tagged_set_prop read GetSetterHandler write SetSetterHandler;
-    property TypeName: AnsiString read GetTypeName write SetTypeName;
+    property TypeName: WideString read GetTypeName write SetTypeName;
     procedure FreeClassDef;
     procedure BuildClassDef;
   public
@@ -131,14 +131,14 @@ type
     function GetGetArgsCount: Integer;
     function GetHasGetter: Boolean;
     function GetHasSetter: Boolean;
-    function GetName: AnsiString;
+    function GetName: WideString;
     function GetSetArgsCount: Integer;
     procedure SetCallArgsCount(const Value: Integer);
     procedure SetCallType(const Value: TMethodType);
     procedure SetGetArgsCount(const Value: Integer);
     procedure SetHasGetter(const Value: Boolean);
     procedure SetHasSetter(const Value: Boolean);
-    procedure SetName(const Value: AnsiString);
+    procedure SetName(const Value: WideString);
     procedure SetSetArgsCount(const Value: Integer);
     function ToString: String;
     property CallArgsCount: Integer read GetCallArgsCount write SetCallArgsCount;
@@ -146,7 +146,7 @@ type
     property GetArgsCount: Integer read GetGetArgsCount write SetGetArgsCount;
     property HasGetter: Boolean read GetHasGetter write SetHasGetter;
     property HasSetter: Boolean read GetHasSetter write SetHasSetter;
-    property Name: AnsiString read GetName write SetName;
+    property Name: WideString read GetName write SetName;
     property SetArgsCount: Integer read GetSetArgsCount write SetSetArgsCount;
   end;
 
@@ -176,14 +176,14 @@ type
     function GetGetArgsCount: Integer;
     function GetHasGetter: Boolean;
     function GetHasSetter: Boolean;
-    function GetName: AnsiString;
+    function GetName: WideString;
     function GetSetArgsCount: Integer;
     procedure SetCallArgsCount(const Value: Integer);
     procedure SetCallType(const Value: TMethodType);
     procedure SetGetArgsCount(const Value: Integer);
     procedure SetHasGetter(const Value: Boolean);
     procedure SetHasSetter(const Value: Boolean);
-    procedure SetName(const Value: AnsiString);
+    procedure SetName(const Value: WideString);
     procedure SetSetArgsCount(const Value: Integer);
   public
     destructor Destroy; override;
@@ -193,7 +193,7 @@ type
     property GetArgsCount: Integer read GetGetArgsCount write SetGetArgsCount;
     property HasGetter: Boolean read GetHasGetter write SetHasGetter;
     property HasSetter: Boolean read GetHasSetter write SetHasSetter;
-    property Name: AnsiString read GetName write SetName;
+    property Name: WideString read GetName write SetName;
     property SetArgsCount: Integer read GetSetArgsCount write SetSetArgsCount;
   end;
 
@@ -346,7 +346,7 @@ end;
 
 destructor TSciterClassInfo.Destroy;
 begin
-  OutputDebugStringA(PAnsiChar('SciterClassInfo ' + TypeName + ' is being destroyed.'));
+  OutputDebugStringA(PAnsiChar('SciterClassInfo ' + FTypeName + ' is being destroyed.'));
   FProps := nil;
   FMethods := nil;
   FAllMethods := nil;
@@ -412,7 +412,7 @@ begin
   FSciterClassDef.iterator   := FIteratorHandler;
   FSciterClassDef.on_gc_copy := FGCCopyHandler;
   FSciterClassDef.prototype  := 0;   // Not implemented
-  FSciterClassDef.name       := StrNew(PAnsiChar(Self.TypeName));
+  FSciterClassDef.name       := StrNew(PAnsiChar(Self.FTypeName));
 
   // Methods
   pMethods := Self.SelectMethods;
@@ -424,7 +424,7 @@ begin
   for i := 0 to pMethods.Count - 1 do
   begin
     pInfo := pMethods[i];
-    smethod_name := pInfo.Name;
+    smethod_name := AnsiString(pInfo.Name);
     pclass_methods.name := StrNew(PAnsiChar(smethod_name));
     pclass_methods.handler := @FMethodHandler;
     pclass_methods.dispatch := nil;
@@ -446,7 +446,7 @@ begin
   for i := 0 to pProps.Count - 1 do
   begin
     pInfo := pProps[i];
-    sprop_name := pInfo.Name;
+    sprop_name := AnsiString(pInfo.Name);
     pclass_props.dispatch := nil;
     pclass_props.name := StrNew(PAnsiChar(sprop_name));
 
@@ -526,9 +526,9 @@ begin
   Result := FSetterHandler;
 end;
 
-function TSciterClassInfo.GetTypeName: AnsiString;
+function TSciterClassInfo.GetTypeName: WideString;
 begin
-  Result := FTypeName;
+  Result := WideString(FTypeName);
 end;
 
 function TSciterClassInfo.SelectMethods: ISciterMethodInfoList;
@@ -609,9 +609,9 @@ begin
   FSetterHandler := Value;
 end;
 
-procedure TSciterClassInfo.SetTypeName(const Value: AnsiString);
+procedure TSciterClassInfo.SetTypeName(const Value: WideString);
 begin
-  FTypeName := Value;
+  FTypeName := AnsiString(Value);
 end;
 
 function TSciterClassInfo.ToString: String;
@@ -961,7 +961,7 @@ end;
 
 destructor TSciterMethodInfo.Destroy;
 begin
-  OutputDebugStringA(PAnsiChar('  SciterMethodInfo ' + Name + ' is being destroyed.'));
+  OutputDebugStringA(PAnsiChar('  SciterMethodInfo ' + FName + ' is being destroyed.'));
   inherited;
 end;
 
@@ -990,9 +990,9 @@ begin
   Result := FHasSetter;
 end;
 
-function TSciterMethodInfo.GetName: AnsiString;
+function TSciterMethodInfo.GetName: WideString;
 begin
-  Result := FName;
+  Result := WideString(FName);
 end;
 
 function TSciterMethodInfo.GetSetArgsCount: Integer;
@@ -1025,9 +1025,9 @@ begin
   FHasSetter := Value;
 end;
 
-procedure TSciterMethodInfo.SetName(const Value: AnsiString);
+procedure TSciterMethodInfo.SetName(const Value: WideString);
 begin
-  FName := Value;
+  FName := AnsiString(Value);
 end;
 
 procedure TSciterMethodInfo.SetSetArgsCount(const Value: Integer);

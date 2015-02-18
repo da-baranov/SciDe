@@ -44,7 +44,7 @@
         <DCC_DebugInfoInExe>true</DCC_DebugInfoInExe>
         <DCC_DebugInformation>1</DCC_DebugInformation>
         <DCC_ImageBase>00400000</DCC_ImageBase>
-        <DCC_UnitSearchPath>$(DELPHI)\Lib\Debug;..\source;..\dcu;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>$(DELPHI)\Lib\Debug;..\source;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <VerInfo_Build>2</VerInfo_Build>
         <DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;Winapi;System.Win;$(DCC_Namespace)</DCC_Namespace>
         <DCC_S>false</DCC_S>
@@ -65,7 +65,6 @@
         <DCC_F>false</DCC_F>
         <SanitizedProjectName>SciDeDemo</SanitizedProjectName>
         <DCC_E>false</DCC_E>
-        <DCC_DcuOutput>..\dcu</DCC_DcuOutput>
         <DCC_IntegerOverflowCheck>true</DCC_IntegerOverflowCheck>
         <DCC_GenerateStackFrames>true</DCC_GenerateStackFrames>
     </PropertyGroup>
@@ -103,11 +102,11 @@
         <DCCReference Include="SciMainForm.pas">
             <Form>MainForm</Form>
         </DCCReference>
-        <DCCReference Include="Sciter.pas"/>
-        <DCCReference Include="SciterApi.pas"/>
-        <DCCReference Include="TiScriptApi.pas"/>
-        <DCCReference Include="SciterNative.pas"/>
-        <DCCReference Include="SciterOle.pas"/>
+        <DCCReference Include="..\source\Sciter.pas"/>
+        <DCCReference Include="..\source\SciterApi.pas"/>
+        <DCCReference Include="..\source\TiScriptApi.pas"/>
+        <DCCReference Include="..\source\SciterNative.pas"/>
+        <DCCReference Include="..\source\SciterOle.pas"/>
         <DCCReference Include="NativeForm.pas"/>
         <DCCReference Include="SciDeDemo_TLB.pas"/>
         <RidlCompile Include="SciDeDemo.ridl"/>
@@ -493,6 +492,7 @@
             <ActiveXProjectInfo>
                 <version>1</version>
             </ActiveXProjectInfo>
+            <ModelSupport>False</ModelSupport>
         </BorlandProject>
         <ProjectFileVersion>12</ProjectFileVersion>
     </ProjectExtensions>

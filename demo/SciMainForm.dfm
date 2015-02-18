@@ -1,9 +1,9 @@
 object MainForm: TMainForm
-  Left = 399
-  Top = 250
-  Width = 1191
-  Height = 775
+  Left = 268
+  Top = 33
   Caption = 'SciDe - test form'
+  ClientHeight = 717
+  ClientWidth = 1175
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -41,6 +41,7 @@ object MainForm: TMainForm
       Width = 982
       Height = 184
       Align = alBottom
+      Color = 16771799
       Font.Charset = RUSSIAN_CHARSET
       Font.Color = clWindowText
       Font.Height = -13
@@ -128,7 +129,7 @@ object MainForm: TMainForm
       Top = 170
       Width = 160
       Height = 25
-      Caption = 'Get Case History'
+      Caption = 'Show case history JSON'
       TabOrder = 5
       OnClick = cmdGetCaseHistoryClick
     end
@@ -140,6 +141,24 @@ object MainForm: TMainForm
       Caption = 'Refresh'
       TabOrder = 6
       OnClick = cmdReloadClick
+    end
+    object Button1: TButton
+      Left = 10
+      Top = 210
+      Width = 161
+      Height = 25
+      Caption = 'Test JSON serialization'
+      TabOrder = 7
+      OnClick = Button1Click
+    end
+    object cmdSetObject: TButton
+      Left = 10
+      Top = 240
+      Width = 161
+      Height = 25
+      Caption = 'Set object'
+      TabOrder = 8
+      OnClick = cmdSetObjectClick
     end
   end
   object mm1: TMainMenu

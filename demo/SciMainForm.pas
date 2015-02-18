@@ -5,7 +5,7 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, SciterApi, TiScriptApi, Sciter, StdCtrls, OleCtrls,
-  ExtCtrls, ComCtrls, ShellCtrls, Menus, ComObj, ActiveX, SciDeDemo_TLB,
+  ExtCtrls, ComCtrls, Menus, ComObj, ActiveX, SciDeDemo_TLB,
   ComServ;
 
 type
@@ -29,10 +29,14 @@ type
     txtLog: TMemo;
     cmdGetCaseHistory: TButton;
     cmdReload: TButton;
+    Button1: TButton;
+    cmdSetObject: TButton;
+    procedure Button1Click(Sender: TObject);
     procedure cmdCallNativeClick(Sender: TObject);
     procedure cmdEvalClick(Sender: TObject);
     procedure cmdGetCaseHistoryClick(Sender: TObject);
     procedure cmdReloadClick(Sender: TObject);
+    procedure cmdSetObjectClick(Sender: TObject);
     procedure DumpHTML1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -46,6 +50,7 @@ type
         Boolean);
   private
     FExamplesBase: WideString;
+    FButton: TButton;
     FHomeUrl: WideString;
     procedure OnElementControlEvent(ASender: TObject; const target: IElement; eventType: BEHAVIOR_EVENTS;
                              reason: Integer; const source: IElement);
@@ -79,6 +84,14 @@ uses SciterOle, SciterNative, NativeForm;
 {$R ..\resources\Richtext.res}
 {$R ..\resources\Mvc.res}
 
+procedure TMainForm.Button1Click(Sender: TObject);
+var
+  sv: TSciterValue;
+begin
+  sv := Sciter1.JsonToSciterValue(' { firstName: "Lars", lastName: "Carlsson", age: 70, address: { country: "Sweden", city: "Stockholm" }}');
+  ShowMessage(Sciter1.SciterValueToJson(sv));
+end;
+
 procedure TMainForm.cmdCallNativeClick(Sender: TObject);
 begin
   Sciter1.Eval('SayHello()');
@@ -107,6 +120,13 @@ begin
   Sciter1.LoadURL(FHomeUrl);
 end;
 
+procedure TMainForm.cmdSetObjectClick(Sender: TObject);
+const
+  cs = '{ id: "2000-1-1", patient: { firstName: "Lars", lastName: "Carlsson" }}';
+begin
+  Sciter1.SetObject('caseHistory', cs);
+end;
+
 procedure TMainForm.DumpHTML1Click(Sender: TObject);
 begin
   txtLog.Lines.Clear;
@@ -117,6 +137,7 @@ procedure TMainForm.FormCreate(Sender: TObject);
 var
   nf: TNativeForm;
   pTest: ITest;
+  pXml: OleVariant;
 begin
   FExamplesBase := ExtractFileDir(Application.ExeName);
   FExamplesBase := Sciter1.FilePathToURL(FExamplesBase) + '/';
@@ -129,11 +150,16 @@ begin
 
   // Registering native form
   nf := TNativeForm.Create;
-  Sciter1.RegisterNativeClass(nf.SciterClassDef, false, false);
+  Sciter1.RegisterNativeClass(nf, true);
 
   // Registering external OLE object variable
   pTest := TTest.Create;
   Sciter1.RegisterComObject('Test', pTest);
+
+  // Registering another external OLE
+  pXml := CreateOleObject('MSXML2.DOMDocument');
+  pXml.LoadXML('<xml><item>Foo</item><item>Bar</item></xml>');
+  Sciter1.RegisterComObject('XML', pXml);
 end;
 
 procedure TMainForm.FormShow(Sender: TObject);
@@ -265,11 +291,12 @@ procedure TMainForm.Sciter1DocumentComplete(ASender: TObject; const url:
     WideString);
 var
   pBody: TElement;
-  pButton: TButton;
 
   pDivContainer: TElement;
   pTxtEvents: TElement;
 begin
+  if FButton <> nil then
+    FreeAndNil(FButton);
   txtLog.Lines.Add('Sciter OnDocumentComplete event');
   pBody := Sciter1.Root.Select('body');
   pBody.OnControlEvent := OnSciterControlEvent;
@@ -277,12 +304,12 @@ begin
   pDivContainer := Sciter1.Root.Select('#divContainer');
   if pDivContainer <> nil then
   begin
-    pButton := TButton.Create(Self);
-    pButton.Parent := Sciter1;
-    pButton.Caption := 'Native button';
-    pButton.OnClick := OnNativeButtonClick;
-    pButton.Font.Color := clGreen;
-    pDivContainer.AttachHwndToElement(pButton.Handle);
+    FButton := TButton.Create(Self);
+    FButton.Parent := Sciter1;
+    FButton.Caption := 'Native button';
+    FButton.OnClick := OnNativeButtonClick;
+    FButton.Font.Color := clGreen;
+    pDivContainer.AttachHwndToElement(FButton.Handle);
   end;
 
   pTxtEvents := Sciter1.Root.Select('#txtEvents');

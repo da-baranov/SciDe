@@ -36,6 +36,11 @@
     return a + b;
   }
   
+  function self#cmdXml.onClick()
+  {
+    self#preXML.text = XML.xml; 
+  }
+  
   function self#cmdMSXML.onClick()
   {
     var doc = CreateObject("MSXML2.DOMDocument");
@@ -226,7 +231,7 @@
   </section>
   
   <section>
-    <h2>MVC demo (plus.tis - experimental)</h2>
+    <h2>Case History - Plus databinding demo (experimental)</h2>
     
     <form id="frmCaseHistory" model="caseHistory" >
       <table>
@@ -354,6 +359,29 @@ function self#cmd.onClick()
     <button id="cmdTestSayHello">Invoke Test.SayHello</button>
   </section>
   
+  
+  <section>
+    <h2>OLE Example 5. Invoke another externally passed COM object</h2>
+    <pre class="code">
+// Delphi code
+pXml := CreateOleObject('MSXML2.DOMDocument');
+pXml.LoadXML('...');
+Sciter1.RegisterComObject('XML', pXml);
+
+// TIScript code
+function self#cmdXml.onClick()
+{
+  self#preXML.text = XML.xml; 
+}
+    </pre>
+    <pre id="preXML">
+
+    </pre>
+    <button id="cmdXml">Get MSXML2.DOMDocument xml</button>
+  </section>
+  
+ 
+  
   <section>
     <h2>Intercept non-existing view methods calls</h2>
     <pre class="code">
@@ -423,12 +451,13 @@ end;
   </section>
   
   <section>
-    <h2>Richtext</h2>
+    <h2>Richtext behavior (embedded in Resources)</h2>
     <div>
       <button id="cmdShowRichText">Show richedit text</button>
       <button id="cmdShowRichHTML">Show richedit HTML</button>
       <richtext style="height: 150px" id="txtRich">
         <h4>SciDe</h4>
+        <a href="http://terrainformatica.com/sciter">Sciter</a>
       </richtext>
       <pre id="richOut" class="out">
     
