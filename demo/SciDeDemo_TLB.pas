@@ -12,7 +12,7 @@ unit SciDeDemo_TLB;
 // ************************************************************************ //
 
 // PASTLWTR : 1.2
-// File generated on 18.02.2015 17:36:39 from Type Library described below.
+// File generated on 18.02.2015 17:44:47 from Type Library described below.
 
 // ************************************************************************  //
 // Type Lib: C:\git\SciDe\demo\SciDeDemo.tlb (1)

@@ -53,7 +53,7 @@ type
     procedure SetSetItemHandler(const Value: tiscript_set_item);
     procedure SetSetterHandler(const Value: tiscript_tagged_set_prop);
     procedure SetTypeName(const Value: AnsiString);
-    function ToString: AnsiString;
+    function ToString: String;
     property FinalizerHandler: tiscript_finalizer read GetFinalizerHandler write SetFinalizerHandler;
     property GCCopyHandler: tiscript_on_gc_copy read GetGCCopyHandler write SetGCCopyHandler;
     property GetItemHandler: tiscript_get_item read GetGetItemHandler write SetGetItemHandler;
@@ -105,7 +105,6 @@ type
     procedure SetSetItemHandler(const Value: tiscript_set_item);
     procedure SetSetterHandler(const Value: tiscript_tagged_set_prop);
     procedure SetTypeName(const Value: AnsiString);
-    function ToString: AnsiString;
     property FinalizerHandler: tiscript_finalizer read GetFinalizerHandler write SetFinalizerHandler;
     property GCCopyHandler: tiscript_on_gc_copy read GetGCCopyHandler write SetGCCopyHandler;
     property GetItemHandler: tiscript_get_item read GetGetItemHandler write SetGetItemHandler;
@@ -121,6 +120,7 @@ type
   public
     constructor Create; virtual;
     destructor Destroy; override;
+    function ToString: String; {$IFDEF UNICODE} override; {$ENDIF}
     property SciterClassDef: ptiscript_class_def read GetSciterClassDef;
   end;
 
@@ -140,7 +140,7 @@ type
     procedure SetHasSetter(const Value: Boolean);
     procedure SetName(const Value: AnsiString);
     procedure SetSetArgsCount(const Value: Integer);
-    function ToString: AnsiString;
+    function ToString: String;
     property CallArgsCount: Integer read GetCallArgsCount write SetCallArgsCount;
     property CallType: TMethodType read GetCallType write SetCallType;
     property GetArgsCount: Integer read GetGetArgsCount write SetGetArgsCount;
@@ -187,7 +187,7 @@ type
     procedure SetSetArgsCount(const Value: Integer);
   public
     destructor Destroy; override;
-    function ToString: AnsiString;
+    function ToString: String; {$IFDEF UNICODE} override; {$ENDIF}
     property CallArgsCount: Integer read GetCallArgsCount write SetCallArgsCount;
     property CallType: TMethodType read GetCallType write SetCallType;
     property GetArgsCount: Integer read GetGetArgsCount write SetGetArgsCount;
@@ -220,7 +220,7 @@ type
     function FindClassInfo(const TypeName: AnsiString): ISciterClassInfo;
     function GetCount: Integer;
     function GetItem(Index: Integer): ISciterClassInfo;
-    function ToString: AnsiString;
+    function ToString: String;
     property Count: Integer read GetCount;
     property Item[Index: Integer]: ISciterClassInfo read GetItem; default;
   end;
@@ -234,12 +234,12 @@ type
     procedure Add(const ClsInfo: ISciterClassInfo);
     function Exists(const TypeName: AnsiString): boolean;
     function FindClassInfo(const TypeName: AnsiString): ISciterClassInfo;
-    function ToString: AnsiString;
     property Count: Integer read GetCount;
     property Item[Index: Integer]: ISciterClassInfo read GetItem; default;
   public
     constructor Create;
     destructor Destroy; override;
+    function ToString: String; {$IFDEF UNICODE} override; {$ENDIF}
   end;
   
   { Key-value pair where key is a HVM and value is a list of class definitions registered for that VM }
@@ -247,7 +247,7 @@ type
     ['{BC375E40-BB49-4B0A-A4F4-C61ADA94ED03}']
     function GetClassInfoList: ISciterClassInfoList;
     function GetVM: HVM;
-    function ToString: AnsiString;
+    function ToString: String;
     property ClassInfoList: ISciterClassInfoList read GetClassInfoList;
     property VM: HVM read GetVM;
   end;
@@ -262,7 +262,7 @@ type
     constructor Create(vm: HVM);
   public
     destructor Destroy; override;
-    function ToString: AnsiString;
+    function ToString: String;  {$IFDEF UNICODE} override; {$ENDIF}
     property ClassInfoList: ISciterClassInfoList read GetClassInfoList;
     property VM: HVM read GetVM;
   end;
@@ -276,7 +276,7 @@ type
     function GetClassInfoList(const vm: HVM): ISciterClassInfoList;
     function GetCount: Integer;
     function GetItem(Index: Integer): IVMClassBag;
-    function ToString: AnsiString;
+    function ToString: String;
     property Count: Integer read GetCount;
     property Item[Index: Integer]: IVMClassBag read GetItem; default;
   end;
@@ -296,7 +296,7 @@ type
     procedure Add(const Item: IVMClassBag);
     function ClassInfoExists(const vm: HVM; const TypeName: AnsiString): boolean; virtual;
     function FindClassInfo(const vm: HVM; const TypeName: AnsiString): ISciterClassInfo; virtual;
-    function ToString: AnsiString;
+    function ToString: String; {$IFDEF UNICODE} override; {$ENDIF}
     property Count: Integer read GetCount;
   end;
 
@@ -614,11 +614,11 @@ begin
   FTypeName := Value;
 end;
 
-function TSciterClassInfo.ToString: AnsiString;
+function TSciterClassInfo.ToString: String;
 var
   i: Integer;
 begin
-  Result := 'class: ' + Self.TypeName + #13#10;
+  Result := 'class: ' + String(Self.TypeName) + #13#10;
   for i := 0 to Self.FAllMethods.Count - 1 do
     Result := Result + Self.FAllMethods[i].ToString + #13#10;
 end;
@@ -755,7 +755,7 @@ begin
   Result := FList[Index] as ISciterClassInfo;
 end;
 
-function TSciterClassInfoList.ToString: AnsiString;
+function TSciterClassInfoList.ToString: String;
 var
   i: Integer;
 begin
@@ -844,9 +844,9 @@ begin
   Result := FVM;
 end;
 
-function TVMClassBag.ToString: AnsiString;
+function TVMClassBag.ToString: String;
 begin
-  Result := AnsiString('VM: ' + IntToStr(Integer(FVM)) + #13#10);
+  Result := 'VM: ' + IntToStr(Integer(FVM)) + #13#10;
   Result := Result + ClassInfoList.ToString;
 end;
 
@@ -949,7 +949,7 @@ begin
   Result := FList[Index] as IVMClassBag;
 end;
 
-function TVMClassBagList.ToString: AnsiString;
+function TVMClassBagList.ToString: String;
 var
   i: Integer;
 begin
@@ -1035,9 +1035,9 @@ begin
   FSetArgsCount := Value;
 end;
 
-function TSciterMethodInfo.ToString: AnsiString;
+function TSciterMethodInfo.ToString: String;
 begin
-  Result := Self.Name;
+  Result := String(Self.Name);
   case CallType of
     Method: Result := Result + ' (method)';
     NonIndexedProperty: Result := Result + ' (non-indexed property)';

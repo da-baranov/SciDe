@@ -60,7 +60,7 @@ type
     function CloneElement: TElement;
     function CreateElement(const Tag: WideString; const Text: WideString): IElement;
     procedure Delete;
-    function Equals(const Element: IElement): WordBool;
+    function EqualsTo(const Element: IElement): WordBool;
     function FindNearestParent(const Selector: WideString): TElement;
     function GetAttrCount: Integer;
     function GetAttributeName(Index: Integer): WideString;
@@ -200,7 +200,7 @@ type
     function CloneElement: TElement;
     function CreateElement(const Tag: WideString; const Text: WideString): IElement;
     procedure Delete;
-    function Equals(const Element: IElement): WordBool;
+    function EqualsTo(const Element: IElement): WordBool;
     function FindNearestParent(const Selector: WideString): TElement;
     function GetAttributeName(Index: Integer): WideString;
     function GetAttributeValue(Index: Integer): WideString; overload;
@@ -479,7 +479,11 @@ begin
   begin
     pStr := PAnsiChar(bytes);
     sStr := UTF8String(pStr);
+    {$IFDEF UNICODE}
+    wStr := UTF8ToString(pStr);
+    {$ELSE}
     wStr := UTF8Decode(sStr);
+    {$ENDIF}
   end;
   pElement.FHtml := wStr;
 end;
@@ -1380,7 +1384,7 @@ begin
   API.SciterDeleteElement(FElement);
 end;
 
-function TElement.Equals(const Element: IElement): WordBool;
+function TElement.EqualsTo(const Element: IElement): WordBool;
 begin
   Result := (Element <> nil) and (Self.Handle = Element.Handle);
 end;
