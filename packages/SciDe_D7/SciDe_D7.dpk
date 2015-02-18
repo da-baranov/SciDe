@@ -1,0 +1,43 @@
+// JCL_DEBUG_EXPERT_GENERATEJDBG OFF
+// JCL_DEBUG_EXPERT_INSERTJDBG OFF
+package SciDe_D7;
+
+{$R *.res}
+{$R '..\..\source\Sciter.dcr'}
+{$ALIGN 8}
+{$ASSERTIONS ON}
+{$BOOLEVAL OFF}
+{$DEBUGINFO ON}
+{$EXTENDEDSYNTAX ON}
+{$IMPORTEDDATA ON}
+{$IOCHECKS ON}
+{$LOCALSYMBOLS ON}
+{$LONGSTRINGS ON}
+{$OPENSTRINGS ON}
+{$OPTIMIZATION OFF}
+{$OVERFLOWCHECKS ON}
+{$RANGECHECKS OFF}
+{$REFERENCEINFO ON}
+{$SAFEDIVIDE OFF}
+{$STACKFRAMES ON}
+{$TYPEDADDRESS OFF}
+{$VARSTRINGCHECKS ON}
+{$WRITEABLECONST OFF}
+{$MINENUMSIZE 1}
+{$IMAGEBASE $400000}
+{$DESCRIPTION 'Sciter for Delphi'}
+{$IMPLICITBUILD OFF}
+{$DEFINE WINDOWS}
+
+requires
+  rtl,
+  vcl;
+
+contains
+  Sciter in '..\..\source\Sciter.pas',
+  SciterApi in '..\..\source\SciterApi.pas',
+  SciterNative in '..\..\source\SciterNative.pas',
+  SciterOle in '..\..\source\SciterOle.pas',
+  TiScriptApi in '..\..\source\TiScriptApi.pas';
+
+end.

@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{6D8014D7-5CB7-47AF-88FA-69D630C4CA10}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="SciDe_XE7\SciDe.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="..\demo\SciDeDemo.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="SciDe">
+        <MSBuild Projects="SciDe_XE7\SciDe.dproj"/>
+    </Target>
+    <Target Name="SciDe:Clean">
+        <MSBuild Projects="SciDe_XE7\SciDe.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SciDe:Make">
+        <MSBuild Projects="SciDe_XE7\SciDe.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="SciDeDemo">
+        <MSBuild Projects="..\demo\SciDeDemo.dproj"/>
+    </Target>
+    <Target Name="SciDeDemo:Clean">
+        <MSBuild Projects="..\demo\SciDeDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SciDeDemo:Make">
+        <MSBuild Projects="..\demo\SciDeDemo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="SciDe;SciDeDemo"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="SciDe:Clean;SciDeDemo:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="SciDe:Make;SciDeDemo:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

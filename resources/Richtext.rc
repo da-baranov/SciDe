@@ -1,0 +1,5 @@
+kbd_back_png				HTML	"richtext\\kbd-back.png"
+richtext_icons_png			HTML	"richtext\\richtext-icons.png"
+richtext_css				HTML	"richtext\\richtext.css"
+richtext_tis				HTML	"richtext\\richtext.tis"
+richtext_utils				HTML	"richtext\\richtext-utils.tis"
