@@ -302,20 +302,20 @@ type
 
   ISciterClassBag = interface(IVMClassBagList)
     function ClassInfoExists(const vm: HVM; const TypeName: AnsiString): boolean;
-    function CreateInstance(const TypeName: AnsiString): tiscript_value;
+    function CreateInstance(const TypeName: AnsiString): tiscript_object;
     function FindClassInfo(const vm: HVM; const TypeName: AnsiString): ISciterClassInfo;
-    function RegisterClassInfo(vm: HVM; const ClsInfo: ISciterClassInfo): tiscript_value;
-    function ResolveClass(vm: HVM; TypeName: WideString): tiscript_value;
+    function RegisterClassInfo(vm: HVM; const ClsInfo: ISciterClassInfo): tiscript_class;
+    function ResolveClass(vm: HVM; TypeName: WideString): tiscript_class;
   end;
 
   // TypeName is an input.
   TSciterClassBag = class(TVMClassBagList, ISciterClassBag)
   public
     function ClassInfoExists(const vm: HVM; const TypeName: AnsiString): boolean; override;
-    function CreateInstance(const TypeName: AnsiString): tiscript_value;
+    function CreateInstance(const TypeName: AnsiString): tiscript_object;
     function FindClassInfo(const vm: HVM; const TypeName: AnsiString): ISciterClassInfo; override;
-    function RegisterClassInfo(vm: HVM; const ClsInfo: ISciterClassInfo): tiscript_value;
-    function ResolveClass(vm: HVM; TypeName: WideString): tiscript_value;
+    function RegisterClassInfo(vm: HVM; const ClsInfo: ISciterClassInfo): tiscript_class;
+    function ResolveClass(vm: HVM; TypeName: WideString): tiscript_class;
   end;
 
   function CreateSciterClassInfo(const TypeName: WideString): ISciterClassInfo;
@@ -772,7 +772,7 @@ begin
 end;
 
 function TSciterClassBag.CreateInstance(
-  const TypeName: AnsiString): tiscript_value;
+  const TypeName: AnsiString): tiscript_object;
 begin
   Result := NI.undefined_value;
 end;
@@ -784,7 +784,7 @@ begin
 end;
 
 function TSciterClassBag.RegisterClassInfo(
-  vm: HVM; const ClsInfo: ISciterClassInfo): tiscript_value;
+  vm: HVM; const ClsInfo: ISciterClassInfo): tiscript_class;
 var
   pVMClassBag: IVMClassBag;
   pClassList: ISciterClassInfoList;
@@ -806,7 +806,7 @@ begin
 end;
 
 function TSciterClassBag.ResolveClass(vm: HVM;
-  TypeName: WideString): tiscript_value;
+  TypeName: WideString): tiscript_class;
 begin
  if not Self.ClassInfoExists(vm, TypeName) then
  begin

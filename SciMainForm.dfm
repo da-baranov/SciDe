@@ -1,6 +1,6 @@
 object MainForm: TMainForm
-  Left = 305
-  Top = 111
+  Left = 383
+  Top = 136
   Width = 1191
   Height = 775
   Caption = 'SciDe - test form'
@@ -58,10 +58,10 @@ object MainForm: TMainForm
       PopupMenu = ctxSciter
       TabOrder = 1
       OnDocumentComplete = Sciter1DocumentComplete
+      OnMethodCall = Sciter1MethodCall
       OnStdErr = OnSciterOut
       OnStdOut = OnSciterOut
       OnStdWarn = OnSciterOut
-      OnMethodCall = Sciter1MethodCall
     end
   end
   object pnlCommands: TPanel

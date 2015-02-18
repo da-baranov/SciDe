@@ -174,10 +174,17 @@ begin
   params.rgdispidNamedArgs := nil;
 
   try
-    OleCheck(Dispatch.Invoke(pDispIds[0], GUID_NULL, LOCALE_USER_DEFAULT, Flags, TDispParams(Params), @VarResult, @ExcepInfo, @ArgErr));
-    Result := VarResult;
-  finally
-    FreeMem(pArgs, sizeof(TVariantArg) * Argc);
+    try
+      OleCheck(Dispatch.Invoke(pDispIds[0], GUID_NULL, LOCALE_USER_DEFAULT, Flags, TDispParams(Params), @VarResult, @ExcepInfo, @ArgErr));
+      Result := VarResult;
+    finally
+      FreeMem(pArgs, sizeof(TVariantArg) * Argc);
+    end;
+  except
+    on E:EOleError do
+    begin
+      raise ESciterOleException.CreateFmt('OLE Error code %d: %s', [ExcepInfo.wCode, ExcepInfo.bstrDescription]);
+    end;
   end;
 end;
 
@@ -216,9 +223,16 @@ begin
   params.rgdispidNamedArgs := nil;
 
   try
-    OleCheck(Dispatch.Invoke(DispID, GUID_NULL, LOCALE_USER_DEFAULT, Flags, TDispParams(Params), @VarResult, @ExcepInfo, @ArgErr));
-  finally
-    FreeMem(pArgs, sizeof(TVariantArg) * Argc);
+    try
+      OleCheck(Dispatch.Invoke(DispID, GUID_NULL, LOCALE_USER_DEFAULT, Flags, TDispParams(Params), @VarResult, @ExcepInfo, @ArgErr));
+    finally
+      FreeMem(pArgs, sizeof(TVariantArg) * Argc);
+    end;
+  except
+    on E:EOleError do
+    begin
+      raise ESciterOleException.CreateFmt('OLE Error code %d: %s', [ExcepInfo.wCode, ExcepInfo.bstrDescription]);
+    end;
   end;
   Result := VarResult;
 end;
@@ -244,9 +258,16 @@ begin
   params.rgdispidNamedArgs := nil;
 
   try
-    OleCheck(Dispatch.Invoke(DISPID_VALUE, GUID_NULL, LOCALE_USER_DEFAULT, Flags, TDispParams(Params), @VarResult, @ExcepInfo, @ArgErr));
-  finally
-    FreeMem(pArgs, sizeof(TVariantArg) * 2);
+    try
+      OleCheck(Dispatch.Invoke(DISPID_VALUE, GUID_NULL, LOCALE_USER_DEFAULT, Flags, TDispParams(Params), @VarResult, @ExcepInfo, @ArgErr));
+    finally
+      FreeMem(pArgs, sizeof(TVariantArg) * 2);
+    end;
+  except
+    on E:EOleError do
+    begin
+      raise ESciterOleException.CreateFmt('OLE Error code %d: %s', [ExcepInfo.wCode, ExcepInfo.bstrDescription]);
+    end;
   end;
 end;
 
@@ -269,9 +290,16 @@ begin
   params.cNamedArgs := 0;
   params.rgdispidNamedArgs := nil;
   try
-    OleCheck(Dispatch.Invoke(DISPID_VALUE, GUID_NULL, LOCALE_USER_DEFAULT, Flags, TDispParams(Params), @VarResult, @ExcepInfo, @ArgErr));
-  finally
-    FreeMem(pArgs, sizeof(TVariantArg) * 1);
+    try
+      OleCheck(Dispatch.Invoke(DISPID_VALUE, GUID_NULL, LOCALE_USER_DEFAULT, Flags, TDispParams(Params), @VarResult, @ExcepInfo, @ArgErr));
+    finally
+      FreeMem(pArgs, sizeof(TVariantArg) * 1);
+    end;
+  except
+    on E:EOleError do
+    begin
+      raise ESciterOleException.CreateFmt('OLE Error code %d: %s', [ExcepInfo.wCode, ExcepInfo.bstrDescription]);
+    end;
   end;
   Result := VarResult;
 end;
@@ -417,14 +445,14 @@ begin
 end;
 
 procedure OleOnGCCopyHandler(instance_data: Pointer; new_self: tiscript_value); cdecl;
-var
-  pThis: IDispatch;
 begin
   if instance_data <> nil then
   begin
-    pthis := IDispatch(instance_data);
+    //pthis := IDispatch(instance_data);
     //pthis._AddRef();
-    NI.set_instance_data(new_self, Pointer(pthis));
+    //NI.set_instance_data(new_self, Pointer(pthis));
+
+    NI.set_instance_data(new_self, instance_data);
   end;
 end;
 

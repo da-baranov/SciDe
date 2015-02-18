@@ -3,7 +3,7 @@
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
   <title>SciDe examples</title>
-  <style>
+  <style>  
   @import url(res:richtext.css);
   
   h2
@@ -18,6 +18,13 @@
     min-height: 40px;
     border: 1px dotted #999999;
     background-color: #FFFFCC;
+  }
+  pre.code
+  {
+    padding: 10px;
+    margin: 10px;
+    font-family: "Courier New";
+    font-size: 9pt;
   }
   </style>
   <script type="text/tiscript">
@@ -64,7 +71,7 @@
     word = CreateObject("Word.Application");
     word.Visible = true;
     var doc = word.Documents.Add();
-    doc.Paragraphs[doc.Paragraphs.Count].Range.Text = "Hello from Sciter! Привет от Sciter!";
+    doc.Paragraphs[doc.Paragraphs.Count].Range.Text = "Hello from Sciter!";
   }
   
   function self#cmdCloseWord.onClick()
@@ -78,7 +85,8 @@
   
   function self#cmdTestSayHello.onClick()
   {
-    Test.SayHello();
+    var x = Test;
+    x.SayHello();
   }
   
   function self#cmdCallNativeFunction.onClick()
@@ -135,15 +143,44 @@
     view.Foo("Hello World!");
   }
   
-  function self#cmdBar.onClick()
+  function self#cmdViewFoo2.onClick()
   {
-    Bar("Hello World!");
+    view.Foo2("Hello World!");
+  }
+  
+  function self.ready()
+  {
+    for (var pre in self.selectAll("pre.code"))
+    {
+      pre.$before(<div><strong>Code example</strong></div>);
+    }
+    
+    for (var pre in self.selectAll("pre.out, div.out"))
+    {
+      pre.$before(<div><strong>Output</strong></div>);
+    }
+    
+    var i = 0;
+    for (var h in self.selectAll("h2"))
+    {
+      var anchor_html = "<a name='toc" + i + "' />";
+      h.append(anchor_html);
+      var link_html = "<li><a href='#toc" + i + "'>" + h.text + "</a></li>";
+      self#menu.append(link_html);
+      i++;
+    }
   }
   
   </script>
 </head>
 <body>
   <h1>SCIDE - Sciter for Delphi</h1>
+  
+  <strong>Table of Contents</strong>
+  <ul id="menu">
+  
+  </ul>
+  
   <section>
     <h2>Basic DOM manipulations</h2>
     <button id="cmdCreateHeadings">Create headings</button>
@@ -155,7 +192,26 @@
   </section>
   
   <section>
+    <h2>Event handling</h2>
+    <input type="text" id="txtEvents" style="width: 50%" value="This input has event handlers attached" />
+  </section>
+  
+  <section>
     <h2>OLE Example 1. Creating and manipulating XML document using MSXML</h2>
+    <pre class="code">
+var doc = CreateObject("MSXML2.DOMDocument");
+doc.loadXML("&lt;div /&gt;");
+var root = doc.documentElement;  
+for (var i = 0; i &lt; 10; i++)
+{
+  var heading = root.appendChild(doc.createElement("h"));
+  var textNode = heading.appendChild(doc.createTextNode("Heading " + i));
+}  
+var doc1 = doc;
+self.select("#oleOut1").text = doc1.xml;
+doc1 = null;
+doc = null;
+    </pre>
     <button id="cmdMSXML">Run MSXML</button>
     <pre id="oleOut1" class="out">
     
@@ -164,6 +220,20 @@
   
   <section>
     <h2>OLE Example 2. Parsing text with regular expressions</h2>
+    <pre class="code">
+var re = CreateObject("VBScript.RegExp");
+re.Pattern = "\\d+";
+re.Global = true;
+var arr = [];
+var matches = re.Execute(self#txtRegExpInp.text);
+for (var match in matches)
+{
+  arr.push(match.Value);
+}
+self.select("#oleOut2").text = "Found numeric values: " + arr.join(", ");
+matches = null;
+re = null;
+    </pre>
     <div>
       <button id="cmdRegExp">Run VBScript.RegExp</button>
     </div>
@@ -187,27 +257,70 @@
   
   <section>
     <h2>OLE Example 3. Call Microsoft Word</h2>
+    <pre class="code">
+var word = CreateObject("Word.Application");
+word.Visible = true;
+var doc = word.Documents.Add();
+doc.Paragraphs[doc.Paragraphs.Count].Range.Text = "Hello from Sciter!";
+    </pre>
     <button id="cmdOpenWord">Run Microsoft Word</button>
     <button id="cmdCloseWord">Close Microsoft Word</button>
   </section>
   
   <section>
     <h2>OLE Example 4. Invoke externally passed COM object</h2>
+    <pre class="code">
+// Delphi code
+procedure TMainForm.FormCreate(Sender: TObject);
+var
+  pTest: ITest; // the ITest interface inherits from IDispatch
+begin
+  pTest := TTest.Create;
+  Sciter1.RegisterComObject('Test', pTest);
+end;
+
+// TIScript code
+function self#cmd.onClick()
+{
+  Test.SayHello();
+}
+    </pre>
     <button id="cmdTestSayHello">Invoke Test.SayHello</button>
   </section>
   
   <section>
     <h2>Intercept non-existing view method call</h2>
+    <pre class="code">
+// The Foo function does not exist in the view context, but you 
+// can intercept and handle that function call
+
+procedure TMainForm.Sciter1MethodCall(ASender: TObject; const MethodName:
+    WideString; const Args: array of OLEVariant; var ReturnValue: OleVariant;
+    var Handled: Boolean);
+begin
+  if MethodName = 'Foo' then
+  begin
+    ShowMessage('Method ' + MethodName + ' is calling with argument ' + Args[0]);
+    Handled := True;
+  end;
+  // else Handled = False and Sciter will emit a warning message
+end;
+    </pre>
     <button id="cmdViewFoo">Call view.Foo()</button>
-  </section>
-  
-  <section>
-    <h2>Intercept non-existing tiscript method call</h2>
-    <button id="cmdBar">Call Bar()</button>
+    <button id="cmdViewFoo2">Call view.Foo2() (handler does not exist)</button>
   </section>
   
   <section>
     <h2>Call native function implemented in Delphi</h2>
+    <pre class="code">
+function SayHelloNative(c: HVM): tiscript_value; cdecl;
+begin
+  ShowMessage('Hello!');
+  Result := NI.int_value(0);
+end;
+...
+Sciter1.RegisterNativeFunction('SayHello', @SayHelloNative);
+    </pre>
     <button id="cmdCallNativeFunction">Say hello</button>
   </section>
   
@@ -219,6 +332,25 @@
   
   <section>
     <h2>Native Delphi Control inside Sciter</h2>
+<pre class="code">
+procedure TMainForm.Sciter1DocumentComplete(ASender: TObject; const url:
+    WideString);
+var
+  pButton: TButton;
+  pDivContainer: TElement; 
+begin
+  pDivContainer := Sciter1.Root.Select('#divContainer');
+  if pDivContainer &lt;&gt; nil then
+  begin
+    pButton := TButton.Create(Self);
+    pButton.Parent := Sciter1;
+    pButton.Caption := 'Native button';
+    pButton.OnClick := OnNativeButtonClick;
+    pButton.Font.Color := clGreen;
+    pDivContainer.AttachHwndToElement(pButton.Handle);
+  end;
+end;
+</pre>
     <div id="divContainer" style="width: 50%; height: 30px">
     
     </div>

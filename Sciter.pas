@@ -81,11 +81,11 @@ type
     function Get_Text: WideString;
     function Get_Value: OleVariant;
     procedure InsertElement(const Child: IElement; Index: Integer);
-    procedure PostEvent(EventCode: BEHAVIOR_EVENTS);
+    function PostEvent(EventCode: BEHAVIOR_EVENTS): Boolean;
     procedure ScrollToView;
     function Select(const Selector: WideString): TElement;
     function SelectAll(const Selector: WideString): IElementCollection;
-    procedure SendEvent(EventCode: BEHAVIOR_EVENTS);
+    function SendEvent(EventCode: BEHAVIOR_EVENTS): Boolean;
     procedure Set_Attr(const AttrName: WideString; const Value: WideString);
     procedure Set_ID(const Value: WideString);
     procedure Set_InnerHtml(const Value: WideString);
@@ -125,6 +125,7 @@ type
     FAttrName: WideString;
     FAttrValue: WideString;
     FELEMENT: HELEMENT;
+    FHChild: HELEMENT;
     FHtml: WideString;
     FOnControlEvent: TElementOnControlEvent;
     FOnFocus: TElementOnFocus;
@@ -176,18 +177,20 @@ type
     procedure Set_Value(Value: OleVariant);
   protected
     constructor Create(ASciter: TSciter; h: HELEMENT); virtual;
-    function HandleBehaviorEvents(params: PBEHAVIOR_EVENT_PARAMS): UINT; virtual;
-    function HandleFocus(params: PFOCUS_PARAMS): UINT; virtual;
-    function HandleInitialization(params: PINITIALIZATION_PARAMS): UINT; virtual;
-    function HandleKey(params: PKEY_PARAMS): UINT; virtual;
-    function HandleMethodCallEvents(params: PMETHOD_PARAMS): UINT; virtual;
-    function HandleMouse(params: PMOUSE_PARAMS): UINT; virtual;
-    function HandleScrollEvents(params: PSCROLL_PARAMS): UINT; virtual;
-    function HandleSize: UINT; virtual;
-    function HandleTimer(params: PTIMER_PARAMS): UINT; virtual;
+    function HandleBehaviorEvents(params: PBEHAVIOR_EVENT_PARAMS): BOOL; virtual;
+    function HandleFocus(params: PFOCUS_PARAMS): BOOL; virtual;
+    function HandleInitialization(params: PINITIALIZATION_PARAMS): BOOL; virtual;
+    function HandleKey(params: PKEY_PARAMS): BOOL; virtual;
+    function HandleMethodCallEvents(params: PMETHOD_PARAMS): BOOL; virtual;
+    function HandleMouse(params: PMOUSE_PARAMS): BOOL; virtual;
     function HandleScriptingCall(params: PSCRIPTING_METHOD_PARAMS): UINT; overload; virtual;
     function HandleScriptingCall(params: PTISCRIPT_METHOD_PARAMS): UINT; overload; virtual;
+    function HandleScrollEvents(params: PSCROLL_PARAMS): BOOL; virtual;
+    function HandleSize: BOOL; virtual;
+    function HandleTimer(params: PTIMER_PARAMS): BOOL; virtual;
     function IsValid: Boolean;
+    procedure ThrowException(const Message: AnsiString); overload; 
+    procedure ThrowException(const Message: AnsiString; const Args: Array of const); overload;
     property Sciter: TSciter read FSciter;
   public
     destructor Destroy; override;
@@ -204,11 +207,11 @@ type
     function GetAttributeValue(const Name: WideString): WideString; overload;
     function GetChild(Index: Integer): IElement;
     procedure InsertElement(const Child: IElement; Index: Integer);
-    procedure PostEvent(EventCode: BEHAVIOR_EVENTS);
+    function PostEvent(EventCode: BEHAVIOR_EVENTS): Boolean;
     procedure ScrollToView;
     function Select(const Selector: WideString): TElement;
     function SelectAll(const Selector: WideString): IElementCollection;
-    procedure SendEvent(EventCode: BEHAVIOR_EVENTS);
+    function SendEvent(EventCode: BEHAVIOR_EVENTS): Boolean;
     property Attr[const AttrName: WideString]: WideString read Get_Attr write Set_Attr;
     property AttrCount: Integer read GetAttrCount;
     property ChildrenCount: Integer read Get_ChildrenCount;
@@ -260,6 +263,7 @@ type
   TSciter = class(TCustomControl)
   private
     FBaseUrl: WideString;
+    FHomeURL: WideString;
     FHtml: WideString;
     FInnerList: TElementList;
     FOnDataLoaded: TSciterOnDataLoaded;
@@ -267,10 +271,10 @@ type
     FOnEngineDestroyed: TNotifyEvent;
     FOnHandleCreated: TNotifyEvent;
     FOnLoadData: TSciterOnLoadData;
+    FOnMethodCall: TSciterOnMethodCall;
     FOnStdErr: TSciterOnStdErr;
     FOnStdOut: TSciterOnStdOut;
     FOnStdWarn: TSciterOnStdOut;
-    FOnMethodCall: TSciterOnMethodCall;
     FUrl: WideString;
     function GetHVM: HVM;
     function Get_Html: WideString;
@@ -301,6 +305,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    procedure AppendMasterCSS(const Value: WideString);
     function Call(const FunctionName: WideString; const Args: array of OleVariant): OleVariant;
     function Eval(const Script: WideString): OleVariant;
     function FilePathToURL(const FileName: AnsiString): AnsiString;
@@ -318,6 +323,8 @@ type
     procedure RegisterNativeFunction(const Name: WideString; Handler: ptiscript_method);
     function Select(const Selector: WideString): TElement;
     function SelectAll(const Selector: WideString): IElementCollection;
+    procedure SetHomeURL(const URL: WideString);
+    procedure SetMasterCSS(const Value: WideString);
     procedure UpdateWindow;
     property Html: WideString read Get_Html;
     property Root: TElement read Get_Root;
@@ -368,10 +375,10 @@ type
     property OnEngineDestroyed: TNotifyEvent read FOnEngineDestroyed write FOnEngineDestroyed;
     property OnHandleCreated: TNotifyEvent read FOnHandleCreated write FOnHandleCreated;
     property OnLoadData: TSciterOnLoadData read FOnLoadData write FOnLoadData;
+    property OnMethodCall: TSciterOnMethodCall read FOnMethodCall write FOnMethodCall;
     property OnStdErr: TSciterOnStdErr read FOnStdErr write SetOnStdErr;
     property OnStdOut: TSciterOnStdOut read FOnStdOut write SetOnStdOut;
     property OnStdWarn: TSciterOnStdOut read FOnStdWarn write SetOnStdWarn;
-    property OnMethodCall: TSciterOnMethodCall read FOnMethodCall write FOnMethodCall;
 end;
 
 procedure SciterDebug(param: Pointer; subsystem: UINT; severity: UINT; text: PWideChar; text_length: UINT); stdcall;
@@ -444,30 +451,6 @@ end;
 function LoadResourceAsWideString(ResID: integer; ResType: PAnsiChar): WideString;
 begin
   Result := UTF8Decode(LoadResourceAsAnsiString(ResID, ResType));
-end;
-
-function CreateObjectNative(vm: HVM): tiscript_value; cdecl;
-var
-  oVal: OleVariant;
-  tProgId: tiscript_value;
-  pProgId: PWideChar;
-  iCnt: UINT;
-  sProgId: WideString;
-begin
-  Result := NI.nothing_value;
-  try
-    iCnt := NI.get_arg_count(vm);
-    // TODO: Check args count
-
-    tProgId := NI.get_arg_n(vm, 2);
-    NI.get_string_value(tProgId, pProgId, iCnt);
-    sProgId := WideString(pProgId);
-    oVal := CreateOleObject(sProgId);
-    Result := WrapOleObject(vm, IDispatch(oVal));
-  except
-    on E:Exception do
-      ThrowError(vm, E.Message);
-  end;
 end;
 
 function HostCallback(pns: LPSCITER_CALLBACK_NOTIFICATION; callbackParam: Pointer ): UINT; stdcall;
@@ -607,7 +590,16 @@ begin
   pElementCollection := TElementCollection(Param);
   pElement := TElement.Create(pElementCollection.Sciter, he);
   pElementCollection.Add(pElement);
-  Result := False;
+  Result := False; // Continue
+end;
+
+function SelectSingleNodeCallback(he: HELEMENT; Param: Pointer ): BOOL; stdcall;
+var
+  pElement: TElement;
+begin
+  pElement := TElement(Param);
+  pElement.FHChild := he;
+  Result := True; // Stop
 end;
 
 function WindowElementEventProc(tag: Pointer; he: HELEMENT; evtg: UINT; prms: Pointer): BOOL; stdcall;
@@ -653,7 +645,7 @@ begin
   end;
 end;
 
-function ElementEventProc(tag: Pointer; he: HELEMENT; evtg: UINT; prms: Pointer): Integer; stdcall;
+function ElementEventProc(tag: Pointer; he: HELEMENT; evtg: UINT; prms: Pointer): BOOL; stdcall;
 var
   pElement: TElement;
   pInitParams: PINITIALIZATION_PARAMS;
@@ -665,7 +657,7 @@ var
   pMethodCallParams: PMETHOD_PARAMS;
   pScrollParams: PSCROLL_PARAMS;
 begin
-  Result := 0;
+  Result := False;
 
   if prms = nil then Exit;
   if tag = nil then Exit;
@@ -772,6 +764,15 @@ begin
   inherited;
 end;
 
+procedure TSciter.AppendMasterCSS(const Value: WideString);
+var
+  sUTF8: UTF8String;
+begin
+  sUTF8 := UTF8Encode(Value);
+  if not API.SciterAppendMasterCSS(PAnsiChar(sUTF8), Length(sUTF8)) then
+    raise ESciterException.Create('Failed to append a string to Sciter master CSS');
+end;
+
 function TSciter.Call(const FunctionName: WideString;
   const Args: array of OleVariant): OleVariant;
 var
@@ -780,7 +781,6 @@ var
   pArgs: array[0..255] of TSciterValue;
   cArgs: Integer;
   i: Integer;
-  vt: Integer;
 begin
   sFunctionName := FunctionName;
   API.ValueInit(@pVal);
@@ -831,7 +831,7 @@ begin
 
     API.SciterSetupDebugOutput(Handle, Self, @SciterDebug);
 
-    RegisterNativeFunction('CreateObject', @CreateObjectNative);
+    API.SciterSetHomeURL(Handle, PWideChar(FHomeURL));
 
     if FHtml <> '' then
     begin
@@ -866,11 +866,13 @@ end;
 function TSciter.Eval(const Script: WideString): OleVariant;
 var
   pVal: TSciterValue;
+  pResult: OleVariant;
 begin
   if API.SciterEval(Self.Handle, PWideChar(Script), Length(Script), pVal)  then
-    S2V(@pVal, Result)
+    S2V(@pVal, pResult)
   else
-    Result := Unassigned;
+    pResult := Unassigned;
+  Result := pResult;
 end;
 
 function TSciter.FilePathToURL(const FileName: AnsiString): AnsiString;
@@ -1034,6 +1036,71 @@ begin
   Result := 0;
 end;
 
+function TSciter.HandleScriptingCall(
+  params: PSCRIPTING_METHOD_PARAMS): BOOL;
+var
+  pArgs: array of OleVariant;
+  sMethodName: WideString;
+  pResult: OleVariant;
+  bHandled: Boolean;
+  pSciterVal: PSciterValue;
+  i: Integer;
+begin
+  Result := False;
+  bHandled := False;
+
+  if Assigned(FOnMethodCall) then
+  try
+    sMethodName := WideString(AnsiString(params.name));
+    SetLength(pArgs, params.argc);
+    pSciterVal := params.argv;
+    for i := 0 to params.argc - 1 do
+    begin
+      S2V(pSciterVal, pArgs[i]);
+      Inc(pSciterVal);
+    end;
+    FOnMethodCall(Self, sMethodName, pArgs, pResult, bHandled);
+    if bHandled then
+      V2S(pResult, @params.result);
+    Result := bHandled;
+  except
+    Exit;
+  end;
+end;
+
+function TSciter.HandleScriptingCall(
+  params: PTISCRIPT_METHOD_PARAMS): BOOL;
+begin
+  Result := False;
+  Exit;
+  { Don't know how to get method name! }
+  { if method returns False then overloaded HandleScriptingCall(params: PSCRIPTING_METHOD_PARAMS) will be called }
+
+  {
+  if Assigned(FOnMethodCall) then
+  try
+    tname := NI.to_string(params.vm, params.tag);
+    sMethodName := T2V(vm, tname);
+    iArgc := NI.get_arg_count(params.vm);
+    SetLength(pArgs, iArgc);
+    for i := 0 to iArgc - 1 do
+    begin
+      tval := NI.get_arg_n(vm, i);
+      if NI.is_object(tval) then
+        oArg := Unassigned
+      else
+        oArg := T2V(vm, tval);
+      pArgs[i] := oArg;
+    end;
+    FOnMethodCall(Self, sMethodName, pArgs, pResult, bHandled);
+    if bHandled then
+      params.result := V2T(vm, pResult);
+    Result := bHandled;
+  except
+  end;
+  }
+end;
+
 procedure TSciter.LoadHtml(const Html: WideString; const BaseURL: WideString);
 var
   sHtml: AnsiString;
@@ -1178,6 +1245,24 @@ begin
   Result := pRoot.SelectAll(Selector);
 end;
 
+procedure TSciter.SetHomeURL(const URL: WideString);
+begin
+  FHomeURL := URL;
+  if HandleAllocated then
+  begin
+    API.SciterSetHomeURL(Handle, PWideChar(URL));
+  end;
+end;
+
+procedure TSciter.SetMasterCSS(const Value: WideString);
+var
+  sUTF8: UTF8String;
+begin
+  sUTF8 := UTF8Encode(Value);
+  if not API.SciterSetMasterCSS(PAnsiChar(sUTF8), Length(sUTF8)) then
+    raise ESciterException.Create('Failed to set Sciter master CSS');
+end;
+
 procedure TSciter.SetName(const NewName: TComponentName);
 begin
   inherited;
@@ -1261,7 +1346,7 @@ end;
 constructor TElement.Create(ASciter: TSciter; h: HELEMENT);
 begin
   if h = nil then
-    raise ESciterException.CreateFmt('Invalid element handle.', []);
+    ThrowException('Invalid element handle.', []);
   FSciter := ASciter;
   Self.FELEMENT := h;
   API.Sciter_UseElement(FElement);
@@ -1272,7 +1357,7 @@ end;
 destructor TElement.Destroy;
 begin
   API.SciterDetachEventHandler(Self.FElement, @ElementEventProc, Self);
-  API.Sciter_UseElement(FElement);
+  API.Sciter_UnuseElement(FElement);
   if FSciter.InnerList.IndexOf(Self) >= 0 then
     FSciter.InnerList.Remove(Self);
   inherited;
@@ -1347,19 +1432,31 @@ begin
 end;
 
 function TElement.GetAttributeName(Index: Integer): WideString;
+var
+  nCnt: UINT;
 begin
+  API.SciterGetAttributeCount(FElement, nCnt);
+  if Index >= nCnt then
+    ThrowException('Attribute index (%d) is out of range.', [Index]);
+    
   if API.SciterGetNthAttributeNameCB(FElement, Index, @NThAttributeNameCallback, Self) = SCDOM_OK then
     Result := WideString(Self.FAttrAnsiName)
   else
-    Result := ''; // TODO: Exception
+    ThrowException('Failed to get attribute name.');
 end;
 
 function TElement.GetAttributeValue(Index: Integer): WideString;
+var
+  nCnt: UINT;
 begin
+  API.SciterGetAttributeCount(FElement, nCnt);
+  if Index >= nCnt then
+    ThrowException('Attribute index (%d) is out of range.', [Index]);
+
   if API.SciterGetNthAttributeValueCB(FElement, Index, @NThAttributeValueCallback, Self) = SCDOM_OK then
     Result := Self.FAttrValue
   else
-    Result := ''; // TODO: Exception
+    ThrowException('Failed to get attribute value.');
 end;
 
 function TElement.GetAttributeValue(const Name: WideString): WideString;
@@ -1371,8 +1468,17 @@ function TElement.GetChild(Index: Integer): IElement;
 var
   hResult: HELEMENT;
   pResult: TElement;
+  nCnt: UINT;
+  SR: SCDOM_RESULT;
 begin
-  API.SciterGetNthChild(FElement, UINT(Index), hResult);
+  API.SciterGetChildrenCount(FElement, nCnt);
+  if Index >= nCnt then
+    ThrowException('Child element index (%d) is out of range.', [Index]);
+
+  SR := API.SciterGetNthChild(FElement, UINT(Index), hResult);
+  if SR <> SCDOM_OK then
+    ThrowException('Failed to get child element with index %d.', [Index]);
+    
   if hResult = nil then
     Result := nil
   else
@@ -1431,7 +1537,8 @@ var
   pResult: UINT;
 begin
   pResult := 0;
-  API.SciterGetElementIndex(FElement, pResult);
+  if API.SciterGetElementIndex(FElement, pResult) <> SCDOM_OK then
+    ThrowException('Failed to get element index.');
   Result := Integer(pResult);
 end;
 
@@ -1540,12 +1647,12 @@ begin
 end;
 
 function TElement.HandleBehaviorEvents(
-  params: PBEHAVIOR_EVENT_PARAMS): UINT;
+  params: PBEHAVIOR_EVENT_PARAMS): BOOL;
 var
   pSource: TElement;
   pTarget: TElement;
 begin
-  Result := 0;
+  Result := False;
   if Assigned(FOnControlEvent) then
   begin
     if params.heTarget <> nil then
@@ -1566,11 +1673,11 @@ begin
   end;
 end;
 
-function TElement.HandleFocus(params: PFOCUS_PARAMS): UINT;
+function TElement.HandleFocus(params: PFOCUS_PARAMS): BOOL;
 var
   pTarget: TElement;
 begin
-  Result := 0;
+  Result := False;
   pTarget := nil;
   if Assigned(FOnFocus) then
   begin
@@ -1583,16 +1690,16 @@ begin
 end;
 
 function TElement.HandleInitialization(
-  params: PINITIALIZATION_PARAMS): UINT;
+  params: PINITIALIZATION_PARAMS): BOOL;
 begin
-  Result := 0;
+  Result := False;
 end;
 
-function TElement.HandleKey(params: PKEY_PARAMS): UINT;
+function TElement.HandleKey(params: PKEY_PARAMS): BOOL;
 var
   pTarget: TElement;
 begin
-  Result := 0;
+  Result := False;
   pTarget := nil;
   if Assigned(FOnKey) then
   begin
@@ -1604,16 +1711,16 @@ begin
   end;
 end;
 
-function TElement.HandleMethodCallEvents(params: PMETHOD_PARAMS): UINT;
+function TElement.HandleMethodCallEvents(params: PMETHOD_PARAMS): BOOL;
 begin
-  Result := 0;
+  Result := False;
 end;
 
-function TElement.HandleMouse(params: PMOUSE_PARAMS): UINT;
+function TElement.HandleMouse(params: PMOUSE_PARAMS): BOOL;
 var
   pTarget: TElement;
 begin
-  Result := 0;
+  Result := False;
   pTarget := nil;
   if Assigned(FOnMouse) then
   begin
@@ -1625,7 +1732,19 @@ begin
   end;
 end;
 
-function TElement.HandleScrollEvents(params: PSCROLL_PARAMS): UINT;
+function TElement.HandleScriptingCall(
+  params: PSCRIPTING_METHOD_PARAMS): UINT;
+begin
+  Result := 0;
+end;
+
+function TElement.HandleScriptingCall(
+  params: PTISCRIPT_METHOD_PARAMS): UINT;
+begin
+  Result := 0;
+end;
+
+function TElement.HandleScrollEvents(params: PSCROLL_PARAMS): BOOL;
 var
   pTarget: TElement;
 begin
@@ -1638,28 +1757,29 @@ begin
     if pTarget <> nil then
       pTarget.Free;
   end;
-  Result := 0;
+  Result := False;
 end;
 
-function TElement.HandleSize: UINT;
+function TElement.HandleSize: BOOL;
 begin
-  Result := 0;
+  Result := False;
   if Assigned(FOnSize) then
   begin
     FOnSize(Sciter, Self);
   end;
 end;
 
-function TElement.HandleTimer(params: PTIMER_PARAMS): UINT;
+function TElement.HandleTimer(params: PTIMER_PARAMS): BOOL;
 begin
   if Assigned(FOnTimer) then
     FOnTimer(Sciter, Integer(params.timerId));
-  Result := 0;
+  Result := False;
 end;
 
 procedure TElement.InsertElement(const Child: IElement; Index: Integer);
 begin
-  API.SciterInsertElement(HELEMENT(Child.Handle), FElement, Index);
+  if API.SciterInsertElement(HELEMENT(Child.Handle), FElement, Index) <> SCDOM_OK then
+    ThrowException('Failed to insert or append child element.');
 end;
 
 function TElement.IsValid: Boolean;
@@ -1667,9 +1787,9 @@ begin
   Result := FElement <> nil;
 end;
 
-procedure TElement.PostEvent(EventCode: BEHAVIOR_EVENTS);
+function TElement.PostEvent(EventCode: BEHAVIOR_EVENTS): Boolean;
 begin
-  API.SciterPostEvent(FELEMENT, UINT(EventCode), nil, nil);
+  Result := API.SciterPostEvent(FELEMENT, UINT(EventCode), nil, nil) = SCDOM_OK;
 end;
 
 procedure TElement.ScrollToView;
@@ -1678,14 +1798,17 @@ begin
 end;
 
 function TElement.Select(const Selector: WideString): TElement;
-var
-  pCol: IElementCollection;
 begin
-  pCol := SelectAll(Selector);
-  if pCol.Count = 0 then
-    Result := nil
-  else
-    Result := pCol[0];
+  FHChild := nil;
+  if API.SciterSelectElementsW(FELEMENT, PWideChar(Selector), @SelectSingleNodeCallback, Self) = SCDOM_OK then
+  begin
+    if FHChild <> nil then
+      Result := TElement.Create(Sciter, FHChild)
+    else
+      Result := nil;
+  end
+    else
+  ThrowException('The Select method failed. Check selector expression syntax.');
 end;
 
 function TElement.SelectAll(const Selector: WideString): IElementCollection;
@@ -1696,14 +1819,14 @@ begin
   if API.SciterSelectElementsW(FELEMENT, PWideChar(Selector), @SelectorCallback, pResult) = SCDOM_OK then
     Result := pResult
   else
-    raise ESciterException.CreateFmt('Cannot select elements using expression "%s".', [Selector]);
+    ThrowException('The Select method failed. Check selector expression syntax.');
 end;
 
-procedure TElement.SendEvent(EventCode: BEHAVIOR_EVENTS);
+function TElement.SendEvent(EventCode: BEHAVIOR_EVENTS): Boolean;
 var
   handled: BOOL;
 begin
-  API.SciterSendEvent(FELEMENT, UINT(EventCode), nil, nil, handled);
+  Result := API.SciterSendEvent(FELEMENT, UINT(EventCode), nil, nil, handled) = SCDOM_OK;
 end;
 
 procedure TElement.Set_Attr(const AttrName, Value: WideString);
@@ -1711,7 +1834,8 @@ var
   sAttrName: AnsiString;
 begin
   sAttrName := AttrName;
-  API.SciterSetAttributeByName(FElement, PAnsiChar(sAttrName), PWideChar(Value));
+  if API.SciterSetAttributeByName(FElement, PAnsiChar(sAttrName), PWideChar(Value)) <> SCDOM_OK then
+    ThrowException('Failed to set "%s" attribute value.', [AttrName]);
 end;
 
 procedure TElement.Set_ID(const Value: WideString);
@@ -1728,7 +1852,8 @@ begin
   sStr := UTF8Encode(Value);
   pStr := PAnsiChar(sStr);
   iLen := Length(sStr);
-  API.SciterSetElementHtml(FElement, PByte(pStr), iLen, SIH_REPLACE_CONTENT);
+  if API.SciterSetElementHtml(FElement, PByte(pStr), iLen, SIH_REPLACE_CONTENT) <> SCDOM_OK then
+    ThrowException('Failed to set the inner html property on element');
 end;
 
 procedure TElement.Set_OnControlEvent(const Value: TElementOnControlEvent);
@@ -1775,7 +1900,8 @@ begin
   sStr := UTF8Encode(Value);
   pStr := PAnsiChar(sStr);
   iLen := Length(sStr);
-  API.SciterSetElementHtml(FElement, PByte(pStr), iLen, SOH_REPLACE);
+  if API.SciterSetElementHtml(FElement, PByte(pStr), iLen, SOH_REPLACE) <> SCDOM_OK then
+    ThrowException('Failed to set the outer html property on element');
 end;
 
 procedure TElement.Set_StyleAttr(const AttrName, Value: WideString);
@@ -1786,7 +1912,7 @@ begin
   sStyleAttrName := AttrName;
   hr := API.SciterSetStyleAttribute(FElement, PAnsiChar(sStyleAttrName), PWideChar(Value));
   if hr <> SCDOM_OK then
-    Exit;
+    ThrowException('Failed to set style attribute.');
 end;
 
 procedure TElement.Set_Text(const Value: WideString);
@@ -1795,7 +1921,7 @@ var
 begin
   hr := API.SciterSetElementText(FElement, PWideChar(Value), Length(Value));
   if hr <> SCDOM_OK then
-    raise Exception.CreateFmt('Failed to set element text.', []);
+    ThrowException('Failed to set element text.', []);
 end;
 
 procedure TElement.Set_Value(Value: OleVariant);
@@ -1803,7 +1929,19 @@ var
   sValue: TSciterValue;
 begin
   V2S(Value, @sValue);
-  API.SciterSetValue(FElement, @sValue);
+  if API.SciterSetValue(FElement, @sValue) <> SCDOM_OK then
+    ThrowException('Failed to set element value.', []);
+end;
+
+procedure TElement.ThrowException(const Message: AnsiString);
+begin
+  raise ESciterException.Create(Message);
+end;
+
+procedure TElement.ThrowException(const Message: AnsiString;
+  const Args: array of const);
+begin
+  raise ESciterException.CreateFmt(Message, Args);
 end;
 
 constructor TElementCollection.Create;
@@ -1816,18 +1954,6 @@ destructor TElementCollection.Destroy;
 begin
   FList.Free;
   inherited;
-end;
-
-function TElement.HandleScriptingCall(
-  params: PSCRIPTING_METHOD_PARAMS): UINT;
-begin
-  Result := 0;
-end;
-
-function TElement.HandleScriptingCall(
-  params: PTISCRIPT_METHOD_PARAMS): UINT;
-begin
-  Result := 0;
 end;
 
 { TElementCollection }
@@ -1893,80 +2019,6 @@ procedure TElementList.Remove(const Element: TElement);
 begin
   if inherited IndexOf(Element) <> -1 then
     inherited Remove(Element);
-end;
-
-function TSciter.HandleScriptingCall(
-  params: PSCRIPTING_METHOD_PARAMS): BOOL;
-var
-  pArgs: array of OleVariant;
-  sMethodName: WideString;
-  pResult: OleVariant;
-  bHandled: Boolean;
-  pSciterVal: PSciterValue;
-  i: Integer;
-begin
-  Result := False;
-  bHandled := False;
-
-  if Assigned(FOnMethodCall) then
-  try
-    sMethodName := WideString(AnsiString(params.name));
-    SetLength(pArgs, params.argc);
-    pSciterVal := params.argv;
-    for i := 0 to params.argc - 1 do
-    begin
-      S2V(pSciterVal, pArgs[i]);
-      Inc(pSciterVal);
-    end;
-    FOnMethodCall(Self, sMethodName, pArgs, pResult, bHandled);
-    if bHandled then
-      V2S(pResult, @params.result);
-    Result := bHandled;
-  except
-    Exit;
-  end;
-end;
-
-function TSciter.HandleScriptingCall(
-  params: PTISCRIPT_METHOD_PARAMS): BOOL;
-var
-  pArgs: array of OleVariant;
-  oArg: OleVariant;
-  sMethodName: WideString;
-  pResult: OleVariant;
-  bHandled: Boolean;
-  tname: tiscript_value;
-  tval: tiscript_value;
-  iArgc: Integer;
-  i: Integer;
-begin
-  Result := False;
-  bHandled := False;
-  Exit; { Don't know to get method name! }
-
-  {
-  if Assigned(FOnMethodCall) then
-  try
-    tname := NI.to_string(params.vm, params.tag);
-    sMethodName := T2V(vm, tname);
-    iArgc := NI.get_arg_count(params.vm);
-    SetLength(pArgs, iArgc);
-    for i := 0 to iArgc - 1 do
-    begin
-      tval := NI.get_arg_n(vm, i);
-      if NI.is_object(tval) then
-        oArg := Unassigned
-      else
-        oArg := T2V(vm, tval);
-      pArgs[i] := oArg;
-    end;
-    FOnMethodCall(Self, sMethodName, pArgs, pResult, bHandled);
-    if bHandled then
-      params.result := V2T(vm, pResult);
-    Result := bHandled;
-  except
-  end;
-  }
 end;
 
 initialization

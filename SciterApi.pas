@@ -83,7 +83,7 @@ type
   SciterHostCallback = function(pns: LPSCITER_CALLBACK_NOTIFICATION; callbackParam: Pointer ): UINT; stdcall;
   LPSciterHostCallback = ^SciterHostCallback;
 
-  ElementEventProc = function(tag: Pointer; he: HELEMENT; evtg: UINT; prms: Pointer ): Integer { really BOOL }; stdcall;
+  ElementEventProc = function(tag: Pointer; he: HELEMENT; evtg: UINT; prms: Pointer ): BOOL; stdcall;
   LPELEMENT_EVENT_PROC = ^ElementEventProc;
 
   SCN_LOAD_DATA = packed record
@@ -997,9 +997,10 @@ begin
     HSCITER := LoadLibrary('sciter32.dll');
     if HSCITER = 0 then
       raise ESciterException.Create('Failed to load Sciter DLL.');
+
     pFuncPtr := GetProcAddress(HSCITER, 'SciterAPI');
     if pFuncPtr = nil then
-      raise ESciterException.Create('Failed to get Sciter entry function.');
+      raise ESciterException.Create('Failed to get pointer to SciterAPI function.');
 
     FAPI := pFuncPtr();
     FNI := FAPI.TIScriptAPI;
@@ -1300,6 +1301,5 @@ initialization
 finalization
   if HSCITER <> 0 then
     FreeLibrary(HSCITER);
-
 
 end.

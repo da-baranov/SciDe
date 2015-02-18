@@ -48,6 +48,8 @@ type
       eventType: MOUSE_EVENTS; x, y: Integer; buttons: MOUSE_BUTTONS; keys: KEYBOARD_STATES);
     procedure OnElementSize(ASender: TObject; const target: IElement);
     procedure OnNativeButtonClick(Sender: TObject);
+    procedure OnSciterControlEvent(ASender: TObject; const target: IElement; eventType: BEHAVIOR_EVENTS;
+                             reason: Integer; const source: IElement);
   end;
 
   { For testing purposes }
@@ -58,6 +60,7 @@ type
     procedure SayHello; safecall;
   end;
 
+function CreateObjectNative(vm: HVM): tiscript_value; cdecl;
 function SayHelloNative(c: HVM): tiscript_value; cdecl;
 
 var
@@ -98,12 +101,12 @@ var
 begin
   FExamplesBase := ExtractFileDir(Application.ExeName);
   FExamplesBase := Sciter1.FilePathToURL(FExamplesBase) + '/';
-
   FHomeURL := FExamplesBase + 'scide.htm';
   Sciter1.LoadUrl(FHomeURL);
 
-  // Registering native function
-  Sciter1.RegisterNativeFunction('SayHello', @SayHelloNative);
+  // Registering native functions
+  Sciter1.RegisterNativeFunction('CreateObject', @CreateObjectNative);
+  Sciter1.RegisterNativeFunction('SayHello',     @SayHelloNative);
 
   // Registering native form
   nf := TNativeForm.Create;
@@ -139,6 +142,30 @@ end;
 procedure TMainForm.OnElementControlEvent(ASender: TObject;
   const target: IElement; eventType: BEHAVIOR_EVENTS; reason: Integer;
   const source: IElement);
+begin
+  txtLog.Lines.Add(Format('Control event of type %d on %s, value=%s', [Integer(eventType), target.Tag, target.Value]));
+end;
+
+procedure TMainForm.OnElementMouse(ASender: TObject; const target: IElement;
+  eventType: MOUSE_EVENTS; x, y: Integer; buttons: MOUSE_BUTTONS; keys: KEYBOARD_STATES);
+begin
+  txtLog.Lines.Add(Format('MouseEvent of type %d at %d:%d', [Integer(eventType), x, y]));
+end;
+
+procedure TMainForm.OnElementSize(ASender: TObject;
+  const target: IElement);
+begin
+  txtLog.Lines.Add(Format('Size event', []));
+end;
+
+procedure TMainForm.OnNativeButtonClick(Sender: TObject);
+begin
+  ShowMessage('It works');
+end;
+
+procedure TMainForm.OnSciterControlEvent(ASender: TObject;
+  const target: IElement; eventType: BEHAVIOR_EVENTS; reason: Integer;
+  const source: IElement);
 var
   pDiv: IElement;
   pCol: IElementCollection;
@@ -166,25 +193,33 @@ begin
     if target.ID = 'cmdCreateHeadings' then
     begin
       pDiv := Sciter1.Root.Select('#divHeadings');
-
-      for i := 1 to 10 do
+      if pDiv <> nil then
       begin
-        pDiv.AppendChild(pDiv.CreateElement('h4', 'Heading ' + IntToStr(i)));
+        for i := 1 to 10 do
+        begin
+          pDiv.AppendChild(pDiv.CreateElement('h4', 'Heading ' + IntToStr(i)));
+        end;
       end;
     end;
 
     if target.ID = 'cmdChangeHeadingsText' then
     begin
       pDiv := Sciter1.Root.Select('#divHeadings');
-      pCol := pDiv.SelectAll('h4');
-      for i := 0 to pCol.Count - 1 do
-        pCol[i].Text := 'Heading (text changed at ' + DateTimeToStr(Now) + ')';
+      if pDiv <> nil then
+      begin
+        pCol := pDiv.SelectAll('h4');
+        for i := 0 to pCol.Count - 1 do
+          pCol[i].Text := 'Heading (text changed at ' + DateTimeToStr(Now) + ')';
+      end;
     end;
 
     if target.ID = 'cmdRemoveHeadings' then
     begin
       pDiv := Sciter1.Root.Select('#divHeadings');
-      pDiv.SelectAll('h4').RemoveAll;
+      if pDiv <> nil then
+      begin
+        pDiv.SelectAll('h4').RemoveAll;
+      end;
     end;
 
     if target.ID = 'cmdDump' then
@@ -195,23 +230,6 @@ begin
       pPre.Text := sText;
     end;
   end;
-end;
-
-procedure TMainForm.OnElementMouse(ASender: TObject; const target: IElement;
-  eventType: MOUSE_EVENTS; x, y: Integer; buttons: MOUSE_BUTTONS; keys: KEYBOARD_STATES);
-begin
-  txtLog.Lines.Add(Format('MouseEvent of type %d at %d:%d', [Integer(eventType), x, y]));
-end;
-
-procedure TMainForm.OnElementSize(ASender: TObject;
-  const target: IElement);
-begin
-  txtLog.Lines.Add(Format('Size event', []));
-end;
-
-procedure TMainForm.OnNativeButtonClick(Sender: TObject);
-begin
-  ShowMessage('It works');
 end;
 
 procedure TMainForm.OnSciterOut(ASender: TObject; const msg: WideString);
@@ -226,10 +244,11 @@ var
   pButton: TButton;
 
   pDivContainer: TElement;
+  pTxtEvents: TElement;
 begin
   txtLog.Lines.Add('Sciter OnDocumentComplete event');
   pBody := Sciter1.Root.Select('body');
-  pBody.OnControlEvent := OnElementControlEvent;
+  pBody.OnControlEvent := OnSciterControlEvent;
 
   pDivContainer := Sciter1.Root.Select('#divContainer');
   if pDivContainer <> nil then
@@ -240,6 +259,14 @@ begin
     pButton.OnClick := OnNativeButtonClick;
     pButton.Font.Color := clGreen;
     pDivContainer.AttachHwndToElement(pButton.Handle);
+  end;
+
+  pTxtEvents := Sciter1.Root.Select('#txtEvents');
+  if pTxtEvents <> nil then
+  begin
+    pTxtEvents.OnControlEvent := OnElementControlEvent;
+    pTxtEvents.OnMouse := OnElementMouse;
+    pTxtEvents.OnSize := OnElementSize;
   end;
 end;
 
@@ -260,6 +287,30 @@ function SayHelloNative(c: HVM): tiscript_value; cdecl;
 begin
   ShowMessage('Hello!');
   Result := NI.int_value(0);
+end;
+
+function CreateObjectNative(vm: HVM): tiscript_value; cdecl;
+var
+  oVal: OleVariant;
+  tProgId: tiscript_value;
+  pProgId: PWideChar;
+  iCnt: UINT;
+  sProgId: WideString;
+begin
+  Result := NI.nothing_value;
+  try
+    iCnt := NI.get_arg_count(vm);
+    // TODO: Check args count
+
+    tProgId := NI.get_arg_n(vm, 2);
+    NI.get_string_value(tProgId, pProgId, iCnt);
+    sProgId := WideString(pProgId);
+    oVal := CreateOleObject(sProgId);
+    Result := WrapOleObject(vm, IDispatch(oVal));
+  except
+    on E:Exception do
+      ThrowError(vm, E.Message);
+  end;
 end;
 
 
