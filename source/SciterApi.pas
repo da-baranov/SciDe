@@ -17,61 +17,65 @@ uses Windows, Messages, Dialogs, Classes, Forms, Controls, SysUtils, ComObj, Act
   Variants, ExtCtrls, TiScriptApi;
 
 const
-  SIH_REPLACE_CONTENT     = 0;
-  SIH_INSERT_AT_START     = 1;
-  SIH_APPEND_AFTER_LAST   = 2;
-  SOH_REPLACE             = 3;
-  SOH_INSERT_BEFORE       = 4;
-  SOH_INSERT_AFTER        = 5;
+  SIH_REPLACE_CONTENT      = 0;
+  SIH_INSERT_AT_START      = 1;
+  SIH_APPEND_AFTER_LAST    = 2;
+  SOH_REPLACE              = 3;
+  SOH_INSERT_BEFORE        = 4;
+  SOH_INSERT_AFTER         = 5;
 
 const
-  HV_OK_TRUE = -1;
-  HV_OK = 0;
-  HV_BAD_PARAMETER = 1;
-  HV_INCOMPATIBLE_TYPE = 2;
+  HV_OK_TRUE               = -1;
+  HV_OK                    = 0;
+  HV_BAD_PARAMETER         = 1;
+  HV_INCOMPATIBLE_TYPE     = 2;
 
 const
-  SC_LOAD_DATA = $1;
-  SC_DATA_LOADED = $2;
-  SC_DOCUMENT_COMPLETE = $3 deprecated;
-  SC_ATTACH_BEHAVIOR = $4;
-  SC_ENGINE_DESTROYED  = $5;
-  SC_POSTED_NOTIFICATION = $6;
+  SC_LOAD_DATA             = $1;
+  SC_DATA_LOADED           = $2;
+  SC_DOCUMENT_COMPLETE     = $3 deprecated;
+  SC_ATTACH_BEHAVIOR       = $4;
+  SC_ENGINE_DESTROYED      = $5;
+  SC_POSTED_NOTIFICATION   = $6;
 
 const
-  LOAD_OK: UINT = 0;
-  LOAD_DISCARD: UINT = 1;
-  LOAD_DELAYED: UINT = 2;
-
+  LOAD_OK     : UINT       = 0;
+  LOAD_DISCARD: UINT       = 1;
+  LOAD_DELAYED: UINT       = 2;
 
 type
   SCDOM_RESULT =
   (
-    SCDOM_OK = 0,
-    SCDOM_INVALID_HWND = 1,
-    SCDOM_INVALID_HANDLE = 2,
-    SCDOM_PASSIVE_HANDLE = 3,
+    SCDOM_OK                = 0,
+    SCDOM_INVALID_HWND      = 1,
+    SCDOM_INVALID_HANDLE    = 2,
+    SCDOM_PASSIVE_HANDLE    = 3,
     SCDOM_INVALID_PARAMETER = 4,
-    SCDOM_OPERATION_FAILED = 5,
-    SCDOM_OK_NOT_HANDLED = -1,
-    SCDOM_DUMMY = MAXINT
+    SCDOM_OPERATION_FAILED  = 5,
+    SCDOM_OK_NOT_HANDLED    = -1,
+    SCDOM_DUMMY             = MAXINT
   );
 
   HWINDOW = HWND;
 
   HELEMENT = Pointer;
+
   LPVOID   = Pointer;
 
   UINT_PTR = ^UINT;
 
-  LPCSTR_RECEIVER = procedure( str: PAnsiChar; str_length: UINT; param : Pointer ); stdcall;
+
+  LPCSTR_RECEIVER = procedure(str: PAnsiChar; str_length: UINT; param : Pointer); stdcall;
   PLPCSTR_RECEIVER = ^LPCSTR_RECEIVER;
+
 
   LPCWSTR_RECEIVER = procedure(str: PWideChar; str_length: UINT; param: Pointer); stdcall;
   PLPCWSTR_RECEIVER = ^LPCWSTR_RECEIVER;
 
+
   LPCBYTE_RECEIVER = procedure(bytes: PByte; num_bytes: UINT; param: Pointer); stdcall;
   PLPCBYTE_RECEIVER = ^LPCBYTE_RECEIVER;
+
 
   SCITER_CALLBACK_NOTIFICATION = packed record
     code: UINT;
@@ -79,56 +83,63 @@ type
   end;
   LPSCITER_CALLBACK_NOTIFICATION = ^SCITER_CALLBACK_NOTIFICATION;
 
-  SciterHostCallback = function(pns: LPSCITER_CALLBACK_NOTIFICATION; callbackParam: Pointer ): UINT; stdcall;
+
+  SciterHostCallback = function(pns: LPSCITER_CALLBACK_NOTIFICATION; callbackParam: Pointer): UINT; stdcall;
   LPSciterHostCallback = ^SciterHostCallback;
 
-  ElementEventProc = function(tag: Pointer; he: HELEMENT; evtg: UINT; prms: Pointer ): BOOL; stdcall;
+
+  ElementEventProc = function(tag: Pointer; he: HELEMENT; evtg: UINT; prms: Pointer): BOOL; stdcall;
   LPELEMENT_EVENT_PROC = ^ElementEventProc;
 
+  
   SciterResourceType { NB: UINT }  =
   (
-    RT_DATA_HTML = 0,
-    RT_DATA_IMAGE = 1,
-    RT_DATA_STYLE = 2,
+    RT_DATA_HTML   = 0,
+    RT_DATA_IMAGE  = 1,
+    RT_DATA_STYLE  = 2,
     RT_DATA_CURSOR = 3,
     RT_DATA_SCRIPT = 4,
-    RT_DATA_RAW = 5,
+    RT_DATA_RAW    = 5,
     SciterResourceTypeDummy = MaxInt
   );
 
+  
   SCN_LOAD_DATA = packed record
-    code: UINT;
-    hwnd: HWINDOW;
-    uri: LPCWSTR;
-    outData: PBYTE;
-    outDataSize: UINT;
-    dataType: SciterResourceType;
-    requestId: Pointer;
-    principal: HELEMENT;
-    initiator: HELEMENT;
+             code: UINT;
+             hwnd: HWINDOW;
+              uri: LPCWSTR;
+          outData: PBYTE;
+      outDataSize: UINT;
+         dataType: SciterResourceType;
+        requestId: Pointer;
+        principal: HELEMENT;
+        initiator: HELEMENT;
   end;
   LPSCN_LOAD_DATA = ^SCN_LOAD_DATA;
 
+
   SCN_DATA_LOADED = packed record
-    code: UINT;
-    hwnd: HWINDOW;
-    uri: LPCWSTR;
-    data: PByte;
-    dataSize: UINT;
-    dataType: SciterResourceType;
-    status: UINT;
+            code: UINT;
+            hwnd: HWINDOW;
+             uri: LPCWSTR;
+            data: PByte;
+        dataSize: UINT;
+        dataType: SciterResourceType;
+          status: UINT;
   end;
   LPSCN_DATA_LOADED = ^SCN_DATA_LOADED;
 
+
   SCN_ATTACH_BEHAVIOR = packed record
-    code: UINT;
-    hwnd: HWINDOW;
-    element: HELEMENT;
+            code: UINT;
+            hwnd: HWINDOW;
+         element: HELEMENT;
     behaviorName: PAnsiChar;
-    elementProc: LPELEMENT_EVENT_PROC;
-    elementTag: LPVOID
+     elementProc: LPELEMENT_EVENT_PROC;
+      elementTag: LPVOID
   end;
   LPSCN_ATTACH_BEHAVIOR = ^SCN_ATTACH_BEHAVIOR;
+
 
   SCN_ENGINE_DESTROYED = packed record
     code: UINT;
@@ -136,23 +147,25 @@ type
   end;
   LPSCN_ENGINE_DESTROYED = ^SCN_ENGINE_DESTROYED;
 
+
   SCN_POSTED_NOTIFICATION = packed record
-    code: UINT;
-    hwnd: HWINDOW;
-    wparam: UINT_PTR;
-    lparam: UINT_PTR;
+       code: UINT;
+       hwnd: HWINDOW;
+     wparam: UINT_PTR;
+     lparam: UINT_PTR;
     lreturn: UINT_PTR;
   end;
   LPSCN_POSTED_NOTIFICATION = ^SCN_POSTED_NOTIFICATION;
 
   TProcPointer = procedure; stdcall;
-  TSciterClassName = function: PWideChar; stdcall;
 
   DEBUG_OUTPUT_PROC = procedure(param: Pointer; subsystem: UINT; severity: UINT; text: PWideChar; text_length: UINT); stdcall;
   PDEBUG_OUTPUT_PROC = ^DEBUG_OUTPUT_PROC;
 
+
   SciterElementCallback = function(he: HELEMENT; Param: Pointer ): BOOL; stdcall;
   PSciterElementCallback = ^SciterElementCallback;
+
 
   VALUE_STRING_CVT_TYPE =
   (
@@ -162,6 +175,7 @@ type
     CVT_XJSON_LITERAL,
     VALUE_STRING_CVT_TYPE_DUMMY = MAXINT
   );
+
 
   TSciterValueType =
   (
@@ -183,32 +197,28 @@ type
     T_DUMMY = MAXINT
   );
 
+
   EVENT_GROUPS =
   (
-      HANDLE_INITIALIZATION = $0000,
-      HANDLE_MOUSE = $0001,
-      HANDLE_KEY = $0002,
-      HANDLE_FOCUS = $0004,
-      HANDLE_SCROLL = $0008,
-      HANDLE_TIMER = $0010,
-      HANDLE_SIZE = $0020,
-      HANDLE_DATA_ARRIVED = $080,
+      HANDLE_INITIALIZATION        = $0000,
+      HANDLE_MOUSE                 = $0001,
+      HANDLE_KEY                   = $0002,
+      HANDLE_FOCUS                 = $0004,
+      HANDLE_SCROLL                = $0008,
+      HANDLE_TIMER                 = $0010,
+      HANDLE_SIZE                  = $0020,
+      HANDLE_DATA_ARRIVED          = $080,
       HANDLE_BEHAVIOR_EVENT        = $0100,
       HANDLE_METHOD_CALL           = $0200,
       HANDLE_SCRIPTING_METHOD_CALL = $0400,
       HANDLE_TISCRIPT_METHOD_CALL  = $0800,
-
       HANDLE_EXCHANGE              = $1000,
       HANDLE_GESTURE               = $2000,
-
       HANDLE_ALL                   = $FFFF,
-
-      // SUBSCRIPTIONS_REQUEST        = $FFFFFFFF // -1?
       SUBSCRIPTIONS_REQUEST        = -1,
-
       EVENT_GROUPS_DUMMY           = MAXINT
-
   );
+
 
   ELEMENT_STATE_BITS =
   (
@@ -217,52 +227,48 @@ type
    STATE_ACTIVE           = $00000004,
    STATE_FOCUS            = $00000008,
    STATE_VISITED          = $00000010,
-   STATE_CURRENT          = $00000020,  // current (hot) item
-   STATE_CHECKED          = $00000040,  // element is checked (or selected)
-   STATE_DISABLED         = $00000080,  // element is disabled
-   STATE_READONLY         = $00000100,  // readonly input element
-   STATE_EXPANDED         = $00000200,  // expanded state - nodes in tree view
-   STATE_COLLAPSED        = $00000400,  // collapsed state - nodes in tree view - mutually exclusive with
-   STATE_INCOMPLETE       = $00000800,  // one of fore/back images requested but not delivered
-   STATE_ANIMATING        = $00001000,  // is animating currently
-   STATE_FOCUSABLE        = $00002000,  // will accept focus
-   STATE_ANCHOR           = $00004000,  // anchor in selection (used with current in selects)
-   STATE_SYNTHETIC        = $00008000,  // this is a synthetic element - don't emit it's head/tail
-   STATE_OWNS_POPUP       = $00010000,  // this is a synthetic element - don't emit it's head/tail
-   STATE_TABFOCUS         = $00020000,  // focus gained by tab traversal
-   STATE_EMPTY            = $00040000,  // empty - element is empty (text.size() == 0 && subs.size() == 0)
-                                         //  if element has behavior attached then the behavior is responsible for the value of this flag.
-   STATE_BUSY             = $00080000,  // busy; loading
-
-   STATE_DRAG_OVER        = $00100000,  // drag over the block that can accept it (so is current drop target). Flag is set for the drop target block
-   STATE_DROP_TARGET      = $00200000,  // active drop target.
-   STATE_MOVING           = $00400000,  // dragging/moving - the flag is set for the moving block.
-   STATE_COPYING          = $00800000,  // dragging/copying - the flag is set for the copying block.
-   STATE_DRAG_SOURCE      = $01000000,  // element that is a drag source.
-   STATE_DROP_MARKER      = $02000000,  // element is drop marker
-
-   STATE_PRESSED          = $04000000,  // pressed - close to active but has wider life span - e.g. in MOUSE_UP it
-                                         //   is still on; so behavior can check it in MOUSE_UP to discover CLICK condition.
-   STATE_POPUP            = $08000000,  // this element is out of flow - popup
-
-   STATE_IS_LTR           = $10000000,  // the element or one of its containers has dir=ltr declared
-   STATE_IS_RTL           = $20000000,  // the element or one of its containers has dir=rtl declared
+   STATE_CURRENT          = $00000020,
+   STATE_CHECKED          = $00000040,
+   STATE_DISABLED         = $00000080,
+   STATE_READONLY         = $00000100,
+   STATE_EXPANDED         = $00000200,
+   STATE_COLLAPSED        = $00000400,
+   STATE_INCOMPLETE       = $00000800,
+   STATE_ANIMATING        = $00001000,
+   STATE_FOCUSABLE        = $00002000,
+   STATE_ANCHOR           = $00004000,
+   STATE_SYNTHETIC        = $00008000,
+   STATE_OWNS_POPUP       = $00010000,
+   STATE_TABFOCUS         = $00020000,
+   STATE_EMPTY            = $00040000,
+   STATE_BUSY             = $00080000,
+   STATE_DRAG_OVER        = $00100000,
+   STATE_DROP_TARGET      = $00200000,
+   STATE_MOVING           = $00400000,
+   STATE_COPYING          = $00800000,
+   STATE_DRAG_SOURCE      = $01000000,
+   STATE_DROP_MARKER      = $02000000,
+   STATE_PRESSED          = $04000000,
+   STATE_POPUP            = $08000000,
+   STATE_IS_LTR           = $10000000,
+   STATE_IS_RTL           = $20000000,
    ELEMENT_STATE_BITS_DUMMY = MAXINT
   );
 
+
   ELEMENT_AREAS =
   (
-    ROOT_RELATIVE = 1,
-    SELF_RELATIVE = 2,
+    ROOT_RELATIVE      = 1,
+    SELF_RELATIVE      = 2,
     CONTAINER_RELATIVE = 3,
-    VIEW_RELATIVE = 4,
-    CONTENT_BOX = 0,
-    PADDING_BOX = $10,
-    BORDER_BOX  = $20,
-    MARGIN_BOX  = $30,
-    BACK_IMAGE_AREA = $40,
-    FORE_IMAGE_AREA = $50,
-    SCROLLABLE_AREA = $60,
+    VIEW_RELATIVE      = 4,
+    CONTENT_BOX        = 0,
+    PADDING_BOX        = $10,
+    BORDER_BOX         = $20,
+    MARGIN_BOX         = $30,
+    BACK_IMAGE_AREA    = $40,
+    FORE_IMAGE_AREA    = $50,
+    SCROLLABLE_AREA    = $60,
     ELEMENT_AREAS_DUMMY = MAXINT
   );
 
@@ -274,10 +280,12 @@ type
   end;
   PSciterValue = ^TSciterValue;
 
+
   METHOD_PARAMS = record
     methodID: UINT;
   end;
   PMETHOD_PARAMS = ^METHOD_PARAMS;
+
 
   REQUEST_PARAM = record
     name: PWideChar;
@@ -285,126 +293,59 @@ type
   end;
   PREQUEST_PARAM = ^REQUEST_PARAM;
 
+
   BEHAVIOR_EVENTS =
   (
-    BUTTON_CLICK = 0,              // click on button
-    BUTTON_PRESS = 1,              // mouse down or key down in button
-    BUTTON_STATE_CHANGED = 2,      // checkbox/radio/slider changed its state/value
-    EDIT_VALUE_CHANGING = 3,       // before text change
-    EDIT_VALUE_CHANGED = 4,        // after text change
-    SELECT_SELECTION_CHANGED = 5,  // selection in <select> changed
-    SELECT_STATE_CHANGED = 6,      // node in select expanded/collapsed, heTarget is the node
-
-    POPUP_REQUEST   = 7,           // request to show popup just received,
-                                   //     here DOM of popup element can be modifed.
-    POPUP_READY     = 8,           // popup element has been measured and ready to be shown on screen,
-                                   //     here you can use functions like ScrollToView.
-    POPUP_DISMISSED = 9,           // popup element is closed,
-                                   //     here DOM of popup element can be modifed again - e.g. some items can be removed
-                                   //     to free memory.
-
-    MENU_ITEM_ACTIVE = $A,        // menu item activated by mouse hover or by keyboard,
-    MENU_ITEM_CLICK = $B,         // menu item click,
-                                   //   BEHAVIOR_EVENT_PARAMS structure layout
-                                   //   BEHAVIOR_EVENT_PARAMS.cmd - MENU_ITEM_CLICK/MENU_ITEM_ACTIVE
-                                   //   BEHAVIOR_EVENT_PARAMS.heTarget - owner(anchor) of the menu
-                                   //   BEHAVIOR_EVENT_PARAMS.he - the menu item, presumably <li> element
-                                   //   BEHAVIOR_EVENT_PARAMS.reason - BY_MOUSE_CLICK | BY_KEY_CLICK
-
-
-    CONTEXT_MENU_REQUEST = $10,   // "right-click", BEHAVIOR_EVENT_PARAMS::he is current popup menu HELEMENT being processed or NULL.
-                                   // application can provide its own HELEMENT here (if it is NULL) or modify current menu element.
-
-    VISIUAL_STATUS_CHANGED = $11, // broadcast notification, sent to all elements of some container being shown or hidden
-    DISABLED_STATUS_CHANGED = $12,// broadcast notification, sent to all elements of some container that got new value of :disabled state
-
-    POPUP_DISMISSING = $13,       // popup is about to be closed
-
-    CONTENT_CHANGED = $15,        // content has been changed, is posted to the element that gets content changed,  reason is combination of CONTENT_CHANGE_BITS.
-                                   // target == NULL means the window got new document and this event is dispatched only to the window.
-
-    // "grey" event codes  - notfications from behaviors from this SDK
-    HYPERLINK_CLICK = $80,        // hyperlink click
-
-    //TABLE_HEADER_CLICK,            // click on some cell in table header,
-    //                               //     target = the cell,
-    //                               //     reason = index of the cell (column number, 0..n)
-    //TABLE_ROW_CLICK,               // click on data row in the table, target is the row
-    //                               //     target = the row,
-    //                               //     reason = index of the row (fixed_rows..n)
-    //TABLE_ROW_DBL_CLICK,           // mouse dbl click on data row in the table, target is the row
-    //                               //     target = the row,
-    //                               //     reason = index of the row (fixed_rows..n)
-
-    ELEMENT_COLLAPSED = $90,      // element was collapsed, so far only behavior:tabs is sending these two to the panels
-    ELEMENT_EXPANDED,              // element was expanded,
-
-    ACTIVATE_CHILD,                // activate (select) child,
-                                   // used for example by accesskeys behaviors to send activation request, e.g. tab on behavior:tabs.
-
-    //DO_SWITCH_TAB = ACTIVATE_CHILD,// command to switch tab programmatically, handled by behavior:tabs
-    //                               // use it as HTMLayoutPostEvent(tabsElementOrItsChild, DO_SWITCH_TAB, tabElementToShow, 0);
-
-    INIT_DATA_VIEW,                // request to virtual grid to initialize its view
-
-    ROWS_DATA_REQUEST,             // request from virtual grid to data source behavior to fill data in the table
-                                   // parameters passed throug DATA_ROWS_PARAMS structure.
-
-    UI_STATE_CHANGED,              // ui state changed, observers shall update their visual states.
-                                   // is sent for example by behavior:richtext when caret position/selection has changed.
-
-    FORM_SUBMIT,                   // behavior:form detected submission event. BEHAVIOR_EVENT_PARAMS::data field contains data to be posted.
-                                   // BEHAVIOR_EVENT_PARAMS::data is of type T_MAP in this case key/value pairs of data that is about
-                                   // to be submitted. You can modify the data or discard submission by returning true from the handler.
-    FORM_RESET,                    // behavior:form detected reset event (from button type=reset). BEHAVIOR_EVENT_PARAMS::data field contains data to be reset.
-                                   // BEHAVIOR_EVENT_PARAMS::data is of type T_MAP in this case key/value pairs of data that is about
-                                   // to be rest. You can modify the data or discard reset by returning true from the handler.
-
-    DOCUMENT_COMPLETE,             // document in behavior:frame or root document is complete.
-
-    HISTORY_PUSH,                  // requests to behavior:history (commands)
+    BUTTON_CLICK = 0,
+    BUTTON_PRESS = 1,
+    BUTTON_STATE_CHANGED = 2,
+    EDIT_VALUE_CHANGING = 3,
+    EDIT_VALUE_CHANGED = 4,
+    SELECT_SELECTION_CHANGED = 5,
+    SELECT_STATE_CHANGED = 6,
+    POPUP_REQUEST   = 7,
+    POPUP_READY     = 8,
+    POPUP_DISMISSED = 9,
+    MENU_ITEM_ACTIVE = $A,
+    MENU_ITEM_CLICK = $B,
+    CONTEXT_MENU_REQUEST = $10,
+    VISIUAL_STATUS_CHANGED = $11,
+    DISABLED_STATUS_CHANGED = $12,
+    POPUP_DISMISSING = $13,
+    CONTENT_CHANGED = $15,
+    HYPERLINK_CLICK = $80,
+    ELEMENT_COLLAPSED = $90,
+    ELEMENT_EXPANDED,
+    ACTIVATE_CHILD,
+    INIT_DATA_VIEW,
+    ROWS_DATA_REQUEST,
+    UI_STATE_CHANGED,
+    FORM_SUBMIT,
+    FORM_RESET,
+    DOCUMENT_COMPLETE,
+    HISTORY_PUSH,
     HISTORY_DROP,
     HISTORY_PRIOR,
     HISTORY_NEXT,
-    HISTORY_STATE_CHANGED,         // behavior:history notification - history stack has changed
-
-    CLOSE_POPUP,                   // close popup request,
-    REQUEST_TOOLTIP,               // request tooltip, evt.source <- is the tooltip element.
-
-    ANIMATION         = $A0,      // animation started (reason=1) or ended(reason=0) on the element.
-    DOCUMENT_CREATED  = $C0,      // document created, script namespace initialized. target -> the document
-
-    VIDEO_INITIALIZED = $D1,      // <video> "ready" notification
-    VIDEO_STARTED     = $D2,      // <video> playback started notification
-    VIDEO_STOPPED     = $D3,      // <video> playback stoped/paused notification
-    VIDEO_BIND_RQ     = $D4,      // <video> request for frame source binding,
-                                   //   If you want to provide your own video frames source for the given target <video> element do the following:
-                                   //   1. Handle and consume this VIDEO_BIND_RQ request
-                                   //   2. You will receive second VIDEO_BIND_RQ request/event for the same <video> element
-                                   //      but this time with the 'reason' field set to an instance of sciter::video_destination interface.
-                                   //   3. add_ref() it and store it for example in worker thread producing video frames.
-                                   //   4. call sciter::video_destination::start_streaming(...) providing needed parameters
-                                   //      call sciter::video_destination::render_frame(...) as soon as they are available
-                                   //      call sciter::video_destination::stop_streaming() to stop the rendering (a.k.a. end of movie reached)
-
-
-
+    HISTORY_STATE_CHANGED,
+    CLOSE_POPUP,
+    REQUEST_TOOLTIP,
+    ANIMATION         = $A0,
+    DOCUMENT_CREATED  = $C0,
+    VIDEO_INITIALIZED = $D1,
+    VIDEO_STARTED     = $D2,
+    VIDEO_STOPPED     = $D3,
+    VIDEO_BIND_RQ     = $D4,
     FIRST_APPLICATION_EVENT_CODE = $100,
-    // all custom event codes shall be greater
-    // than this number. All codes below this will be used
-    // solely by application - HTMLayout will not intrepret it
-    // and will do just dispatching.
-    // To send event notifications with  these codes use
-    // HTMLayoutSend/PostEvent API.
     BEHAVIOR_EVENTS_DUMMY = MAXINT
   );
-  
+
   BEHAVIOR_EVENT_PARAMS = packed record
-    cmd: BEHAVIOR_EVENTS;
+         cmd: BEHAVIOR_EVENTS;
     heTarget: HELEMENT;
-    he: HELEMENT;
-    reason: Pointer;
-    data: TSciterValue;
+          he: HELEMENT;
+      reason: Pointer;
+        data: TSciterValue;
   end;
   PBEHAVIOR_EVENT_PARAMS = ^BEHAVIOR_EVENT_PARAMS;
 
@@ -415,7 +356,7 @@ type
   ISciterAPI = packed record
     Version: UINT;
     SciterClassName: function: LPCWSTR; stdcall;
-    SciterVersion: function(major: Integer): UINT; stdcall;
+    SciterVersion: function(major: BOOL): UINT; stdcall;
     SciterDataReady: function(hwnd: HWINDOW; uri: PWideChar; data: PByte; dataLength: UINT): BOOL; stdcall;
     SciterDataReadyAsync: function(hwnd: HWINDOW; uri: PWideChar; data: PByte; dataLength: UINT; requestId: LPVOID): BOOL; stdcall;
     SciterProc: function(hwnd: HWINDOW; msg: Cardinal; wParam: Integer; lParam: Integer): LRESULT; stdcall;
@@ -603,22 +544,24 @@ type
   end;
 
   PSciterApi = ^ISciterAPI;
-
+  
   
   SciterApiFunc = function: PSciterApi; stdcall;
   PSciterApiFunc = ^SciterApiFunc;
 
-    INITIALIZATION_EVENTS =
-    (
-      BEHAVIOR_DETACH = 0,
-      BEHAVIOR_ATTACH = 1,
-      INITIALIZATION_EVENTS_DUMMY = MAXINT
-    );
 
-    INITIALIZATION_PARAMS = packed record
-      cmd: INITIALIZATION_EVENTS;
-    end;
-    PINITIALIZATION_PARAMS = ^INITIALIZATION_PARAMS;
+  INITIALIZATION_EVENTS =
+  (
+    BEHAVIOR_DETACH = 0,
+    BEHAVIOR_ATTACH = 1,
+    INITIALIZATION_EVENTS_DUMMY = MAXINT
+  );
+
+
+  INITIALIZATION_PARAMS = packed record
+    cmd: INITIALIZATION_EVENTS;
+  end;
+  PINITIALIZATION_PARAMS = ^INITIALIZATION_PARAMS;
 
 
   KEYBOARD_STATES =
@@ -628,6 +571,7 @@ type
     ALT_KEY_PRESSED = 4,
     KEYBOARD_STATES_DUMMY = MAXINT
   );
+
 
   CURSOR_TYPE =
   (
@@ -651,48 +595,51 @@ type
     CURSOR_TYPE_DUMMY = MAXINT
   );
 
+
   MOUSE_EVENTS =
   (
-    MOUSE_ENTER = 0,
-    MOUSE_LEAVE = 1,
-    MOUSE_MOVE = 2,
-    MOUSE_UP = 3,
-    MOUSE_DOWN = 4,
+    MOUSE_ENTER  = 0,
+    MOUSE_LEAVE  = 1,
+    MOUSE_MOVE   = 2,
+    MOUSE_UP     = 3,
+    MOUSE_DOWN   = 4,
     MOUSE_DCLICK = 5,
-    MOUSE_WHEEL = 6,
-    MOUSE_TICK = 7,
-    MOUSE_IDLE = 8,
-    DROP = 9,
-    DRAG_ENTER  = 10,
-    DRAG_LEAVE  = 11,
+    MOUSE_WHEEL  = 6,
+    MOUSE_TICK   = 7,
+    MOUSE_IDLE   = 8,
+    DROP         = 9,
+    DRAG_ENTER   = 10,
+    DRAG_LEAVE   = 11,
     DRAG_REQUEST = 12,
-    MOUSE_CLICK = $FF,
-    DRAGGING = $100,
+    MOUSE_CLICK  = $FF,
+    DRAGGING     = $100,
     MOUSE_EVENTS_DUMMY = MAXINT
   );
 
+
   MOUSE_BUTTONS =
   (
-    MAIN_MOUSE_BUTTON = 1,
-    PROP_MOUSE_BUTTON = 2,
-    MIDDLE_MOUSE_BUTTON = 4,
-    MOUSE_BUTTONS_DUMMY = MAXINT
+    MAIN_MOUSE_BUTTON    = 1,
+    PROP_MOUSE_BUTTON    = 2,
+    MIDDLE_MOUSE_BUTTON  = 4,
+    MOUSE_BUTTONS_DUMMY  = MAXINT
   );
 
+
   MOUSE_PARAMS = packed record
-    cmd: MOUSE_EVENTS;
-    target: HELEMENT;
-    pos: TPoint;
-    pos_view: TPoint;
+             cmd: MOUSE_EVENTS;
+          target: HELEMENT;
+             pos: TPoint;
+        pos_view: TPoint;
     button_state: MOUSE_BUTTONS;
-    alt_state: KEYBOARD_STATES;
-    cursor_type: CURSOR_TYPE;
-    is_on_icon: BOOL;
-    dragging: HELEMENT;
-    dragging_mode: UINT;
+       alt_state: KEYBOARD_STATES;
+     cursor_type: CURSOR_TYPE;
+      is_on_icon: BOOL;
+        dragging: HELEMENT;
+   dragging_mode: UINT;
   end;
-  
   PMOUSE_PARAMS = ^MOUSE_PARAMS;
+
 
   KEY_EVENTS =
   (
@@ -703,12 +650,13 @@ type
   );
 
   KEY_PARAMS = packed record
-    cmd: KEY_EVENTS;
-    target: HELEMENT;
-    key_code: UINT;
+          cmd: KEY_EVENTS;
+       target: HELEMENT;
+     key_code: UINT;
     alt_state: KEYBOARD_STATES;
   end;
   PKEY_PARAMS = ^KEY_PARAMS;
+
 
   FOCUS_EVENTS =
   (
@@ -717,21 +665,23 @@ type
     FOCUS_EVENTS_DUMMY = MAXINT
   );
 
+
   FOCUS_PARAMS = packed record
-    cmd: FOCUS_EVENTS;
-    target: HELEMENT;
+               cmd: FOCUS_EVENTS;
+            target: HELEMENT;
     by_mouse_click: BOOL;
-    cancel: BOOL;
+            cancel: BOOL;
   end;
   PFOCUS_PARAMS = ^FOCUS_PARAMS;
 
+
   DATA_ARRIVED_PARAMS = packed record
     initiator: HELEMENT;
-    data: PByte;
-    dataSize: UINT;
-    dataType: UINT;
-    status: UINT;
-    uri: PWideChar;
+         data: PByte;
+     dataSize: UINT;
+     dataType: UINT;
+       status: UINT;
+          uri: PWideChar;
   end;
   PDATA_ARRIVED_PARAMS = ^DATA_ARRIVED_PARAMS;
 
@@ -751,6 +701,7 @@ type
   end;
   PDRAW_PARAMS=^DRAW_PARAMS;
 
+
   TIMER_PARAMS = packed record
     timerId: Pointer;
   end;
@@ -765,12 +716,14 @@ type
   end;
   PSCRIPTING_METHOD_PARAMS = ^SCRIPTING_METHOD_PARAMS;
 
+
   TISCRIPT_METHOD_PARAMS = packed record
     vm: HVM;
     tag: tiscript_value;
     result: tiscript_value;
   end;
   PTISCRIPT_METHOD_PARAMS = ^TISCRIPT_METHOD_PARAMS;
+
 
   SCROLL_EVENTS =
   (
@@ -795,12 +748,24 @@ type
   end;
   PSCROLL_PARAMS = ^SCROLL_PARAMS;
 
+
+  { Inspector }
+  TSciterInspector = procedure(root: HELEMENT; papi: PSciterApi); stdcall;
+  TSciterWindowInspector = procedure(hwndSciter: HWINDOW; papi: PSciterApi); stdcall;
+
+
+  { Exceptions }
   ESciterException = class(Exception)
   end;
 
-  ESciterNullPointerException = class(Exception)
+  ESciterNullPointerException = class(ESciterException)
   public
     constructor Create;
+  end;
+
+  ESciterCallException = class(ESciterException)
+  public
+    constructor Create(const MethodName: String);
   end;
 
   ESciterNotImplementedException = class(ESciterException)
@@ -826,8 +791,11 @@ function CreateObjectInstance(const vm: HVM; Obj: Pointer; OfClass: tiscript_cla
 function CreateObjectInstance(const vm: HVM; Obj: Pointer; OfClass: WideString): tiscript_object; overload;
 procedure RegisterObject(const vm: HVM; Obj: tiscript_object; const VarName: WideString); overload;
 procedure RegisterObject(const vm: HVM; Obj: Pointer; const OfClass: WideString; const VarName: WideString); overload;
+function SciterVarType(value: PSciterValue): TSciterValueType;
+function SciterVarToString(value: PSciterValue): WideString;
 procedure ThrowError(const vm: HVM; const Message: AnsiString); overload;
 procedure ThrowError(const vm: HVM; const Message: WideString); overload;
+function GetNativeObjectJson(const Value: PSciterValue): WideString;
 
 implementation
 
@@ -835,7 +803,27 @@ var
   FAPI: PSciterApi;
   FNI: ptiscript_native_interface;
   HSCITER: HMODULE;
+  HINSPECTOR: HMODULE;
 
+function GetNativeObjectJson(const Value: PSciterValue): WideString;
+var
+  pWStr: PWideChar;
+  iNum: UINT;
+  pType: TSciterValueType;
+  pUnits: UINT;
+begin
+  pUnits := 0;
+  API.ValueType(Value, pType, pUnits);
+  if (pType = T_NULL) or (pType = T_UNDEFINED) then
+  begin
+    Result := '';
+    Exit;
+  end;
+  
+  API.ValueToString(Value, CVT_XJSON_LITERAL);
+  API.ValueStringData(Value, pWStr, iNum);
+  Result := WideString(pWstr);
+end;
 
 function NI: ptiscript_native_interface;
 begin
@@ -865,9 +853,11 @@ var
   zns: tiscript_value;
 begin
   Result := False;
+
   zns := NI.get_global_ns(vm);
   var_name  := NI.string_value(vm, PWideChar(Name), Length(Name));
   var_value := NI.get_prop(vm, zns, var_name);
+  
   if NI.is_class(vm, var_value) then
     Result := True;
 end;
@@ -998,6 +988,22 @@ begin
   end;
 end;
 
+function SciterVarType(value: PSciterValue): TSciterValueType;
+var
+  pUnits: UINT;
+begin
+  API.ValueType(value, Result, pUnits);
+end;
+
+function SciterVarToString(value: PSciterValue): WideString;
+var
+  pCh: PWideChar;
+  iNum: UINT;
+begin
+  API.ValueStringData(value, pCh, iNum);
+  Result := WideString(pCh);
+end;
+
 function CreateObjectInstance(const vm: HVM; Obj: Pointer; OfClass: tiscript_class): tiscript_object;
 begin
   if not NI.is_class(vm, OfClass) then
@@ -1022,9 +1028,7 @@ begin
   if not NI.is_native_object(Obj) then
     raise ESciterException.CreateFmt('Cannot register object instance. Provided value is not an object.', []);
 
-  if IsNameExists(vm, VarName) then
-    raise ESciterException.CreateFmt('Cannot register object instance. Object with name "%s" (class, namespace, constant, variable or function) already exists.', [VarName]);
-    
+  // If a variable VarName already exists it'll be rewritten
   var_name := NI.string_value(vm, PWideChar(VarName), Length(VarName));
   zns := NI.get_global_ns(vm);
   NI.set_prop(vm, zns, var_name, Obj);
@@ -1145,12 +1149,10 @@ begin
         sWStr := WideString(pWStr);
         OleValue := sWStr;
       end;
-    T_MAP:  // TODO:
+    T_MAP:
       begin
-        API.ValueToString(Value, CVT_JSON_LITERAL);
-        Result := API.ValueStringData(Value, pWStr, iNum);
-        sWStr := WideString(pWstr);
-        OleValue := sWStr;
+        OleValue := GetNativeObjectJson(Value);
+        Result := HV_OK;
       end;
     T_FUNCTION:
       begin
@@ -1172,6 +1174,7 @@ begin
         Result := HV_OK;
       end;
     T_OBJECT:
+      // TODO: returns OleVariant if Object wraps IDispatch, JSON otherwise 
       begin
         pbResult := nil;
         Result := API.ValueBinaryData(Value, pbResult, iNum);
@@ -1186,7 +1189,7 @@ begin
               OleValue := OleVariant(pDispValue);
             except
               // not an IDispatch, probably native tiscript object
-              OleValue := Unassigned;
+              OleValue := GetNativeObjectJson(Value);
               Result := HV_OK;
             end;
           end
@@ -1197,17 +1200,8 @@ begin
         end
           else
         begin
-          if API.ValueToString(Value, CVT_JSON_LITERAL) = HV_OK then
-          begin
-            Result := API.ValueStringData(Value, pWStr, iNum);
-            sWStr := WideString(pWstr);
-            OleValue := sWStr;
-          end
-            else
-          begin
-            Result := HV_INCOMPATIBLE_TYPE;
-            OleValue := Unassigned;
-          end;
+          OleValue := GetNativeObjectJson(Value);
+          Result := HV_OK;
         end;
       end;
     T_UNDEFINED:
@@ -1352,6 +1346,13 @@ end;
 constructor ESciterNullPointerException.Create;
 begin
   inherited Create('The argument cannot be null.');
+end;
+
+{ ESciterCallException }
+
+constructor ESciterCallException.Create(const MethodName: String);
+begin
+  inherited CreateFmt('Method "%s" call failed.', [MethodName]);
 end;
 
 initialization

@@ -31,12 +31,17 @@ type
     cmdReload: TButton;
     Button1: TButton;
     cmdSetObject: TButton;
+    cmdSaveToFile: TButton;
+    sfd: TSaveDialog;
+    cmdShowInspector: TButton;
     procedure Button1Click(Sender: TObject);
     procedure cmdCallNativeClick(Sender: TObject);
     procedure cmdEvalClick(Sender: TObject);
     procedure cmdGetCaseHistoryClick(Sender: TObject);
     procedure cmdReloadClick(Sender: TObject);
+    procedure cmdSaveToFileClick(Sender: TObject);
     procedure cmdSetObjectClick(Sender: TObject);
+    procedure cmdShowInspectorClick(Sender: TObject);
     procedure DumpHTML1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -53,13 +58,15 @@ type
     FButton: TButton;
     FHomeUrl: WideString;
     procedure OnElementControlEvent(ASender: TObject; const target: IElement; eventType: BEHAVIOR_EVENTS;
-                             reason: Integer; const source: IElement);
+                             reason: Integer; const source: IElement; var Handled: Boolean);
     procedure OnElementMouse(ASender: TObject; const target: IElement;
-      eventType: MOUSE_EVENTS; x, y: Integer; buttons: MOUSE_BUTTONS; keys: KEYBOARD_STATES);
-    procedure OnElementSize(ASender: TObject; const target: IElement);
+      eventType: MOUSE_EVENTS; x, y: Integer; buttons: MOUSE_BUTTONS; keys: KEYBOARD_STATES; var Handled: Boolean);
+    procedure OnElementSize(ASender: TObject; const target: IElement; var Handled: Boolean);
     procedure OnNativeButtonClick(Sender: TObject);
     procedure OnSciterControlEvent(ASender: TObject; const target: IElement; eventType: BEHAVIOR_EVENTS;
-                             reason: Integer; const source: IElement);
+                             reason: Integer; const source: IElement; var Handled: Boolean);
+    procedure OnBodyMethodCall(ASender: TObject; const target: IElement; const MethodName: WideString; const Args: array of OleVariant;
+      var ReturnValue: OleVariant; var Handled: boolean);
   end;
 
   { For testing purposes }
@@ -120,11 +127,22 @@ begin
   Sciter1.LoadURL(FHomeUrl);
 end;
 
+procedure TMainForm.cmdSaveToFileClick(Sender: TObject);
+begin
+  if sfd.Execute then
+    Sciter1.SaveToFile(sfd.FileName);  
+end;
+
 procedure TMainForm.cmdSetObjectClick(Sender: TObject);
 const
   cs = '{ id: "2000-1-1", patient: { firstName: "Lars", lastName: "Carlsson" }}';
 begin
   Sciter1.SetObject('caseHistory', cs);
+end;
+
+procedure TMainForm.cmdShowInspectorClick(Sender: TObject);
+begin
+  Sciter1.ShowInspector;
 end;
 
 procedure TMainForm.DumpHTML1Click(Sender: TObject);
@@ -139,6 +157,7 @@ var
   pTest: ITest;
   pXml: OleVariant;
 begin
+  Caption := Caption + ' :: Sciter version ' + Sciter1.Version;
   FExamplesBase := ExtractFileDir(Application.ExeName);
   FExamplesBase := Sciter1.FilePathToURL(FExamplesBase) + '/';
   FHomeURL := FExamplesBase + 'scide.htm';
@@ -189,21 +208,33 @@ begin
   Sciter1.LoadURL('http://www.terrainformatica.com/sciter/main.whtm');
 end;
 
+procedure TMainForm.OnBodyMethodCall(ASender: TObject;
+  const target: IElement; const MethodName: WideString;
+  const Args: array of OleVariant; var ReturnValue: OleVariant;
+  var Handled: boolean);
+begin
+  if MethodName = 'Foo' then
+  begin
+    ShowMessage(Args[0]);
+    Handled := True;
+  end;
+end;
+
 procedure TMainForm.OnElementControlEvent(ASender: TObject;
   const target: IElement; eventType: BEHAVIOR_EVENTS; reason: Integer;
-  const source: IElement);
+  const source: IElement; var Handled: Boolean);
 begin
   txtLog.Lines.Add(Format('Control event of type %d on %s, value=%s', [Integer(eventType), target.Tag, target.Value]));
 end;
 
 procedure TMainForm.OnElementMouse(ASender: TObject; const target: IElement;
-  eventType: MOUSE_EVENTS; x, y: Integer; buttons: MOUSE_BUTTONS; keys: KEYBOARD_STATES);
+  eventType: MOUSE_EVENTS; x, y: Integer; buttons: MOUSE_BUTTONS; keys: KEYBOARD_STATES; var Handled: Boolean);
 begin
   txtLog.Lines.Add(Format('MouseEvent of type %d at %d:%d', [Integer(eventType), x, y]));
 end;
 
 procedure TMainForm.OnElementSize(ASender: TObject;
-  const target: IElement);
+  const target: IElement; var Handled: Boolean);
 begin
   txtLog.Lines.Add(Format('Size event', []));
 end;
@@ -215,7 +246,7 @@ end;
 
 procedure TMainForm.OnSciterControlEvent(ASender: TObject;
   const target: IElement; eventType: BEHAVIOR_EVENTS; reason: Integer;
-  const source: IElement);
+  const source: IElement; var Handled: Boolean);
 var
   pDiv: IElement;
   pCol: IElementCollection;
@@ -300,6 +331,7 @@ begin
   txtLog.Lines.Add('Sciter OnDocumentComplete event');
   pBody := Sciter1.Root.Select('body');
   pBody.OnControlEvent := OnSciterControlEvent;
+  pBody.OnMethodCall := OnBodyMethodCall;
 
   pDivContainer := Sciter1.Root.Select('#divContainer');
   if pDivContainer <> nil then

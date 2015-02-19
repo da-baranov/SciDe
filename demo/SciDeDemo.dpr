@@ -15,7 +15,11 @@ uses
 
 {$R *.res}
 
+var
+  sCSS: UTF8String;
 begin
+  sCSS := 'h1 { color: #999999; border-bottom: 2px dotted #333333; } ';
+  API.SciterAppendMasterCSS(PChar(sCSS), Length(sCSS));
   Application.Initialize;
   Application.Title := 'SciDe - Sciter for Delphi';
   Application.CreateForm(TMainForm, MainForm);

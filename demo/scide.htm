@@ -156,6 +156,16 @@
     view.Foo2("Hello World!");
   }
   
+  function self#cmdBodyFoo.onClick()
+  {
+    self.select("body").Foo("body.Foo() called");
+  }
+  
+  function self#cmdBodyFoo2.onClick()
+  {
+    self.select("body").Foo2("body.Foo2() called");
+  }
+  
   function self.ready()
   {
     for (var pre in self.selectAll("pre.code"))
@@ -214,7 +224,8 @@
   <ul id="menu">
   
   </ul>
-  
+
+<!--************************************************************************-->  
   <section>
     <h2>Basic DOM manipulations</h2>
     <button id="cmdCreateHeadings">Create headings</button>
@@ -225,11 +236,13 @@
     </pre>
   </section>
   
+<!--************************************************************************-->
   <section>
     <h2>Event handling</h2>
     <input type="text" id="txtEvents" style="width: 50%" value="This input has event handlers attached" />
   </section>
-  
+
+<!--************************************************************************-->  
   <section>
     <h2>Case History - Plus databinding demo (experimental)</h2>
     
@@ -266,7 +279,8 @@
     
     </pre>
   </section>
-  
+
+<!--************************************************************************-->  
   <section>
     <h2>OLE Example 1. Creating and manipulating XML document using MSXML</h2>
     <pre class="code">
@@ -289,6 +303,7 @@ doc = null;
     </pre>
   </section>
   
+<!--************************************************************************-->
   <section>
     <h2>OLE Example 2. Parsing text with regular expressions</h2>
     <pre class="code">
@@ -325,7 +340,8 @@ re = null;
     
     </pre>
   </section>
-  
+
+<!--************************************************************************-->  
   <section>
     <h2>OLE Example 3. Call Microsoft Word</h2>
     <pre class="code">
@@ -359,7 +375,7 @@ function self#cmd.onClick()
     <button id="cmdTestSayHello">Invoke Test.SayHello</button>
   </section>
   
-  
+<!--************************************************************************-->  
   <section>
     <h2>OLE Example 5. Invoke another externally passed COM object</h2>
     <pre class="code">
@@ -379,9 +395,8 @@ function self#cmdXml.onClick()
     </pre>
     <button id="cmdXml">Get MSXML2.DOMDocument xml</button>
   </section>
-  
- 
-  
+
+<!--************************************************************************-->  
   <section>
     <h2>Intercept non-existing view methods calls</h2>
     <pre class="code">
@@ -404,6 +419,14 @@ end;
     <button id="cmdViewFoo2">Call view.Foo2() (handler does not exist)</button>
   </section>
   
+<!--************************************************************************-->  
+  <section>
+    <h2>Intercept element methods calls</h2>
+    <button id="cmdBodyFoo">Call body.Foo()</button>
+    <button id="cmdBodyFoo2">Call body.Foo2() (handler does not exist)</button>
+  </section>
+  
+<!--************************************************************************--> 
   <section>
     <h2>Call native function implemented in Delphi</h2>
     <pre class="code">
@@ -417,13 +440,15 @@ Sciter1.RegisterNativeFunction('SayHello', @SayHelloNative);
     </pre>
     <button id="cmdCallNativeFunction">Say hello</button>
   </section>
-  
+
+<!--************************************************************************--> 
   <section>
     <h2>Call native class implemented in Delphi</h2>
     <button id="cmdShowNativeForm">Show native form</button>
     <button id="cmdCloseNativeForm">Close native form</button>
   </section>
-  
+
+<!--************************************************************************-->  
   <section>
     <h2>Native Delphi Control inside Sciter</h2>
 <pre class="code">
@@ -449,7 +474,8 @@ end;
     
     </div>
   </section>
-  
+
+<!--************************************************************************-->  
   <section>
     <h2>Richtext behavior (embedded in Resources)</h2>
     <div>
@@ -465,7 +491,7 @@ end;
     </div>
   </section>
       
-  
+<!--************************************************************************-->  
   <section>
     <h2>Dump this Document DOM tree</h2>
     <button id="cmdDump">Run</button>
@@ -473,13 +499,15 @@ end;
     
     </pre>
   </section>
-  
+
+<!--************************************************************************-->  
   <section>
     <h2>Print something</h2>
     <button id="cmdPrintOut">An info message</button>
     <button id="cmdPrintError">An error message</button>
   </section>
-  
+
+<!--************************************************************************-->  
   <section>
     <h2>Popups from child windows issue</h2>
     <button id="cmdPopup">Show alert</button>

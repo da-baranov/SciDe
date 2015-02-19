@@ -119,8 +119,8 @@ var
   ole_class_def: tiscript_class;
   class_instance: tiscript_object;
 begin
-  if SciterApi.IsNameExists(vm, Name) then
-    raise ESciterOleException.CreateFmt('Cannot register OLE Object: variable with name %s already exists.', [Name]);
+  //if SciterApi.IsNameExists(vm, Name) then
+  //  raise ESciterOleException.CreateFmt('Cannot register OLE Object: variable with name %s already exists.', [Name]);
 
   Assert(Dispatch <> nil, 'OLE object is undefined');
       
@@ -530,6 +530,7 @@ begin
     for i := 2 to argc - 1 do
     begin
       arg := NI.get_arg_n(vm, i);
+      API.ValueInit(@sarg);
       API.Sciter_T2S(vm, arg, sarg, false);
       S2V(@sarg, oargs[i - 2]);
     end;

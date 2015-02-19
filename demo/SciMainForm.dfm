@@ -1,9 +1,9 @@
 object MainForm: TMainForm
-  Left = 268
-  Top = 33
+  Left = 315
+  Top = 121
+  Width = 1191
+  Height = 775
   Caption = 'SciDe - test form'
-  ClientHeight = 717
-  ClientWidth = 1175
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -160,6 +160,24 @@ object MainForm: TMainForm
       TabOrder = 8
       OnClick = cmdSetObjectClick
     end
+    object cmdSaveToFile: TButton
+      Left = 10
+      Top = 270
+      Width = 161
+      Height = 25
+      Caption = 'Save to file'
+      TabOrder = 9
+      OnClick = cmdSaveToFileClick
+    end
+    object cmdShowInspector: TButton
+      Left = 8
+      Top = 304
+      Width = 161
+      Height = 25
+      Caption = 'Show Inspector'
+      TabOrder = 10
+      OnClick = cmdShowInspectorClick
+    end
   end
   object mm1: TMainMenu
     Left = 209
@@ -183,5 +201,12 @@ object MainForm: TMainForm
       Caption = 'Find element at cursor'
       OnClick = mnuElementAtCursorClick
     end
+  end
+  object sfd: TSaveDialog
+    DefaultExt = 'htm'
+    Filter = 'HTML files (*.htm)|*.htm'
+    Options = [ofOverwritePrompt, ofHideReadOnly, ofEnableSizing]
+    Left = 180
+    Top = 270
   end
 end
