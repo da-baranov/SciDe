@@ -151,32 +151,14 @@ object MainForm: TMainForm
       TabOrder = 7
       OnClick = Button1Click
     end
-    object cmdSetObject: TButton
+    object cmdSaveToFile: TButton
       Left = 10
       Top = 240
       Width = 161
       Height = 25
-      Caption = 'Set object'
-      TabOrder = 8
-      OnClick = cmdSetObjectClick
-    end
-    object cmdSaveToFile: TButton
-      Left = 10
-      Top = 270
-      Width = 161
-      Height = 25
       Caption = 'Save to file'
-      TabOrder = 9
+      TabOrder = 8
       OnClick = cmdSaveToFileClick
-    end
-    object cmdShowInspector: TButton
-      Left = 8
-      Top = 304
-      Width = 161
-      Height = 25
-      Caption = 'Show Inspector'
-      TabOrder = 10
-      OnClick = cmdShowInspectorClick
     end
   end
   object mm1: TMainMenu

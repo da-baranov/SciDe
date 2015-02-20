@@ -45,14 +45,42 @@ type
   { Sciter events }
   TSciterOnStdOut = procedure(ASender: TObject; const msg: WideString) of object;
   TSciterOnStdErr = procedure(ASender: TObject; const msg: WideString) of object;
-  TSciterOnLoadData = procedure(ASender: TObject; const url: WideString; resType: SciterResourceType;
-                                                  requestId: Integer; out discard: WordBool) of object;
+  TSciterOnLoadData = procedure(ASender: TObject; var url: WideString; resType: SciterResourceType;
+                                                  requestId: Integer; out discard: Boolean) of object;
   TSciterOnDataLoaded = procedure(ASender: TObject; const url: WideString; resType: SciterResourceType;
                                                     data: PByte; dataLength: Integer; status: Integer;
                                                     requestId: Integer) of object;
   TSciterOnDocumentComplete = procedure(ASender: TObject; const url: WideString) of object;
   TSciterOnMethodCall = procedure(ASender: TObject; const MethodName: WideString; const Args: array of OleVariant;
     var ReturnValue: OleVariant; var Handled: boolean) of object;
+
+  IElementEvents = interface
+    ['{CC651703-89C1-411D-875E-735D48D6E311}']
+    function Get_OnControlEvent: TElementOnControlEvent;
+    function Get_OnFocus: TElementOnFocus;
+    function Get_OnKey: TElementOnKey;
+    function Get_OnMethodCall: TElementOnMethodCall;
+    function Get_OnMouse: TElementOnMouse;
+    function Get_OnScroll: TElementOnScroll;
+    function Get_OnSize: TElementOnSize;
+    function Get_OnTimer: TElementOnTimer;
+    procedure Set_OnControlEvent(const Value: TElementOnControlEvent);
+    procedure Set_OnFocus(const Value: TElementOnFocus);
+    procedure Set_OnKey(const Value: TElementOnKey);
+    procedure Set_OnMethodCall(const Value: TElementOnMethodCall);
+    procedure Set_OnMouse(const Value: TElementOnMouse);
+    procedure Set_OnScroll(const Value: TElementOnScroll);
+    procedure Set_OnSize(const Value: TElementOnSize);
+    procedure Set_OnTimer(const Value: TElementOnTimer);
+    property OnControlEvent: TElementOnControlEvent read Get_OnControlEvent write Set_OnControlEvent;
+    property OnFocus: TElementOnFocus read Get_OnFocus write Set_OnFocus;
+    property OnKey: TElementOnKey read Get_OnKey write Set_OnKey;
+    property OnMethodCall: TElementOnMethodCall read Get_OnMethodCall write Set_OnMethodCall;
+    property OnMouse: TElementOnMouse read Get_OnMouse write Set_OnMouse;
+    property OnScroll: TElementOnScroll read Get_OnScroll write Set_OnScroll;
+    property OnSize: TElementOnSize read Get_OnSize write Set_OnSize;
+    property OnTimer: TElementOnTimer read Get_OnTimer write Set_OnTimer;
+  end;
 
   IElement = interface
     ['{E2C542D1-5B7B-4513-BFBC-7B0DD9FB04DE}']
@@ -63,7 +91,7 @@ type
     function CreateElement(const Tag: WideString; const Text: WideString): IElement;
     procedure Delete;
     function EqualsTo(const Element: IElement): WordBool;
-    function FindNearestParent(const Selector: WideString): TElement;
+    function FindNearestParent(const Selector: WideString): IElement;
     function GetAttrCount: Integer;
     function GetAttributeName(Index: Integer): WideString;
     function GetAttributeValue(Index: Integer): WideString;
@@ -73,7 +101,7 @@ type
     function GetVisible: boolean;
     function Get_Attr(const AttrName: WideString): WideString;
     function Get_ChildrenCount: Integer;
-    function Get_Handle: Integer;
+    function Get_Handle: HELEMENT;
     function Get_ID: WideString;
     function Get_Index: Integer;
     function Get_InnerHtml: WideString;
@@ -83,11 +111,11 @@ type
     function Get_Tag: WideString;
     function Get_Text: WideString;
     function Get_Value: OleVariant;
-    procedure InsertElement(const Child: IElement; Index: Integer);
+    procedure InsertElement(const Child: IElement; const Index: Integer);
     function PostEvent(EventCode: BEHAVIOR_EVENTS): Boolean;
     procedure RemoveChildren;
     procedure ScrollToView;
-    function Select(const Selector: WideString): TElement;
+    function Select(const Selector: WideString): IElement;
     function SelectAll(const Selector: WideString): IElementCollection;
     function SendEvent(EventCode: BEHAVIOR_EVENTS): Boolean;
     procedure SetState(const Value: Integer);
@@ -98,11 +126,12 @@ type
     procedure Set_StyleAttr(const AttrName: WideString; const Value: WideString);
     procedure Set_Text(const Value: WideString);
     procedure Set_Value(Value: OleVariant);
+    function TryCall(const Method: WideString; const Args: array of OleVariant; out RetVal: OleVariant): Boolean;
     property Attr[const AttrName: WideString]: WideString read Get_Attr write Set_Attr;
     property AttrCount: Integer read GetAttrCount;
     property ChildrenCount: Integer read Get_ChildrenCount;
     property Enabled: boolean read GetEnabled;
-    property Handle: Integer read Get_Handle;
+    property Handle: HELEMENT read Get_Handle;
     property ID: WideString read Get_ID write Set_ID;
     property Index: Integer read Get_Index;
     property InnerHtml: WideString read Get_InnerHtml write Set_InnerHtml;
@@ -119,15 +148,15 @@ type
   IElementCollection = interface
     ['{2E262CE3-43DE-4266-9424-EBA0241F77F8}']
     function Get_Count: Integer;
-    function Get_Item(const Index: Integer): TElement;
+    function Get_Item(const Index: Integer): IElement;
     procedure RemoveAll;
     property Count: Integer read Get_Count;
-    property Item[const Index: Integer]: TElement read Get_Item; default;
+    property Item[const Index: Integer]: IElement read Get_Item; default;
   end;
 
   IElements = type IElementCollection;
 
-  TElement = class(TInterfacedObject, IElement)
+  TElement = class(TInterfacedObject, IElement, IElementEvents)
   private
     FAttrAnsiName: AnsiString;
     FAttrName: WideString;
@@ -154,7 +183,7 @@ type
     function GetVisible: boolean;
     function Get_Attr(const AttrName: WideString): WideString;
     function Get_ChildrenCount: Integer;
-    function Get_Handle: Integer;
+    function Get_Handle: HELEMENT;
     function Get_ID: WideString;
     function Get_Index: Integer;
     function Get_InnerHtml: WideString;
@@ -214,24 +243,25 @@ type
     function CreateElement(const Tag: WideString; const Text: WideString): IElement;
     procedure Delete;
     function EqualsTo(const Element: IElement): WordBool;
-    function FindNearestParent(const Selector: WideString): TElement;
+    function FindNearestParent(const Selector: WideString): IElement;
     function GetAttributeName(Index: Integer): WideString;
     function GetAttributeValue(Index: Integer): WideString; overload;
     function GetAttributeValue(const Name: WideString): WideString; overload;
     function GetChild(Index: Integer): IElement;
-    procedure InsertElement(const Child: IElement; Index: Integer);
+    procedure InsertElement(const Child: IElement; const AIndex: Integer);
     function IsValid: Boolean;
     function PostEvent(EventCode: BEHAVIOR_EVENTS): Boolean;
     procedure RemoveChildren;
     procedure ScrollToView;
-    function Select(const Selector: WideString): TElement;
+    function Select(const Selector: WideString): IElement;
     function SelectAll(const Selector: WideString): IElementCollection;
     function SendEvent(EventCode: BEHAVIOR_EVENTS): Boolean;
+    function TryCall(const Method: WideString; const Args: array of OleVariant; out RetVal: OleVariant): Boolean;
     property Attr[const AttrName: WideString]: WideString read Get_Attr write Set_Attr;
     property AttrCount: Integer read GetAttrCount;
     property ChildrenCount: Integer read Get_ChildrenCount;
     property Enabled: boolean read GetEnabled;
-    property Handle: Integer read Get_Handle;
+    property Handle: HELEMENT read Get_Handle;
     property ID: WideString read Get_ID write Set_ID;
     property InnerHtml: WideString read Get_InnerHtml write Set_InnerHtml;
     property OuterHtml: WideString read Get_OuterHtml write Set_OuterHtml;
@@ -251,8 +281,6 @@ type
     property OnTimer: TElementOnTimer read Get_OnTimer write Set_OnTimer;
   end;
 
-  TElementClass = class of TElement;
-
   TElementList = class(TObjectList)
   private
     function GetItem(const Index: Integer): TElement;
@@ -266,17 +294,19 @@ type
   private
     FList: TObjectList;
     FSciter: TSciter;
+    function Get_Element(const Index: Integer): TElement;
   protected
     constructor Create(ASciter: TSciter);
     function Get_Count: Integer;
-    function Get_Item(const Index: Integer): TElement;
+    function Get_Item(const Index: Integer): IElement;
     property Sciter: TSciter read FSciter;
   public
     destructor Destroy; override;
     procedure Add(const Item: TElement);
     procedure RemoveAll;
     property Count: Integer read Get_Count;
-    property Item[const Index: Integer]: TElement read Get_Item;
+    property Element[const Index: Integer]: TElement read Get_Element;
+    property Item[const Index: Integer]: IElement read Get_Item; default;
   end;
 
   TSciter = class(TCustomControl)
@@ -284,7 +314,7 @@ type
     FBaseUrl: WideString;
     FHomeURL: WideString;
     FHtml: WideString;
-    FInnerList: TElementList;
+    FManagedElements: TElementList;
     FOnDataLoaded: TSciterOnDataLoaded;
     FOnDocumentComplete: TSciterOnDocumentComplete;
     FOnEngineDestroyed: TNotifyEvent;
@@ -297,12 +327,12 @@ type
     FSilent: Boolean;
     FUrl: WideString;
     function GetHVM: HVM;
+    function GetVersion: WideString;
     function Get_Html: WideString;
     function Get_Root: TElement;
     procedure SetOnStdErr(const Value: TSciterOnStdErr);
     procedure SetOnStdOut(const Value: TSciterOnStdOut);
     procedure SetOnStdWarn(const Value: TSciterOnStdOut);
-    function GetVersion: WideString;
   protected
     procedure CreateParams(var Params: TCreateParams); override;
     procedure CreateWindowHandle(const Params: TCreateParams); override;
@@ -322,9 +352,8 @@ type
     procedure SetName(const NewName: TComponentName); override;
     procedure SetParent(AParent: TWinControl); override;
     procedure WndProc(var Message: TMessage); override;
-    property InnerList: TElementList read FInnerList;
+    property ManagedElements: TElementList read FManagedElements;
   public
-    property Version: WideString read GetVersion;
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     function Call(const FunctionName: WideString; const Args: array of OleVariant): OleVariant;
@@ -348,15 +377,18 @@ type
     procedure RegisterNativeFunction(const Name: WideString; Handler: ptiscript_method);
     procedure SaveToFile(const FileName: WideString; const Encoding: WideString = 'UTF-8' { reserved, TODO:} );
     function SciterValueToJson(Obj: TSciterValue): WideString;
-    function Select(const Selector: WideString): TElement;
+    function Select(const Selector: WideString): IElement;
     function SelectAll(const Selector: WideString): IElementCollection;
     procedure SetHomeURL(const URL: WideString);
     procedure SetObject(const Name: WideString; const Json: WideString);
     procedure ShowInspector(const Element: IElement = nil);
     function TiScriptValueToJson(Obj: tiscript_value): WideString;
+    function TryCall(const FunctionName: WideString; const Args: array of OleVariant): boolean; overload;
+    function TryCall(const FunctionName: WideString; const Args: array of OleVariant; out RetVal: OleVariant): boolean; overload;
     procedure UpdateWindow;
     property Html: WideString read Get_Html;
     property Root: TElement read Get_Root;
+    property Version: WideString read GetVersion;
     property VM: HVM read GetHVM;
   published
     property Action;
@@ -420,14 +452,16 @@ function LoadResourceAsStream(const ResName: AnsiString; const ResType: AnsiStri
 {$ENDIF}
 
 procedure Register;
-procedure SciterSetElementFactoryClass(Cls: TElementClass);
 
 implementation
 
-uses SciterOle;
+uses
+  SciterOle;
 
-var
-  ElementFactoryClass: TElementClass;
+function ElementFactory(const ASciter: TSciter; const he: HELEMENT): TElement;
+begin
+  Result := TElement.Create(ASciter, he);
+end;
 
 {$IFDEF UNICODE}
 function LoadResourceAsStream(const ResName: String; const ResType: String): TCustomMemoryStream;
@@ -596,7 +630,7 @@ var
   pElement: TElement;
 begin
   pElementCollection := TElementCollection(Param);
-  pElement := ElementFactoryClass.Create(pElementCollection.Sciter, he);
+  pElement := ElementFactory(pElementCollection.Sciter, he);
   pElementCollection.Add(pElement);
   Result := False; // Continue
 end;
@@ -618,9 +652,7 @@ var
   pBehaviorEventParams:   PBEHAVIOR_EVENT_PARAMS;
   pScriptingMethodParams: PSCRIPTING_METHOD_PARAMS;
   pTiScriptMethodParams:  PTISCRIPT_METHOD_PARAMS;
-  oUrl: OleVariant;
   sUri: WideString;
-  i: UINT;
 begin
   Result := False;
   pSciter := TObject(tag) as TSciter;
@@ -668,6 +700,7 @@ begin
   if tag = nil then Exit;
 
   pElement := TObject(tag) as TElement;
+
   if pElement = nil then Exit;
 
   case EVENT_GROUPS(evtg) of
@@ -750,7 +783,7 @@ end;
 constructor TSciter.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FInnerList := TElementList.Create(False);
+  FManagedElements := TElementList.Create(False);
   Width := 300;
   Height := 300;
   TabStop := True;
@@ -758,56 +791,15 @@ begin
 end;
 
 destructor TSciter.Destroy;
-var
-  i: Integer;
 begin
-  for i := FInnerList.Count - 1 downto 0 do
-  begin
-    FInnerList[i].Free;
-  end;
-  FInnerList.Clear;
-  FInnerList.Free;
   inherited;
 end;
 
 function TSciter.Call(const FunctionName: WideString;
   const Args: array of OleVariant): OleVariant;
-var
-  pVal: TSciterValue;
-  sFunctionName: AnsiString;
-  pArgs: array[0..255] of TSciterValue;
-  cArgs: Integer;
-  i: Integer;
 begin
-  sFunctionName := AnsiString(FunctionName);
-  API.ValueInit(@pVal);
-
-  cArgs := Length(Args);
-
-  for i := Low(pArgs) to High(pArgs) do
-    API.ValueInit(@pArgs[i]);
-
-  for i := Low(Args) to High(Args) do
-  begin
-    V2S(Args[i], @pArgs[i]);
-  end;
-
-  if API.SciterCall(Handle, PAnsiChar(sFunctionName), cArgs, @pArgs[0], pVal) then
-  begin
-    S2V(@pVal, Result);
-  end
-    else
-  begin
-    if Silent then
-    begin
-      ThrowError(VM, Format('Method "%s" call failed.', [FunctionName]));
-      Result := Unassigned;
-    end
-      else
-    begin
-      raise ESciterCallException.Create(FunctionName);
-    end;
-  end;
+  if not TryCall(FunctionName, Args, Result) then
+    raise ESciterCallException.Create(FunctionName);
 end;
 
 procedure TSciter.CreateParams(var Params: TCreateParams);
@@ -907,7 +899,7 @@ begin
     end
       else
     begin
-      pResult := ElementFactoryClass.Create(Self, hResult);
+      pResult := ElementFactory(Self, hResult);
       Result := pResult;
     end;
   end;
@@ -929,7 +921,7 @@ end;
 
 function TSciter.GetElementByHandle(Handle: Integer): IElement;
 begin
-  Result := ElementFactoryClass.Create(Self, HELEMENT(Handle));
+  Result := ElementFactory(Self, HELEMENT(Handle));
 end;
 
 function TSciter.GetHVM: HVM;
@@ -945,6 +937,20 @@ end;
 function TSciter.GetMinWidth: Integer;
 begin
   Result := API.SciterGetMinWidth(Handle);
+end;
+
+function TSciter.GetVersion: WideString;
+type
+  TVer = record
+    a: Word;
+    b: Word;
+  end;
+  PVer = ^TVer;
+var
+  ver: UINT;
+begin
+  ver := API.SciterVersion(true);
+  Result := '3.0.' + Format('%d.%d', [PVer(@ver)^.a, PVer(@ver)^.b]);
 end;
 
 function TSciter.Get_Html: WideString;
@@ -975,7 +981,7 @@ begin
 
   he := nil;
   if API.SciterGetRootElement(Handle, he) = SCDOM_OK then
-    Result := ElementFactoryClass.Create(Self, he)
+    Result := ElementFactory(Self, he)
   else
     Result := nil;
 end;
@@ -1011,7 +1017,7 @@ end;
 
 function TSciter.HandleLoadData(data: LPSCN_LOAD_DATA): UINT;
 var
-  discard: WordBool;
+  discard: Boolean;
   wUrl: WideString;
   wResName: WideString;
   pStream: TCustomMemoryStream;
@@ -1043,7 +1049,9 @@ begin
   begin
     if Assigned(FOnLoadData) then
     begin
-      FOnLoadData(Self, WideString(data.uri), data.dataType, Integer(data.requestId), discard);
+      wUrl := WideString(data.uri);
+      FOnLoadData(Self, wUrl, data.dataType, Integer(data.requestId), discard);
+      data.uri := PWideChar(wUrl);
       if discard then
         Result := LOAD_DISCARD;
     end;
@@ -1063,7 +1071,6 @@ var
   sMethodName: WideString;
   pResult: OleVariant;
   bHandled: Boolean;
-  pSciterVal: PSciterValue;
   i: Integer;
 begin
   Result := False;
@@ -1073,11 +1080,12 @@ begin
   try
     sMethodName := WideString(AnsiString(params.name));
     SetLength(pArgs, params.argc);
-    pSciterVal := params.argv;
-    for i := 0 to params.argc - 1 do
+    if params.argc > 0 then
     begin
-      S2V(pSciterVal, pArgs[i]);
-      Inc(pSciterVal);
+      for i := 0 to params.argc - 1 do
+      begin
+        S2V(@params.argv[i], pArgs[i]);
+      end;
     end;
     FOnMethodCall(Self, sMethodName, pArgs, pResult, bHandled);
     if bHandled then
@@ -1092,33 +1100,8 @@ function TSciter.HandleScriptingCall(
   params: PTISCRIPT_METHOD_PARAMS): BOOL;
 begin
   Result := False;
-  Exit;
   { Don't know how to get method name! }
   { if method returns False then overloaded HandleScriptingCall(params: PSCRIPTING_METHOD_PARAMS) will be called }
-
-  {
-  if Assigned(FOnMethodCall) then
-  try
-    tname := NI.to_string(params.vm, params.tag);
-    sMethodName := T2V(vm, tname);
-    iArgc := NI.get_arg_count(params.vm);
-    SetLength(pArgs, iArgc);
-    for i := 0 to iArgc - 1 do
-    begin
-      tval := NI.get_arg_n(vm, i);
-      if NI.is_object(tval) then
-        oArg := Unassigned
-      else
-        oArg := T2V(vm, tval);
-      pArgs[i] := oArg;
-    end;
-    FOnMethodCall(Self, sMethodName, pArgs, pResult, bHandled);
-    if bHandled then
-      params.result := V2T(vm, pResult);
-    Result := bHandled;
-  except
-  end;
-  }
 end;
 
 function TSciter.JsonToSciterValue(const Json: WideString): TSciterValue;
@@ -1340,7 +1323,7 @@ begin
   Result := WideString(pWstr);
 end;
 
-function TSciter.Select(const Selector: WideString): TElement;
+function TSciter.Select(const Selector: WideString): IElement;
 var
   pRoot: IElement;
 begin
@@ -1429,6 +1412,50 @@ begin
   Result := SciterValueToJson(sv);
 end;
 
+function TSciter.TryCall(const FunctionName: WideString;
+  const Args: array of OleVariant): boolean;
+var
+  pRetVal: OleVariant;
+begin
+  Result := TryCall(FunctionName, Args, pRetVal);
+end;
+
+function TSciter.TryCall(const FunctionName: WideString;
+  const Args: array of OleVariant; out RetVal: OleVariant): boolean;
+var
+  pVal: TSciterValue;
+  sFunctionName: AnsiString;
+  pArgs: array[0..255] of TSciterValue;
+  cArgs: Integer;
+  i: Integer;
+begin
+  sFunctionName := AnsiString(FunctionName);
+  API.ValueInit(@pVal);
+
+  cArgs := Length(Args);
+  if cArgs > 256 then
+    raise ESciterException.Create('Too many arguments.');
+
+  for i := Low(pArgs) to High(pArgs) do
+    API.ValueInit(@pArgs[i]);
+
+  for i := Low(Args) to High(Args) do
+  begin
+    V2S(Args[i], @pArgs[i]);
+  end;
+
+  if API.SciterCall(Handle, PAnsiChar(sFunctionName), cArgs, @pArgs[0], pVal) then
+  begin
+    S2V(@pVal, RetVal);
+    Result := True;
+  end
+    else
+  begin
+    RetVal := Unassigned;
+    Result := False;
+  end;
+end;
+
 procedure TSciter.UpdateWindow;
 begin
   API.SciterUpdateWindow(Self.Handle);
@@ -1491,22 +1518,27 @@ begin
   Self.FELEMENT := h;
   API.Sciter_UseElement(FElement);
   API.SciterAttachEventHandler(Self.FElement, @ElementEventProc, Self);
-  FSciter.InnerList.Add(Self);
+  FSciter.ManagedElements.Add(Self);
 end;
 
 destructor TElement.Destroy;
 begin
   API.SciterDetachEventHandler(Self.FElement, @ElementEventProc, Self);
   API.Sciter_UnuseElement(FElement);
-  if FSciter.InnerList.IndexOf(Self) >= 0 then
-    FSciter.InnerList.Remove(Self);
+  if FSciter.ManagedElements.IndexOf(Self) <> - 1 then
+    FSciter.ManagedElements.Remove(Self);
   inherited;
 end;
 
 { TElement }
 procedure TElement.AppendChild(const Element: IElement);
+var
+  SR: SCDOM_RESULT;
 begin
-  InsertElement(Element, MaxInt);
+  Assert(FSciter.HandleAllocated);
+  SR := API.SciterInsertElement(Element.Handle, FElement, $7FFFFFFF { sciter-x-dom.h });
+  if SR <> SCDOM_OK then
+    raise ESciterException.Create('Failed to append child element.');
 end;
 
 function TElement.AttachHwndToElement(h: HWND): boolean;
@@ -1516,42 +1548,9 @@ end;
 
 function TElement.Call(const Method: WideString;
   const Args: array of OleVariant): OleVariant;
-var
-  sMethod: AnsiString;
-  sargs: array[0..255] of TSciterValue;
-  sargc: UINT;
-  i: Integer;
-  pRetVal: TSciterValue;
-  pResult: OleVariant;
 begin
-  for i := Low(sargs) to High(sargs) do
-    API.ValueInit(@sargs[i]);
-  sargc := Length(Args);
-  for i := 0 to sargc - 1 do
-  begin
-    V2S(Args[i], @sargs[i]);
-  end;
-  sMethod := AnsiString(Method);
-
-  API.ValueInit(@pRetVal);
-
-  if API.SciterCallScriptingMethod(FElement, PAnsiChar(sMethod), @sargs[0], sargc, pRetVal) <> SCDOM_OK then
-  begin
-    if FSciter.Silent then
-    begin
-      ThrowError(Sciter.VM, Format('Method "%s" call failed.', [Method]));
-      Result := Unassigned;
-    end
-      else
-    begin
+  if not TryCall(Method, Args, Result) then
       raise ESciterCallException.Create(Method);
-    end;
-  end
-    else
-  begin
-    S2V(@pRetVal, pResult);
-    Result := pResult;
-  end;
 end;
 
 procedure TElement.ClearAttributes;
@@ -1565,7 +1564,7 @@ var
 begin
   Result := nil;
   if API.SciterCloneElement(FElement, phe) = SCDOM_OK then
-    Result := ElementFactoryClass.Create(Self.Sciter, phe);
+    Result := ElementFactory(Self.Sciter, phe);
 end;
 
 function TElement.CreateElement(const Tag: WideString; const Text: WideString): IElement;
@@ -1576,7 +1575,7 @@ var
 begin
   sTag := AnsiString(Tag);
   API.SciterCreateElement(PAnsiChar(sTag), PWideChar(Text), pHandle);
-  pElement := ElementFactoryClass.Create(Self.Sciter, pHandle);
+  pElement := ElementFactory(Self.Sciter, pHandle);
   Result := pElement;
 end;
 
@@ -1591,7 +1590,7 @@ begin
   Result := (Element <> nil) and (Self.Handle = Element.Handle);
 end;
 
-function TElement.FindNearestParent(const Selector: WideString): TElement;
+function TElement.FindNearestParent(const Selector: WideString): IElement;
 var
   pHE: HELEMENT;
   SR: SCDOM_RESULT;
@@ -1601,7 +1600,7 @@ begin
   if (SR <> SCDOM_OK) or (pHE = nil) then
     Result := nil
   else
-    Result := ElementFactoryClass.Create(Sciter, pHE);
+    Result := ElementFactory(Sciter, pHE);
 end;
 
 function TElement.GetAttrCount: Integer;
@@ -1617,7 +1616,7 @@ var
   nCnt: UINT;
 begin
   API.SciterGetAttributeCount(FElement, nCnt);
-  if Index >= nCnt then
+  if UINT(Index) >= nCnt then
     ThrowException('Attribute index (%d) is out of range.', [Index]);
     
   if API.SciterGetNthAttributeNameCB(FElement, Index, @NThAttributeNameCallback, Self) = SCDOM_OK then
@@ -1631,7 +1630,7 @@ var
   nCnt: UINT;
 begin
   API.SciterGetAttributeCount(FElement, nCnt);
-  if Index >= nCnt then
+  if UINT(Index) >= nCnt then
     ThrowException('Attribute index (%d) is out of range.', [Index]);
 
   if API.SciterGetNthAttributeValueCB(FElement, Index, @NThAttributeValueCallback, Self) = SCDOM_OK then
@@ -1653,7 +1652,7 @@ var
   SR: SCDOM_RESULT;
 begin
   API.SciterGetChildrenCount(FElement, nCnt);
-  if Index >= nCnt then
+  if UINT(Index) >= nCnt then
     ThrowException('Child element index (%d) is out of range.', [Index]);
 
   SR := API.SciterGetNthChild(FElement, UINT(Index), hResult);
@@ -1664,7 +1663,7 @@ begin
     Result := nil
   else
   begin
-    pResult := ElementFactoryClass.Create(Self.Sciter, hResult);
+    pResult := ElementFactory(Self.Sciter, hResult);
     Result := pResult;
   end;
 end;
@@ -1696,11 +1695,29 @@ end;
 function TElement.Get_Attr(const AttrName: WideString): WideString;
 var
   sAttrName: AnsiString;
+  SR: SCDOM_RESULT;
 begin
+  if AttrName = '' then
+  begin
+    Result := '';
+    Exit;
+  end;
+  
   sAttrName := AnsiString(AttrName);
   Self.FAttrName := AttrName;
-  API.SciterGetAttributeByNameCB(FElement, PAnsiChar(sAttrName), @AttributeTextCallback, Self);
-  Result := Self.FAttrValue;
+  SR := API.SciterGetAttributeByNameCB(FElement, PAnsiChar(sAttrName), @AttributeTextCallback, Self);
+  
+  case SR of
+    SCDOM_OK_NOT_HANDLED:
+      begin
+        FAttrValue := '';
+        Result := '';
+      end;
+    SCDOM_OK:
+      Result := Self.FAttrValue;
+    else
+      raise ESciterException.CreateFmt('Failed to get attribute value (attribute name: %s)', [AttrName]);
+  end;
 end;
 
 function TElement.Get_ChildrenCount: Integer;
@@ -1711,14 +1728,14 @@ begin
   Result := Integer(cnt);
 end;
 
-function TElement.Get_Handle: Integer;
+function TElement.Get_Handle: HELEMENT;
 begin
-  Result := Integer(FELEMENT);
+  Result := FELEMENT;
 end;
 
 function TElement.Get_ID: WideString;
 begin
-  Result := Attr['id'];
+  Result := Get_Attr('id');
 end;
 
 function TElement.Get_Index: Integer;
@@ -1796,7 +1813,7 @@ begin
   end
     else
   begin
-    pResult := ElementFactoryClass.Create(Self.Sciter, pParent);
+    pResult := ElementFactory(Self.Sciter, pParent);
     Result := pResult;
   end;
 end;
@@ -1831,6 +1848,7 @@ function TElement.Get_Value: OleVariant;
 var
   pValue: TSciterValue;
 begin
+{$R-}
   pValue.t := 0;
   pValue.u := 0;
   pValue.d := 0;
@@ -1838,6 +1856,7 @@ begin
     Result := Unassigned
   else
     S2V(@pValue, Result);
+{$R+}
 end;
 
 function TElement.HandleBehaviorEvents(
@@ -1851,11 +1870,11 @@ begin
   if Assigned(FOnControlEvent) then
   begin
     if params.heTarget <> nil then
-      pTarget := ElementFactoryClass.Create(Self.Sciter, params.heTarget)
+      pTarget := ElementFactory(Self.Sciter, params.heTarget)
     else
       pTarget := nil;
     if params.he <> nil then
-      pSource := ElementFactoryClass.Create(Self.Sciter, params.he)
+      pSource := ElementFactory(Self.Sciter, params.he)
     else
       pSource := nil;
 
@@ -1879,7 +1898,7 @@ begin
   if Assigned(FOnFocus) then
   begin
     if params.target <> nil then
-      pTarget := ElementFactoryClass.Create(Self.Sciter, params.target);
+      pTarget := ElementFactory(Self.Sciter, params.target);
     FOnFocus(Sciter, pTarget, params.cmd, bHandled);
     if pTarget <> nil then
       pTarget := nil;
@@ -1903,7 +1922,7 @@ begin
   if Assigned(FOnKey) then
   begin
     if params.target <> nil then
-      pTarget := ElementFactoryClass.Create(Self.Sciter, params.target);
+      pTarget := ElementFactory(Self.Sciter, params.target);
     FOnKey(Sciter, pTarget, params.cmd, params.key_code, params.alt_state, bHandled);
     if pTarget <> nil then
       pTarget := nil;
@@ -1926,7 +1945,7 @@ begin
   if Assigned(FOnMouse) then
   begin
     if params.target <> nil then
-      pTarget := ElementFactoryClass.Create(Self.Sciter, params.target);
+      pTarget := ElementFactory(Self.Sciter, params.target);
     FOnMouse(Sciter, pTarget, params.cmd, params.pos.x, params.pos.Y, params.button_state, params.alt_state, bHandled);
     if pTarget <> nil then
       pTarget := nil;
@@ -1941,7 +1960,6 @@ var
   sMethodName: WideString;
   pResult: OleVariant;
   bHandled: Boolean;
-  pSciterVal: PSciterValue;
   i: Integer;
 begin
   bHandled := False;
@@ -1950,11 +1968,9 @@ begin
   try
     sMethodName := WideString(AnsiString(params.name));
     SetLength(pArgs, params.argc);
-    pSciterVal := params.argv;
     for i := 0 to params.argc - 1 do
     begin
-      S2V(pSciterVal, pArgs[i]);
-      Inc(pSciterVal);
+      S2V(@params.argv[i], pArgs[i]);
     end;
     FOnMethodCall(Sciter, Self, sMethodName, pArgs, pResult, bHandled);
     V2S(pResult, @params.result);
@@ -1980,7 +1996,7 @@ begin
   if Assigned(FOnScroll) then
   begin
     if params.target <> nil then
-      pTarget := ElementFactoryClass.Create(Self.Sciter, params.target);
+      pTarget := ElementFactory(Self.Sciter, params.target);
     FOnScroll(Sciter, pTarget, params.cmd, params.pos, params.vertical, bHandled);
     if pTarget <> nil then
       pTarget := nil;
@@ -2010,10 +2026,14 @@ begin
   Result := bHandled;
 end;
 
-procedure TElement.InsertElement(const Child: IElement; Index: Integer);
+procedure TElement.InsertElement(const Child: IElement; const AIndex: Integer);
+var
+  SR: SCDOM_RESULT;
 begin
-  if API.SciterInsertElement(HELEMENT(Child.Handle), FElement, Index) <> SCDOM_OK then
-    ThrowException('Failed to insert or append child element.');
+  Assert(FSciter.HandleAllocated);
+  SR := API.SciterInsertElement(Child.Handle, FElement, AIndex);
+  if SR <> SCDOM_OK then
+    raise ESciterException.Create('Failed to insert child element.');
 end;
 
 function TElement.IsValid: Boolean;
@@ -2036,14 +2056,14 @@ begin
   API.SciterScrollToView(FElement, 0);
 end;
 
-function TElement.Select(const Selector: WideString): TElement;
+function TElement.Select(const Selector: WideString): IElement;
 begin
   FHChild := nil;
   Result := nil;
   if API.SciterSelectElementsW(FELEMENT, PWideChar(Selector), @SelectSingleNodeCallback, Self) = SCDOM_OK then
   begin
     if FHChild <> nil then
-      Result := ElementFactoryClass.Create(Sciter, FHChild)
+      Result := ElementFactory(Sciter, FHChild)
     else
       Result := nil;
   end
@@ -2194,6 +2214,45 @@ begin
   raise ESciterException.CreateFmt(Message, Args);
 end;
 
+function TElement.TryCall(const Method: WideString; const Args: array of OleVariant; out RetVal: OleVariant): Boolean;
+var
+  sMethod: AnsiString;
+  sargs: array[0..255] of TSciterValue;
+  sargc: UINT;
+  i: Integer;
+  pRetVal: TSciterValue;
+begin
+  sargc := Length(Args);
+
+  if sargc > 256 then
+    raise ESciterException.Create('Too many arguments.');
+
+  for i := Low(sargs) to High(sargs) do
+    API.ValueInit(@sargs[i]);
+
+  if sargc > 0 then
+  begin
+    for i := 0 to sargc - 1 do
+    begin
+      V2S(Args[i], @sargs[i]);
+    end;
+  end;
+  sMethod := AnsiString(Method);
+
+  API.ValueInit(@pRetVal);
+
+  if API.SciterCallScriptingMethod(FElement, PAnsiChar(sMethod), @sargs[0], sargc, pRetVal) <> SCDOM_OK then
+  begin
+    RetVal := Unassigned;
+    Result := False;
+  end
+    else
+  begin
+    S2V(@pRetVal, RetVal);
+    Result := True;
+  end;
+end;
+
 constructor TElementCollection.Create;
 begin
   FSciter := ASciter;
@@ -2218,9 +2277,17 @@ begin
   Result := FList.Count;
 end;
 
-function TElementCollection.Get_Item(const Index: Integer): TElement;
+function TElementCollection.Get_Element(const Index: Integer): TElement;
 begin
   Result := FList[Index] as TElement;
+end;
+
+function TElementCollection.Get_Item(const Index: Integer): IElement;
+var
+  pElement: IElement;
+begin
+  pElement := FList[Index] as TElement;
+  Result := pElement;
 end;
 
 procedure TElementCollection.RemoveAll;
@@ -2230,7 +2297,6 @@ begin
   for i := Count - 1 downto 0 do
   begin
     Item[i].Delete;
-    // TODO: Item[i].Free;
   end;
   FList.Clear;
 end;
@@ -2252,12 +2318,6 @@ begin
   RegisterComponents('Samples', [TSciter]);
 end;
 
-procedure SciterSetElementFactoryClass(Cls: TElementClass);
-begin
-  ElementFactoryClass := Cls;
-end;
-
-
 { TElementList }
 
 procedure TElementList.Add(const Element: TElement);
@@ -2276,22 +2336,7 @@ begin
     inherited Remove(Element);
 end;
 
-function TSciter.GetVersion: WideString;
-type
-  TVer = record
-    a: Word;
-    b: Word;
-  end;
-  PVer = ^TVer;
-var
-  ver: UINT;
-begin
-  ver := API.SciterVersion(true);
-  Result := '3.0.' + Format('%d.%d', [PVer(@ver)^.a, PVer(@ver)^.b]);
-end;
-
 initialization
-  ElementFactoryClass := TElement;
   CoInitialize(nil);
   OleInitialize(nil);
 

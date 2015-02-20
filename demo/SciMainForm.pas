@@ -30,17 +30,15 @@ type
     cmdGetCaseHistory: TButton;
     cmdReload: TButton;
     Button1: TButton;
-    cmdSetObject: TButton;
     cmdSaveToFile: TButton;
     sfd: TSaveDialog;
-    cmdShowInspector: TButton;
     procedure Button1Click(Sender: TObject);
+    procedure Button2Click(Sender: TObject);
     procedure cmdCallNativeClick(Sender: TObject);
     procedure cmdEvalClick(Sender: TObject);
     procedure cmdGetCaseHistoryClick(Sender: TObject);
     procedure cmdReloadClick(Sender: TObject);
     procedure cmdSaveToFileClick(Sender: TObject);
-    procedure cmdSetObjectClick(Sender: TObject);
     procedure cmdShowInspectorClick(Sender: TObject);
     procedure DumpHTML1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -57,6 +55,8 @@ type
     FExamplesBase: WideString;
     FButton: TButton;
     FHomeUrl: WideString;
+    FTxtEvents: IElementEvents;
+    FBodyEvents: IElementEvents;
     procedure OnElementControlEvent(ASender: TObject; const target: IElement; eventType: BEHAVIOR_EVENTS;
                              reason: Integer; const source: IElement; var Handled: Boolean);
     procedure OnElementMouse(ASender: TObject; const target: IElement;
@@ -99,6 +99,20 @@ begin
   ShowMessage(Sciter1.SciterValueToJson(sv));
 end;
 
+procedure TMainForm.Button2Click(Sender: TObject);
+var
+  pTxt: IElement;
+begin
+  pTxt := Sciter1.Root.Select('#txtEvents');
+  if pTxt <> nil then
+  begin
+    FTxtEvents := pTxt as IElementEvents;
+    FTxtEvents.OnControlEvent := OnElementControlEvent;
+    FTxtEvents.OnMouse := OnElementMouse;
+    FTxtEvents.OnSize := OnElementSize;
+  end;
+end;
+
 procedure TMainForm.cmdCallNativeClick(Sender: TObject);
 begin
   Sciter1.Eval('SayHello()');
@@ -131,13 +145,6 @@ procedure TMainForm.cmdSaveToFileClick(Sender: TObject);
 begin
   if sfd.Execute then
     Sciter1.SaveToFile(sfd.FileName);  
-end;
-
-procedure TMainForm.cmdSetObjectClick(Sender: TObject);
-const
-  cs = '{ id: "2000-1-1", patient: { firstName: "Lars", lastName: "Carlsson" }}';
-begin
-  Sciter1.SetObject('caseHistory', cs);
 end;
 
 procedure TMainForm.cmdShowInspectorClick(Sender: TObject);
@@ -224,7 +231,7 @@ procedure TMainForm.OnElementControlEvent(ASender: TObject;
   const target: IElement; eventType: BEHAVIOR_EVENTS; reason: Integer;
   const source: IElement; var Handled: Boolean);
 begin
-  txtLog.Lines.Add(Format('Control event of type %d on %s, value=%s', [Integer(eventType), target.Tag, target.Value]));
+  txtLog.Lines.Add(Format('ControlEvent of type %d on %s, value=%s', [Integer(eventType), target.Tag, target.Value]));
 end;
 
 procedure TMainForm.OnElementMouse(ASender: TObject; const target: IElement;
@@ -236,7 +243,7 @@ end;
 procedure TMainForm.OnElementSize(ASender: TObject;
   const target: IElement; var Handled: Boolean);
 begin
-  txtLog.Lines.Add(Format('Size event', []));
+  txtLog.Lines.Add(Format('SizeEvent', []));
 end;
 
 procedure TMainForm.OnNativeButtonClick(Sender: TObject);
@@ -321,17 +328,17 @@ end;
 procedure TMainForm.Sciter1DocumentComplete(ASender: TObject; const url:
     WideString);
 var
-  pBody: TElement;
-
-  pDivContainer: TElement;
-  pTxtEvents: TElement;
+  pBody: IElement;
+  pDivContainer: IElement;
+  pTxt: IElement;
 begin
   if FButton <> nil then
     FreeAndNil(FButton);
   txtLog.Lines.Add('Sciter OnDocumentComplete event');
   pBody := Sciter1.Root.Select('body');
-  pBody.OnControlEvent := OnSciterControlEvent;
-  pBody.OnMethodCall := OnBodyMethodCall;
+  FBodyEvents := pBody as IElementEvents;
+  FBodyEvents.OnControlEvent := OnSciterControlEvent;
+  FBodyEvents.OnMethodCall := OnBodyMethodCall;
 
   pDivContainer := Sciter1.Root.Select('#divContainer');
   if pDivContainer <> nil then
@@ -344,12 +351,13 @@ begin
     pDivContainer.AttachHwndToElement(FButton.Handle);
   end;
 
-  pTxtEvents := Sciter1.Root.Select('#txtEvents');
-  if pTxtEvents <> nil then
+  pTxt := Sciter1.Root.Select('#txtEvents');
+  if pTxt <> nil then
   begin
-    pTxtEvents.OnControlEvent := OnElementControlEvent;
-    pTxtEvents.OnMouse := OnElementMouse;
-    pTxtEvents.OnSize := OnElementSize;
+    FTxtEvents := pTxt as IElementEvents;
+    FTxtEvents.OnControlEvent := OnElementControlEvent;
+    FTxtEvents.OnMouse := OnElementMouse;
+    FTxtEvents.OnSize := OnElementSize;
   end;
 end;
 

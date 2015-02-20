@@ -280,6 +280,8 @@ type
   end;
   PSciterValue = ^TSciterValue;
 
+  TSciterValueArray = array[0..$FFFF] of TSciterValue;
+  PSciterValueArray = ^TSciterValueArray;
 
   METHOD_PARAMS = record
     methodID: UINT;
@@ -710,7 +712,7 @@ type
 
   SCRIPTING_METHOD_PARAMS = packed record
     name: PAnsiChar;
-    argv: PSciterValue;
+    argv: ^TSciterValueArray; // SCITER_VALUE*
     argc: UINT;
     result: TSciterValue;
   end;
@@ -803,7 +805,6 @@ var
   FAPI: PSciterApi;
   FNI: ptiscript_native_interface;
   HSCITER: HMODULE;
-  HINSPECTOR: HMODULE;
 
 function GetNativeObjectJson(const Value: PSciterValue): WideString;
 var
@@ -1119,11 +1120,9 @@ begin
       end;
     T_CURRENCY:
       begin
-        // TODO:
+        // TODO: ?
         Result := FAPI.ValueInt64Data(Value, i64Result);
-        cResult := CompToCurrency(i64Result);
-        //cResult := PCurrency(i64Result)^;
-        // PInt64(aCurrencyVar)^
+        cResult := PCurrency(i64Result)^;
         OleValue := cResult;
       end;
     T_DATE:

@@ -788,6 +788,7 @@ function TSciterClassBag.RegisterClassInfo(
 var
   pVMClassBag: IVMClassBag;
   pClassList: ISciterClassInfoList;
+  zns: tiscript_value;
 begin
   if not Exists(vm) then
   begin
@@ -803,6 +804,15 @@ begin
   end;
 
   Result := SciterApi.GetNativeClass(vm, WideString(ClsInfo.TypeName));
+
+  // Probably class def was somehow collected by GC
+  if not NI.is_class(vm, Result) then
+  begin
+    zns := NI.get_global_ns(vm);
+    Result := NI.define_class(vm, ClsInfo.SciterClassDef, zns);
+  end;
+
+  Assert(NI.is_class(vm, Result), 'Failed to Register class info.');
 end;
 
 function TSciterClassBag.ResolveClass(vm: HVM;

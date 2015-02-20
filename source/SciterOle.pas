@@ -84,18 +84,34 @@ function FindOrCreateOleObjectClass(vm: HVM; const Dispatch: IDispatch): tiscrip
 var
   pOleClassInfo: ISciterOleClassInfo;
   sGuid: AnsiString;
+  tclass: tiscript_class;
 begin
   sGuid := GetOleObjectGuid(Dispatch);
-  
+
+  tclass := SciterApi.GetNativeClass(vm, WideString(sGuid));
+  if NI.is_class(vm, tclass) then
+  begin
+    Result := tclass;
+    Exit;
+  end;
+
   if not ClassBag.ClassInfoExists(vm, sGuid) then
   begin
     pOleClassInfo := TSciterOleNative.Create;
     pOleClassInfo.Build(Dispatch);
-    Result := ClassBag.RegisterClassInfo(vm, pOleClassInfo);
+    tclass := ClassBag.RegisterClassInfo(vm, pOleClassInfo);
+    Result := tclass;
   end
     else
   begin
-    Result := SciterApi.GetNativeClass(vm, WideString(sGuid));
+    tclass := SciterAPI.GetNativeClass(vm, sGuid);
+    if not NI.is_class(vm, tclass) then
+    begin
+      pOleClassInfo := TSciterOleNative.Create;
+      pOleClassInfo.Build(Dispatch);
+      tclass := ClassBag.RegisterClassInfo(vm, pOleClassInfo);
+    end;
+    Result := tclass;
   end;
 end;
 
