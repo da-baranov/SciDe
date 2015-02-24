@@ -85,7 +85,7 @@ var
 
 implementation
 
-uses SciterOle, SciterNative, NativeForm;
+uses SciterOle, SciterNative, NativeForm, Math;
 
 {$R *.dfm}
 {$R ..\resources\Richtext.res}
@@ -287,6 +287,16 @@ begin
         begin
           pDiv.AppendChild(pDiv.CreateElement('h4', 'Heading ' + IntToStr(i)));
         end;
+      end;
+    end;
+
+    if target.ID = 'cmdCloneHeadings' then
+    begin
+      pDiv := Sciter1.Root.Select('#divHeadings');
+      if pDiv <> nil then
+      begin
+        for i := 0 to Min(pDiv.ChildrenCount, 10) - 1 do
+          pDiv.AppendChild(pDiv.GetChild(i).CloneElement);
       end;
     end;
 

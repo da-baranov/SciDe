@@ -62,7 +62,7 @@ type
 
   LPVOID   = Pointer;
 
-  UINT_PTR = ^UINT;
+  UINT_PTR = UINT;
 
 
   LPCSTR_RECEIVER = procedure(str: PAnsiChar; str_length: UINT; param : Pointer); stdcall;
@@ -91,7 +91,7 @@ type
   ElementEventProc = function(tag: Pointer; he: HELEMENT; evtg: UINT; prms: Pointer): BOOL; stdcall;
   LPELEMENT_EVENT_PROC = ^ElementEventProc;
 
-  
+
   SciterResourceType { NB: UINT }  =
   (
     RT_DATA_HTML   = 0,
@@ -103,7 +103,24 @@ type
     SciterResourceTypeDummy = MaxInt
   );
 
-  
+  SCITER_RT_OPTIONS { NB: UINT_PTR } = (
+   SCITER_SMOOTH_SCROLL = 1,      // value:TRUE - enable, value:FALSE - disable, enabled by default
+   SCITER_CONNECTION_TIMEOUT = 2, // value: milliseconds, connection timeout of http client
+   SCITER_HTTPS_ERROR = 3,        // value: 0 - drop connection, 1 - use builtin dialog, 2 - accept connection silently
+   SCITER_FONT_SMOOTHING = 4,     // value: 0 - system default, 1 - no smoothing, 2 - std smoothing, 3 - clear type
+   SCITER_TRANSPARENT_WINDOW = 6, // Windows Aero support, value:
+                                  // 0 - normal drawing,
+                                  // 1 - window has transparent background after calls DwmExtendFrameIntoClientArea() or DwmEnableBlurBehindWindow().
+   SCITER_SET_GPU_BLACKLIST  = 7, // hWnd = NULL,
+                                  // value = LPCBYTE, json - GPU black list, see: gpu-blacklist.json resource.
+   SCITER_SET_SCRIPT_RUNTIME_FEATURES = 8, // value - combination of SCRIPT_RUNTIME_FEATURES flags.
+   SCITER_SET_GFX_LAYER = 9,      // hWnd = NULL, value - GFX_LAYER
+   SCITER_SET_DEBUG_MODE = 10,    // hWnd, value - TRUE/FALSE
+   SCITER_SET_UX_THEMING = 11     // hWnd = NULL, value - BOOL, TRUE - the engine will use "unisex" theme that is common for all platforms.
+                                  // That UX theme is not using OS primitives for rendering input elements. Use it if you want exactly
+                                  // the same (modulo fonts) look-n-feel on all platforms.
+  );
+
   SCN_LOAD_DATA = packed record
              code: UINT;
              hwnd: HWINDOW;
@@ -377,7 +394,7 @@ type
     SciterEval: function(hwnd: HWINDOW; script: PWideChar; scriptLength: UINT; var pretval: TSciterValue): BOOL; stdcall;
     SciterUpdateWindow: procedure(hwnd: HWINDOW); stdcall;
     SciterTranslateMessage: function(var lpMsg: TMsg): BOOL; stdcall;
-    SciterSetOption: function(hwnd: HWINDOW; option: UINT; value: PUINT): BOOL; stdcall;
+    SciterSetOption: function(hwnd: HWINDOW; option: SCITER_RT_OPTIONS; value: UINT_PTR): BOOL; stdcall;
     SciterGetPPI: procedure(hWndSciter: HWINDOW; var px: UINT; var py: UINT); stdcall;
     SciterGetViewExpando: function( hwnd: HWINDOW; pval: PSciterValue ): BOOL; stdcall;
     SciterEnumUrlData: Pointer;  // TODO:
@@ -1087,7 +1104,9 @@ var
   oleArrayResult: Variant;
   j: Integer;
 begin
-  FAPI.ValueType(Value, pType, pUnits);
+  API.ValueInit(@sArrItem);
+  
+  API.ValueType(Value, pType, pUnits);
   case pType of
     T_ARRAY:
       begin
@@ -1325,6 +1344,7 @@ function T2V(const vm: HVM; Value: tiscript_value): OleVariant;
 var
   sValue: TSciterValue;
 begin
+  API.ValueInit(@sValue);
   API.Sciter_T2S(vm, Value, sValue, False);
   S2V(@sValue, Result);
 end;
@@ -1335,6 +1355,7 @@ var
   sValue: TSciterValue;
   tResult: tiscript_value;
 begin
+  API.ValueInit(@sValue);
   V2S(Value, @sValue);
   API.Sciter_S2T(vm, @sValue, tResult);
   Result := tResult;

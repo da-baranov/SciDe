@@ -87,7 +87,7 @@ type
     procedure AppendChild(const Element: IElement);
     function AttachHwndToElement(h: HWND): boolean;
     function Call(const Method: WideString; const Args: Array of OleVariant): OleVariant;
-    function CloneElement: TElement;
+    function CloneElement: IElement;
     function CreateElement(const Tag: WideString; const Text: WideString): IElement;
     procedure Delete;
     function EqualsTo(const Element: IElement): WordBool;
@@ -239,7 +239,7 @@ type
     function AttachHwndToElement(h: HWND): boolean;
     function Call(const Method: WideString; const Args: Array of OleVariant): OleVariant;
     procedure ClearAttributes;
-    function CloneElement: TElement;
+    function CloneElement: IElement;
     function CreateElement(const Tag: WideString; const Text: WideString): IElement;
     procedure Delete;
     function EqualsTo(const Element: IElement): WordBool;
@@ -381,6 +381,7 @@ type
     function SelectAll(const Selector: WideString): IElementCollection;
     procedure SetHomeURL(const URL: WideString);
     procedure SetObject(const Name: WideString; const Json: WideString);
+    procedure SetOption(const Key: SCITER_RT_OPTIONS; const Value: UINT_PTR);
     procedure ShowInspector(const Element: IElement = nil);
     function TiScriptValueToJson(Obj: tiscript_value): WideString;
     function TryCall(const FunctionName: WideString; const Args: array of OleVariant): boolean; overload;
@@ -457,6 +458,28 @@ implementation
 
 uses
   SciterOle;
+
+function SciterCheck(const SR: SCDOM_RESULT; const FmtString: String; const Args: array of const; const AllowNotHandled: Boolean = False): SCDOM_RESULT; overload;
+begin
+  if SCDOM_RESULT(SR) = SCDOM_OK then
+  begin
+    Result := SCDOM_OK;
+  end
+    else
+  begin
+    if ( SR = SCDOM_OK_NOT_HANDLED) and (AllowNotHandled) then
+    begin
+      Result := SR;
+      Exit;
+    end;
+    raise ESciterException.CreateFmt(FmtString, Args);
+  end;
+end;
+
+function SciterCheck(const SR: SCDOM_RESULT; const Msg: String; const AllowNotHandled: Boolean = false): SCDOM_RESULT; overload;
+begin
+  Result := SciterCheck(SR, Msg, [], AllowNotHandled);
+end;
 
 function ElementFactory(const ASciter: TSciter; const he: HELEMENT): TElement;
 begin
@@ -870,6 +893,7 @@ var
   pVal: TSciterValue;
   pResult: OleVariant;
 begin
+  API.ValueInit(@pVal);
   if API.SciterEval(Handle, PWideChar(Script), Length(Script), pVal)  then
     S2V(@pVal, pResult)
   else
@@ -999,10 +1023,15 @@ begin
 end;
 
 function TSciter.HandleDocumentComplete(const Url: WideString): BOOL;
+var
+  bHandled: Integer;
 begin
   Result := False;
   if Assigned(FOnDocumentComplete) then
     FOnDocumentComplete(Self, Url);
+
+  // Temporary fix: sometimes bottom part of document stays invisible until parent form gets resized
+  API.SciterProcND(Handle, WM_SIZE, 0, MAKELPARAM(ClientRect.Right - ClientRect.Left + 1, ClientRect.Bottom - ClientRect.Top), bHandled);
 end;
 
 function TSciter.HandleEngineDestroyed(data: LPSCN_ENGINE_DESTROYED): UINT;
@@ -1388,6 +1417,12 @@ begin
   FOnStdWarn := Value;
 end;
 
+procedure TSciter.SetOption(const Key: SCITER_RT_OPTIONS;
+  const Value: UINT_PTR);
+begin
+  API.SciterSetOption(Handle, Key, Value);
+end;
+
 procedure TSciter.SetParent(AParent: TWinControl);
 begin
   inherited SetParent(AParent);
@@ -1407,6 +1442,7 @@ function TSciter.TiScriptValueToJson(Obj: tiscript_value): WideString;
 var
   sv: TSciterValue;
 begin
+  API.ValueInit(@sv);
   if not API.Sciter_T2S(VM, Obj, sv, False) then
     raise ESciterException.Create('Failed to convert tiscript_value to JSON.');
   Result := SciterValueToJson(sv);
@@ -1532,13 +1568,12 @@ end;
 
 { TElement }
 procedure TElement.AppendChild(const Element: IElement);
-var
-  SR: SCDOM_RESULT;
 begin
   Assert(FSciter.HandleAllocated);
-  SR := API.SciterInsertElement(Element.Handle, FElement, $7FFFFFFF { sciter-x-dom.h });
-  if SR <> SCDOM_OK then
-    raise ESciterException.Create('Failed to append child element.');
+  SciterCheck(
+    API.SciterInsertElement(Element.Handle, FElement, $7FFFFFFF { sciter-x-dom.h }),
+    'Failed to append child element.'
+  );
 end;
 
 function TElement.AttachHwndToElement(h: HWND): boolean;
@@ -1550,21 +1585,25 @@ function TElement.Call(const Method: WideString;
   const Args: array of OleVariant): OleVariant;
 begin
   if not TryCall(Method, Args, Result) then
-      raise ESciterCallException.Create(Method);
+    raise ESciterCallException.Create(Method);
 end;
 
 procedure TElement.ClearAttributes;
 begin
-  API.SciterClearAttributes(FElement);
+  SciterCheck(
+    API.SciterClearAttributes(FElement),
+    'Failed to clear element attributes.'
+  );
 end;
 
-function TElement.CloneElement: TElement;
+function TElement.CloneElement: IElement;
 var
   phe: HELEMENT;
 begin
-  Result := nil;
-  if API.SciterCloneElement(FElement, phe) = SCDOM_OK then
-    Result := ElementFactory(Self.Sciter, phe);
+  SciterCheck(
+    API.SciterCloneElement(FElement, phe), 'Failed to clone element.'
+  );
+  Result := ElementFactory(Self.Sciter, phe);
 end;
 
 function TElement.CreateElement(const Tag: WideString; const Text: WideString): IElement;
@@ -1572,16 +1611,26 @@ var
   pElement: TElement;
   pHandle: HELEMENT;
   sTag: AnsiString;
+  SR: SCDOM_RESULT;
 begin
   sTag := AnsiString(Tag);
-  API.SciterCreateElement(PAnsiChar(sTag), PWideChar(Text), pHandle);
+  SR := API.SciterCreateElement(PAnsiChar(sTag), PWideChar(Text), pHandle);
+
+  //if SR <> SCDOM_OK then
+  //  raise ESciterException.CreateFmt( 'Failed to create element "%s".', [Tag]);
+
   pElement := ElementFactory(Self.Sciter, pHandle);
   Result := pElement;
 end;
 
 procedure TElement.Delete;
 begin
-  API.SciterDeleteElement(FElement);
+  SciterCheck(
+    API.SciterDeleteElement(FElement),
+    'Failed to delete element.',
+    [],
+    True
+  );
   FELEMENT := nil;
 end;
 
@@ -1593,21 +1642,24 @@ end;
 function TElement.FindNearestParent(const Selector: WideString): IElement;
 var
   pHE: HELEMENT;
-  SR: SCDOM_RESULT;
 begin
   pHE := nil;
-  SR := API.SciterSelectParentW(FElement, PWideChar(Selector), 0, pHE);
-  if (SR <> SCDOM_OK) or (pHE = nil) then
-    Result := nil
-  else
-    Result := ElementFactory(Sciter, pHE);
+  SciterCheck(
+    API.SciterSelectParentW(FElement, PWideChar(Selector), 0, pHE),
+    'Failed to select nearest parent element.',
+    []
+  );
+  Result := ElementFactory(Sciter, pHE);
 end;
 
 function TElement.GetAttrCount: Integer;
 var
   Cnt: UINT;
 begin
-  API.SciterGetAttributeCount(FElement, Cnt);
+  SciterCheck(
+    API.SciterGetAttributeCount(FElement, Cnt),
+    'Failed to get count of element attributes.'
+  );
   Result := Integer(Cnt);
 end;
 
@@ -1615,28 +1667,36 @@ function TElement.GetAttributeName(Index: Integer): WideString;
 var
   nCnt: UINT;
 begin
-  API.SciterGetAttributeCount(FElement, nCnt);
+  nCnt := GetAttrCount;
+
   if UINT(Index) >= nCnt then
     ThrowException('Attribute index (%d) is out of range.', [Index]);
     
-  if API.SciterGetNthAttributeNameCB(FElement, Index, @NThAttributeNameCallback, Self) = SCDOM_OK then
-    Result := WideString(Self.FAttrAnsiName)
-  else
-    ThrowException('Failed to get attribute name.');
+  SciterCheck(
+    API.SciterGetNthAttributeNameCB(FElement, Index, @NThAttributeNameCallback, Self),
+    'Failed to get attribute name.',
+    []
+  );
+    
+  Result := WideString(Self.FAttrAnsiName)
 end;
 
 function TElement.GetAttributeValue(Index: Integer): WideString;
 var
   nCnt: UINT;
 begin
-  API.SciterGetAttributeCount(FElement, nCnt);
+  nCnt := GetAttrCount;
+  
   if UINT(Index) >= nCnt then
     ThrowException('Attribute index (%d) is out of range.', [Index]);
 
-  if API.SciterGetNthAttributeValueCB(FElement, Index, @NThAttributeValueCallback, Self) = SCDOM_OK then
-    Result := Self.FAttrValue
-  else
-    ThrowException('Failed to get attribute value.');
+  SciterCheck(
+    API.SciterGetNthAttributeValueCB(FElement, Index, @NThAttributeValueCallback, Self),
+    'Failed to get attribute #%d value.',
+    [Index]
+  );
+
+  Result := Self.FAttrValue
 end;
 
 function TElement.GetAttributeValue(const Name: WideString): WideString;
@@ -1648,20 +1708,24 @@ function TElement.GetChild(Index: Integer): IElement;
 var
   hResult: HELEMENT;
   pResult: TElement;
-  nCnt: UINT;
-  SR: SCDOM_RESULT;
+  nCnt: Integer;
 begin
-  API.SciterGetChildrenCount(FElement, nCnt);
-  if UINT(Index) >= nCnt then
+  nCnt := Get_ChildrenCount;
+
+  if Index >= nCnt then
     ThrowException('Child element index (%d) is out of range.', [Index]);
 
-  SR := API.SciterGetNthChild(FElement, UINT(Index), hResult);
-  if SR <> SCDOM_OK then
-    ThrowException('Failed to get child element with index %d.', [Index]);
+  SciterCheck(
+    API.SciterGetNthChild(FElement, UINT(Index), hResult),
+    'Failed to get child element with index %d.',
+    [Index]
+  );
     
   if hResult = nil then
-    Result := nil
-  else
+  begin
+    Result := nil;
+  end
+    else
   begin
     pResult := ElementFactory(Self.Sciter, hResult);
     Result := pResult;
@@ -1697,6 +1761,8 @@ var
   sAttrName: AnsiString;
   SR: SCDOM_RESULT;
 begin
+  Result := '';
+  
   if AttrName = '' then
   begin
     Result := '';
@@ -1705,8 +1771,14 @@ begin
   
   sAttrName := AnsiString(AttrName);
   Self.FAttrName := AttrName;
-  SR := API.SciterGetAttributeByNameCB(FElement, PAnsiChar(sAttrName), @AttributeTextCallback, Self);
   
+  SR := SciterCheck(
+    API.SciterGetAttributeByNameCB(FElement, PAnsiChar(sAttrName), @AttributeTextCallback, Self),
+    'Failed to get attribute value (attribute name: %s)',
+    [AttrName],
+    True
+  );
+
   case SR of
     SCDOM_OK_NOT_HANDLED:
       begin
@@ -1715,8 +1787,6 @@ begin
       end;
     SCDOM_OK:
       Result := Self.FAttrValue;
-    else
-      raise ESciterException.CreateFmt('Failed to get attribute value (attribute name: %s)', [AttrName]);
   end;
 end;
 
@@ -1724,7 +1794,10 @@ function TElement.Get_ChildrenCount: Integer;
 var
   cnt: UINT;
 begin
-  API.SciterGetChildrenCount(FElement, cnt);
+  SciterCheck(
+    API.SciterGetChildrenCount(FElement, cnt),
+    'Failed to get count of child elements.'
+  );
   Result := Integer(cnt);
 end;
 
@@ -1743,14 +1816,20 @@ var
   pResult: UINT;
 begin
   pResult := 0;
-  if API.SciterGetElementIndex(FElement, pResult) <> SCDOM_OK then
-    ThrowException('Failed to get element index.');
+  SciterCheck(
+    API.SciterGetElementIndex(FElement, pResult),
+    'Failed to get element index.'
+  );
   Result := Integer(pResult);
 end;
 
 function TElement.Get_InnerHtml: WideString;
 begin
-  API.SciterGetElementHtmlCB(FElement, False, @ElementHtmlCallback, Self);
+  SciterCheck(
+    API.SciterGetElementHtmlCB(FElement, False, @ElementHtmlCallback, Self),
+    'Failed to get element inner HTML property.'
+  );
+  
   Result := Self.FHtml;
 end;
 
@@ -1796,7 +1875,10 @@ end;
 
 function TElement.Get_OuterHtml: WideString;
 begin
-  API.SciterGetElementHtmlCB(FElement, True, @ElementHtmlCallback, Self);
+  SciterCheck(
+    API.SciterGetElementHtmlCB(FElement, True, @ElementHtmlCallback, Self),
+    'Failed to get element outer HTML property.'
+  );
   Result := Self.FHtml;
 end;
 
@@ -1806,7 +1888,11 @@ var
   pResult: TElement;
 begin
   pParent := nil;
-  API.SciterGetParentElement(FELEMENT, pParent);
+  SciterCheck(
+    API.SciterGetParentElement(FELEMENT, pParent),
+    'Failed to get parent element.'
+  );
+  
   if (pParent = nil) then
   begin
     Result := nil;
@@ -1824,24 +1910,30 @@ var
 begin
   sStyleAttrName := AnsiString(AttrName);
   Self.FStyleAttrName := AttrName;
-  API.SciterGetAttributeByNameCB(FElement, PAnsiChar(sStyleAttrName), @StyleAttributeTextCallback, Self);
+  
+  SciterCheck(
+    API.SciterGetAttributeByNameCB(FElement, PAnsiChar(sStyleAttrName), @StyleAttributeTextCallback, Self),
+    'Failed to get element style attribute.');
+    
   Result := Self.FStyleAttrValue;
 end;
 
 function TElement.Get_Tag: WideString;
 begin
-  if API.SciterGetElementTypeCB(FElement, @ElementTagCallback, Self) = SCDOM_OK then
-    Result := FTag
-  else
-    Result := '';
+  SciterCheck(
+    API.SciterGetElementTypeCB(FElement, @ElementTagCallback, Self),
+    'Failed to get element tag.'
+  );
+  Result := FTag
 end;
 
 function TElement.Get_Text: WideString;
 begin
-  if API.SciterGetElementTextCB(FELEMENT, @ElementTextCallback, Self) = SCDOM_OK then
-    Result := FText
-  else
-    Result := '';
+  SciterCheck(
+    API.SciterGetElementTextCB(FELEMENT, @ElementTextCallback, Self),
+    'Failed to get element text.'
+  );
+  Result := FText
 end;
 
 function TElement.Get_Value: OleVariant;
@@ -1849,13 +1941,12 @@ var
   pValue: TSciterValue;
 begin
 {$R-}
-  pValue.t := 0;
-  pValue.u := 0;
-  pValue.d := 0;
-  if API.SciterGetValue(FElement, @pValue) <> SCDOM_OK then
-    Result := Unassigned
-  else
-    S2V(@pValue, Result);
+  API.ValueInit(@pValue);
+  SciterCheck(
+    API.SciterGetValue(FElement, @pValue),
+    'Failed to get element value'
+  );
+  S2V(@pValue, Result);
 {$R+}
 end;
 
@@ -2027,13 +2118,16 @@ begin
 end;
 
 procedure TElement.InsertElement(const Child: IElement; const AIndex: Integer);
-var
-  SR: SCDOM_RESULT;
 begin
   Assert(FSciter.HandleAllocated);
-  SR := API.SciterInsertElement(Child.Handle, FElement, AIndex);
-  if SR <> SCDOM_OK then
-    raise ESciterException.Create('Failed to insert child element.');
+
+  if Child = nil then
+    raise ESciterNullPointerException.Create;
+
+  SciterCheck(
+    API.SciterInsertElement(Child.Handle, FElement, AIndex),
+    'Failed to insert child element.'
+  );
 end;
 
 function TElement.IsValid: Boolean;
@@ -2059,16 +2153,17 @@ end;
 function TElement.Select(const Selector: WideString): IElement;
 begin
   FHChild := nil;
+
   Result := nil;
-  if API.SciterSelectElementsW(FELEMENT, PWideChar(Selector), @SelectSingleNodeCallback, Self) = SCDOM_OK then
-  begin
-    if FHChild <> nil then
-      Result := ElementFactory(Sciter, FHChild)
-    else
-      Result := nil;
-  end
-    else
-  ThrowException('The Select method failed. Check selector expression syntax.');
+  SciterCheck(
+    API.SciterSelectElementsW(FELEMENT, PWideChar(Selector), @SelectSingleNodeCallback, Self),
+    'The Select method failed. Check selector expression syntax.'
+  );
+
+  if FHChild <> nil then
+    Result := ElementFactory(Sciter, FHChild)
+  else
+    Result := nil;
 end;
 
 function TElement.SelectAll(const Selector: WideString): IElementCollection;
@@ -2076,10 +2171,11 @@ var
   pResult: TElementCollection;
 begin
   pResult := TElementCollection.Create(Self.Sciter);
-  if API.SciterSelectElementsW(FELEMENT, PWideChar(Selector), @SelectorCallback, pResult) = SCDOM_OK then
-    Result := pResult
-  else
-    ThrowException('The Select method failed. Check selector expression syntax.');
+  SciterCheck(
+    API.SciterSelectElementsW(FELEMENT, PWideChar(Selector), @SelectorCallback, pResult),
+    'The Select method failed. Check selector expression syntax.'
+  );
+  Result := pResult;
 end;
 
 function TElement.SendEvent(EventCode: BEHAVIOR_EVENTS): Boolean;
@@ -2099,8 +2195,11 @@ var
   sAttrName: AnsiString;
 begin
   sAttrName := AnsiString(AttrName);
-  if API.SciterSetAttributeByName(FElement, PAnsiChar(sAttrName), PWideChar(Value)) <> SCDOM_OK then
-    ThrowException('Failed to set "%s" attribute value.', [AttrName]);
+  SciterCheck(
+    API.SciterSetAttributeByName(FElement, PAnsiChar(sAttrName), PWideChar(Value)),
+    'Failed to set "%s" attribute value.',
+    [AttrName]
+  );
 end;
 
 procedure TElement.Set_ID(const Value: WideString);
@@ -2117,8 +2216,11 @@ begin
   sStr := UTF8Encode(Value);
   pStr := PAnsiChar(sStr);
   iLen := Length(sStr);
-  if API.SciterSetElementHtml(FElement, PByte(pStr), iLen, SIH_REPLACE_CONTENT) <> SCDOM_OK then
-    ThrowException('Failed to set the inner html property on element');
+
+  SciterCheck(
+    API.SciterSetElementHtml(FElement, PByte(pStr), iLen, SIH_REPLACE_CONTENT),
+    'Failed to set the inner html property on element'
+  );
 end;
 
 procedure TElement.Set_OnControlEvent(const Value: TElementOnControlEvent);
@@ -2170,37 +2272,43 @@ begin
   sStr := UTF8Encode(Value);
   pStr := PAnsiChar(sStr);
   iLen := Length(sStr);
-  if API.SciterSetElementHtml(FElement, PByte(pStr), iLen, SOH_REPLACE) <> SCDOM_OK then
-    ThrowException('Failed to set the outer html property on element');
+
+  SciterCheck(
+    API.SciterSetElementHtml(FElement, PByte(pStr), iLen, SOH_REPLACE),
+    'Failed to set the outer html property on element'
+  );
 end;
 
 procedure TElement.Set_StyleAttr(const AttrName, Value: WideString);
 var
   sStyleAttrName: AnsiString;
-  hr: SCDOM_RESULT;
 begin
   sStyleAttrName := AnsiString(AttrName);
-  hr := API.SciterSetStyleAttribute(FElement, PAnsiChar(sStyleAttrName), PWideChar(Value));
-  if hr <> SCDOM_OK then
-    ThrowException('Failed to set style attribute.');
+
+  SciterCheck(
+    API.SciterSetStyleAttribute(FElement, PAnsiChar(sStyleAttrName), PWideChar(Value)),
+    'Failed to set style attribute.'
+  );
 end;
 
 procedure TElement.Set_Text(const Value: WideString);
-var
-  hr: SCDOM_RESULT;
 begin
-  hr := API.SciterSetElementText(FElement, PWideChar(Value), Length(Value));
-  if hr <> SCDOM_OK then
-    ThrowException('Failed to set element text.', []);
+  SciterCheck(
+    API.SciterSetElementText(FElement, PWideChar(Value), Length(Value)),
+    'Failed to set element text.'
+  );
 end;
 
 procedure TElement.Set_Value(Value: OleVariant);
 var
   sValue: TSciterValue;
 begin
+  API.ValueInit(@sValue);
   V2S(Value, @sValue);
-  if API.SciterSetValue(FElement, @sValue) <> SCDOM_OK then
-    ThrowException('Failed to set element value.', []);
+  SciterCheck(
+    API.SciterSetValue(FElement, @sValue),
+    'Failed to set element value.'
+  );
 end;
 
 procedure TElement.ThrowException(const Message: String);
@@ -2222,6 +2330,8 @@ var
   i: Integer;
   pRetVal: TSciterValue;
 begin
+  API.ValueInit(@pRetVal);
+  
   sargc := Length(Args);
 
   if sargc > 256 then
