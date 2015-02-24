@@ -329,7 +329,7 @@ type
     function GetHVM: HVM;
     function GetVersion: WideString;
     function Get_Html: WideString;
-    function Get_Root: TElement;
+    function Get_Root: IElement;
     procedure SetOnStdErr(const Value: TSciterOnStdErr);
     procedure SetOnStdOut(const Value: TSciterOnStdOut);
     procedure SetOnStdWarn(const Value: TSciterOnStdOut);
@@ -388,7 +388,7 @@ type
     function TryCall(const FunctionName: WideString; const Args: array of OleVariant; out RetVal: OleVariant): boolean; overload;
     procedure UpdateWindow;
     property Html: WideString read Get_Html;
-    property Root: TElement read Get_Root;
+    property Root: IElement read Get_Root;
     property Version: WideString read GetVersion;
     property VM: HVM read GetHVM;
   published
@@ -979,7 +979,7 @@ end;
 
 function TSciter.Get_Html: WideString;
 var
-  pRoot: TElement;
+  pRoot: IElement;
 begin
   pRoot := Get_Root;
   if pRoot = nil then
@@ -989,11 +989,11 @@ begin
     else
   begin
     Result := pRoot.OuterHtml;
-    pRoot.Free;
   end;
+  pRoot := nil;
 end;
 
-function TSciter.Get_Root: TElement;
+function TSciter.Get_Root: IElement;
 var
   he: HELEMENT;
 begin
