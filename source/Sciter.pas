@@ -311,6 +311,7 @@ type
 
   TSciter = class(TCustomControl)
   private
+    FMonitorModals: Boolean;
     FBaseUrl: WideString;
     FHomeURL: WideString;
     FHtml: WideString;
@@ -1503,9 +1504,43 @@ var
   llResult: LRESULT;
   bHandled: Integer;
   M: PMsg;
+  i: Integer;
+
+  function EnumChildProc(h: HWND; l: LPARAM): BOOL; stdcall;
+  var
+    pClassName: array[0..255] of AnsiChar;
+  begin
+    Result := TRUE;
+    if GetClassNameA(h, @pClassName, 256) = 0 then
+      Exit; // and continue
+      
+    if string(pClassName) = 'H-SMILE-FRAME' then
+    begin
+      if not IsWindowEnabled(h) then
+        EnableWindow(h, TRUE);
+      Result := FALSE;
+    end;
+  end;
 begin
   if not DesignMode then
   begin
+    // Tweaking Sciter modals VCL-related problem
+    // When showing a modal, Sciter calls EnableWindow(FALSE) for all the parent windows
+    // including application top-level form. And the main form disables all child controls including both Sciter window
+    // and the modal, so it gets disabled and cannot be closed with a mouse.
+    if Message.Msg = WM_KILLFOCUS then
+    begin
+      FMonitorModals := True;
+    end;
+    if Message.Msg = WM_SETFOCUS then
+    begin
+      FMonitorModals := False;
+    end;
+    if FMonitorModals then
+    begin
+      EnumThreadWindows(GetCurrentThreadId, @EnumChildProc, 0);
+    end;
+    
     // Tweaking arrow keys and TAB handling (VCL-specific)
     if Message.Msg = WM_GETDLGCODE then
     begin
@@ -1514,6 +1549,7 @@ begin
       begin
         M := PMsg(Message.lParam);
         case M.Message of
+          WM_SYSKEYDOWN, WM_SYSKEYUP, WM_SYSCHAR,
           WM_KEYDOWN, WM_KEYUP, WM_CHAR:
           begin
             Perform(M.message, M.wParam, M.lParam);

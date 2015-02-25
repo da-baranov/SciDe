@@ -6,7 +6,7 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, SciterApi, TiScriptApi, Sciter, StdCtrls, OleCtrls,
   ExtCtrls, ComCtrls, Menus, ComObj, ActiveX, SciDeDemo_TLB,
-  ComServ;
+  ComServ, AppEvnts;
 
 type
   TMainForm = class(TForm)
@@ -30,10 +30,12 @@ type
     cmdGetCaseHistory: TButton;
     cmdReload: TButton;
     Button1: TButton;
-    cmdSaveToFile: TButton;
     sfd: TSaveDialog;
+    ofd: TOpenDialog;
+    mnuOpenFile: TMenuItem;
+    mnuSaveFile: TMenuItem;
+    N1: TMenuItem;
     procedure Button1Click(Sender: TObject);
-    procedure Button2Click(Sender: TObject);
     procedure cmdCallNativeClick(Sender: TObject);
     procedure cmdEvalClick(Sender: TObject);
     procedure cmdGetCaseHistoryClick(Sender: TObject);
@@ -51,6 +53,8 @@ type
     procedure Sciter1MethodCall(ASender: TObject; const MethodName: WideString;
         const Args: array of OLEVariant; var ReturnValue: OLEVariant; var Handled:
         Boolean);
+    procedure E(var Message: TMessage);// message WM_ENABLE;
+    procedure mnuOpenFileClick(Sender: TObject);
   private
     FExamplesBase: WideString;
     FButton: TButton;
@@ -99,20 +103,6 @@ begin
   ShowMessage(Sciter1.SciterValueToJson(sv));
 end;
 
-procedure TMainForm.Button2Click(Sender: TObject);
-var
-  pTxt: IElement;
-begin
-  pTxt := Sciter1.Root.Select('#txtEvents');
-  if pTxt <> nil then
-  begin
-    FTxtEvents := pTxt as IElementEvents;
-    FTxtEvents.OnControlEvent := OnElementControlEvent;
-    FTxtEvents.OnMouse := OnElementMouse;
-    FTxtEvents.OnSize := OnElementSize;
-  end;
-end;
-
 procedure TMainForm.cmdCallNativeClick(Sender: TObject);
 begin
   Sciter1.Eval('SayHello()');
@@ -156,6 +146,18 @@ procedure TMainForm.DumpHTML1Click(Sender: TObject);
 begin
   txtLog.Lines.Clear;
   txtLog.Text := Sciter1.Root.OuterHtml;
+end;
+
+procedure TMainForm.E(var Message: TMessage);
+var
+  h: hWnd;
+begin
+  EnableWindow(Handle, True);
+  EnableWindow(Sciter1.Handle, True);
+  h := FindWindow('H-SMILE-FRAME', nil);
+  if h <> 0 then
+    EnableWindow(h, True);
+  inherited;
 end;
 
 procedure TMainForm.FormCreate(Sender: TObject);
@@ -208,6 +210,12 @@ begin
   pEl := Sciter1.FindElement(pt);
   if pEl <> nil then
     txtLog.Lines.Add(Format('Element at %d:%d is %s', [pt.X, pt.Y, pEl.Tag]));
+end;
+
+procedure TMainForm.mnuOpenFileClick(Sender: TObject);
+begin
+  if ofd.Execute then
+    Sciter1.LoadURL(Sciter1.FilePathToURL(ofd.FileName));
 end;
 
 procedure TMainForm.NavigatetoSciterwebsite1Click(Sender: TObject);
@@ -344,7 +352,7 @@ var
 begin
   if FButton <> nil then
     FreeAndNil(FButton);
-  txtLog.Lines.Add('Sciter OnDocumentComplete event');
+  txtLog.Lines.Add('OnDocumentComplete: ' + url);
   pBody := Sciter1.Root.Select('body');
   FBodyEvents := pBody as IElementEvents;
   FBodyEvents.OnControlEvent := OnSciterControlEvent;
@@ -431,5 +439,8 @@ procedure TTest.SayHello;
 begin
   ShowMessage('TTest: Hello!');
 end;
+
+initialization
+  
 
 end.

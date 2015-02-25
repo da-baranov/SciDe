@@ -1,6 +1,6 @@
 object MainForm: TMainForm
-  Left = 315
-  Top = 121
+  Left = 350
+  Top = 133
   Width = 1191
   Height = 775
   Caption = 'SciDe - test form'
@@ -10,7 +10,6 @@ object MainForm: TMainForm
   Font.Height = -11
   Font.Name = 'MS Sans Serif'
   Font.Style = []
-  KeyPreview = True
   Menu = mm1
   OldCreateOrder = False
   Position = poScreenCenter
@@ -151,21 +150,23 @@ object MainForm: TMainForm
       TabOrder = 7
       OnClick = Button1Click
     end
-    object cmdSaveToFile: TButton
-      Left = 10
-      Top = 240
-      Width = 161
-      Height = 25
-      Caption = 'Save to file'
-      TabOrder = 8
-      OnClick = cmdSaveToFileClick
-    end
   end
   object mm1: TMainMenu
     Left = 209
     Top = 104
     object Actions1: TMenuItem
-      Caption = 'Actions'
+      Caption = '&File'
+      object mnuOpenFile: TMenuItem
+        Caption = 'Open...'
+        OnClick = mnuOpenFileClick
+      end
+      object mnuSaveFile: TMenuItem
+        Caption = 'Save...'
+        OnClick = cmdSaveToFileClick
+      end
+      object N1: TMenuItem
+        Caption = '-'
+      end
       object NavigatetoSciterwebsite1: TMenuItem
         Caption = 'Navigate to Sciter website'
         OnClick = NavigatetoSciterwebsite1Click
@@ -189,6 +190,11 @@ object MainForm: TMainForm
     Filter = 'HTML files (*.htm)|*.htm'
     Options = [ofOverwritePrompt, ofHideReadOnly, ofEnableSizing]
     Left = 180
+    Top = 270
+  end
+  object ofd: TOpenDialog
+    Filter = 'HTML files|*.htm*'
+    Left = 223
     Top = 270
   end
 end
