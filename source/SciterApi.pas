@@ -456,7 +456,7 @@ type
     SciterHidePopup: function(he: HELEMENT): SCDOM_RESULT; stdcall;
     SciterGetElementState: function(he: HELEMENT; var pstateBits: UINT): SCDOM_RESULT; stdcall;
     SciterSetElementState: function(he: HELEMENT; stateBitsToSet: UINT; stateBitsToClear: UINT; updateView: BOOL): SCDOM_RESULT; stdcall;
-    SciterCreateElement: function(tagname: PAnsiChar; textOrNull: PWideChar; var phe: HELEMENT): SCDOM_RESULT; safecall;
+    SciterCreateElement: function(const tagname: PAnsiChar; const textOrNull: PWideChar; var phe: HELEMENT): SCDOM_RESULT; stdcall;
     SciterCloneElement: function(he: HELEMENT; var phe: HELEMENT): SCDOM_RESULT; stdcall;
     SciterInsertElement: function(he: HELEMENT; hparent: HELEMENT; index: UINT): SCDOM_RESULT; stdcall;
     SciterDetachElement: function(he: HELEMENT): SCDOM_RESULT; stdcall;

@@ -815,6 +815,7 @@ end;
 
 destructor TSciter.Destroy;
 begin
+  FManagedElements.Free;
   inherited;
 end;
 
@@ -1614,10 +1615,10 @@ var
   SR: SCDOM_RESULT;
 begin
   sTag := AnsiString(Tag);
-  SR := API.SciterCreateElement(PAnsiChar(sTag), PWideChar(Text), pHandle);
-
-  //if SR <> SCDOM_OK then
-  //  raise ESciterException.CreateFmt( 'Failed to create element "%s".', [Tag]);
+  SciterCheck(
+    API.SciterCreateElement(PAnsiChar(sTag), PWideChar(Text), pHandle),
+    'Failed to create element "%s".', [Tag]
+  );
 
   pElement := ElementFactory(Self.Sciter, pHandle);
   Result := pElement;
