@@ -9,7 +9,8 @@ uses
   SciterNative in '..\source\SciterNative.pas',
   SciterOle in '..\source\SciterOle.pas',
   NativeForm in 'NativeForm.pas',
-  SciDeDemo_TLB in 'SciDeDemo_TLB.pas';
+  SciDeDemo_TLB in 'SciDeDemo_TLB.pas',
+  DemoBehavior in 'DemoBehavior.pas';
 
 {$R *.TLB}
 

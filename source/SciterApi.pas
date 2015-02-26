@@ -233,7 +233,7 @@ type
       HANDLE_GESTURE               = $2000,
       HANDLE_ALL                   = $FFFF,
       SUBSCRIPTIONS_REQUEST        = -1,
-      EVENT_GROUPS_DUMMY           = MAXINT
+      EVENT_GROUPS_DUMMY           = High(Cardinal)
   );
 
 
@@ -290,7 +290,7 @@ type
   );
 
 
-  TSciterValue = packed record
+  TSciterValue = record
     t: UINT;
     u: UINT;
     d: UInt64;
@@ -300,10 +300,51 @@ type
   TSciterValueArray = array[0..$FFFF] of TSciterValue;
   PSciterValueArray = ^TSciterValueArray;
 
+  BEHAVIOR_METHOD_IDENTIFIERS =
+  (
+    DO_CLICK = 0,
+    GET_TEXT_VALUE = 1,
+    SET_TEXT_VALUE,
+      // p - TEXT_VALUE_PARAMS
+
+    TEXT_EDIT_GET_SELECTION,
+      // p - TEXT_EDIT_SELECTION_PARAMS
+
+    TEXT_EDIT_SET_SELECTION,
+      // p - TEXT_EDIT_SELECTION_PARAMS
+
+    // Replace selection content or insert text at current caret position.
+    // Replaced text will be selected.
+    TEXT_EDIT_REPLACE_SELECTION,
+      // p - TEXT_EDIT_REPLACE_SELECTION_PARAMS
+
+    // Set value of type="vscrollbar"/"hscrollbar"
+    SCROLL_BAR_GET_VALUE,
+    SCROLL_BAR_SET_VALUE,
+
+    TEXT_EDIT_GET_CARET_POSITION, 
+    TEXT_EDIT_GET_SELECTION_TEXT, // p - TEXT_SELECTION_PARAMS
+    TEXT_EDIT_GET_SELECTION_HTML, // p - TEXT_SELECTION_PARAMS
+    TEXT_EDIT_CHAR_POS_AT_XY,     // p - TEXT_EDIT_CHAR_POS_AT_XY_PARAMS
+
+    IS_EMPTY      = $FC,       // p - IS_EMPTY_PARAMS // set VALUE_PARAMS::is_empty (false/true) reflects :empty state of the element.
+    GET_VALUE     = $FD,       // p - VALUE_PARAMS
+    SET_VALUE     = $FE,       // p - VALUE_PARAMS
+
+    FIRST_APPLICATION_METHOD_ID = $100,
+    BEHAVIOR_METHOD_IDENTIFIERS_DUMMY = MAXINT
+  );
+
   METHOD_PARAMS = record
-    methodID: UINT;
+    methodID: BEHAVIOR_METHOD_IDENTIFIERS;
   end;
   PMETHOD_PARAMS = ^METHOD_PARAMS;
+
+  IS_EMPTY_PARAMS = packed record
+    methodID: BEHAVIOR_METHOD_IDENTIFIERS;
+    is_empty: UINT;
+  end;
+  PIS_EMPTY_PARAMS = ^IS_EMPTY_PARAMS;
 
 
   REQUEST_PARAM = record
@@ -517,7 +558,7 @@ type
     ValueInit: function(Value: PSciterValue): UINT; stdcall;
     ValueClear: function(Value: PSciterValue): UINT; stdcall;
     ValueCompare: function(Value1: PSciterValue; Value2: PSciterValue): UINT; stdcall;
-    ValueCopy: function(Value1: PSciterValue; Value2: PSciterValue): UINT; stdcall;
+    ValueCopy: function(dst: PSciterValue; src: PSciterValue): UINT; stdcall;
     ValueIsolate: TProcPointer;
     ValueType: function(Value: PSciterValue; var pType: TSciterValueType; var pUnits: UINT): UINT; stdcall;
     ValueStringData: function(Value: PSciterValue; var Chars: PWideChar; var NumChars: UINT): UINT; stdcall;
@@ -727,16 +768,16 @@ type
   PTIMER_PARAMS = ^TIMER_PARAMS;
 
 
-  SCRIPTING_METHOD_PARAMS = packed record
+  SCRIPTING_METHOD_PARAMS = record
     name: PAnsiChar;
-    argv: ^TSciterValueArray; // SCITER_VALUE*
+    argv: PSciterValue; // SCITER_VALUE*
     argc: UINT;
-    result: TSciterValue;
+    rv: TSciterValue;
   end;
   PSCRIPTING_METHOD_PARAMS = ^SCRIPTING_METHOD_PARAMS;
 
 
-  TISCRIPT_METHOD_PARAMS = packed record
+  TISCRIPT_METHOD_PARAMS = record
     vm: HVM;
     tag: tiscript_value;
     result: tiscript_value;
@@ -1250,7 +1291,6 @@ var
   oArrItem: Variant;
   sArrItem: TSciterValue;
 begin
-  FAPI.ValueClear(SciterValue);
   FAPI.ValueInit(SciterValue);
   vt := VarType(Value);
 

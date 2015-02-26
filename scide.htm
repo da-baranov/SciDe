@@ -148,7 +148,8 @@
   
   function self#cmdViewFoo.onClick()
   {
-    view.Foo("Hello World!");
+    var x = view.Foo();
+    stdout.println(x);
   }
   
   function self#cmdViewFoo2.onClick()
@@ -213,6 +214,16 @@
   {
     var visit = { date: "2015-03-01", reason: "Headache" };
     caseHistory.visits.push(visit);
+  }
+  
+  function self#cmdSciterAlert.onClick()
+  {
+    view.msgbox(#alert, "Sciter");
+  }
+  
+  function self#cmdDemoBehavior.onClick()
+  {
+    view.msgbox(#alert, self#divDemoBehavior.nativeValue());
   }
   
   </script>
@@ -506,20 +517,22 @@ end;
     <h2>Print something</h2>
     <button id="cmdPrintOut">An info message</button>
     <button id="cmdPrintError">An error message</button>
+    <button id="cmdSciterAlert">Show alert</button>
   </section>
 
 <!--************************************************************************-->  
   <section>
-    <h2>Popups problem (resolved)</h2>
+    <h2>Popups problem (partially resolved)</h2>
     <button id="cmdPopup">Show alert</button>
   </section>
   
 <!--************************************************************************-->  
   <section>
     <h2>Native behavior demo</h2>
-    <div style="behavior: TestBehavior">
+    <div style="behavior: DemoBehavior" id="divDemoBehavior">
     
     </div>
+    <button id="cmdDemoBehavior">Show value</button>
   </section>
   
 </body>

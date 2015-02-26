@@ -18,7 +18,7 @@ N=1
 O=0
 P=1
 Q=1
-R=1
+R=0
 S=0
 T=0
 U=0
@@ -157,6 +157,3 @@ Item2=$(DELPHI)\Lib\Debug;c:\Delphi7\Source\Jcl\lib\d7\debug;c:\Delphi7\Source\J
 Count=2
 Item0=..\..\dcu
 Item1=dcu
-[HistoryLists\hlOutputDirectorry]
-Count=1
-Item0=..

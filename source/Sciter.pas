@@ -199,8 +199,6 @@ type
     function Get_Parent: IElement;
     function Get_StyleAttr(const AttrName: WideString): WideString;
     function Get_Tag: WideString;
-    function Get_Text: WideString;
-    function Get_Value: OleVariant;
     procedure SetState(const Value: Integer);
     procedure Set_Attr(const AttrName: WideString; const Value: WideString);
     procedure Set_ID(const Value: WideString);
@@ -215,10 +213,10 @@ type
     procedure Set_OnTimer(const Value: TElementOnTimer);
     procedure Set_OuterHtml(const Value: WideString);
     procedure Set_StyleAttr(const AttrName: WideString; const Value: WideString);
-    procedure Set_Text(const Value: WideString);
-    procedure Set_Value(Value: OleVariant);
   protected
     constructor Create(ASciter: TSciter; h: HELEMENT); virtual;
+    function Get_Text: WideString; virtual;
+    function Get_Value: OleVariant; virtual;
     procedure HandleBehaviorAttach; virtual;
     procedure HandleBehaviorDetach; virtual;
     function HandleBehaviorEvents(params: PBEHAVIOR_EVENT_PARAMS): BOOL; virtual;
@@ -232,6 +230,8 @@ type
     function HandleScrollEvents(params: PSCROLL_PARAMS): BOOL; virtual;
     function HandleSize: BOOL; virtual;
     function HandleTimer(params: PTIMER_PARAMS): BOOL; virtual;
+    procedure Set_Text(const Value: WideString); virtual;
+    procedure Set_Value(Value: OleVariant); virtual;
     procedure ThrowException(const Message: String); overload;
     procedure ThrowException(const Message: String; const Args: Array of const); overload;
     property Sciter: TSciter read FSciter;
@@ -351,14 +351,13 @@ type
     procedure CreateWnd; override;
     function DesignMode: boolean;
     procedure DestroyWnd; override;
-    function HandleAttachBehavior(data: LPSCN_ATTACH_BEHAVIOR): UINT; virtual;
-    function HandleDataLoaded(data: LPSCN_DATA_LOADED): UINT; virtual;
+    function HandleAttachBehavior(var data: SCN_ATTACH_BEHAVIOR): UINT; virtual;
+    function HandleDataLoaded(var data: SCN_DATA_LOADED): UINT; virtual;
     function HandleDocumentComplete(const Url: WideString): BOOL; virtual;
-    function HandleEngineDestroyed(data: LPSCN_ENGINE_DESTROYED): UINT; virtual;
-    function HandleLoadData(data: LPSCN_LOAD_DATA): UINT; virtual;
-    function HandlePostedNotification(data: LPSCN_POSTED_NOTIFICATION): UINT; virtual;
-    function HandleScriptingCall(params: PSCRIPTING_METHOD_PARAMS): BOOL; overload; virtual;
-    function HandleScriptingCall(params: PTISCRIPT_METHOD_PARAMS): BOOL; overload; virtual;
+    function HandleEngineDestroyed(var data: SCN_ENGINE_DESTROYED): UINT; virtual;
+    function HandleLoadData(var data: SCN_LOAD_DATA): UINT; virtual;
+    function HandlePostedNotification(var data: SCN_POSTED_NOTIFICATION): UINT; virtual;
+    function HandleScriptingCall(var params: SCRIPTING_METHOD_PARAMS): BOOL; virtual;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure Paint; override;
     procedure SetName(const NewName: TComponentName); override;
@@ -477,6 +476,8 @@ var
 
 procedure SciterRegisterBehavior(Cls: TElementClass);
 begin
+  if Behaviors = nil then
+    Behaviors := TList.Create;
   if Behaviors.IndexOf(Cls) = -1 then
     Behaviors.Add(Cls);
 end;
@@ -544,19 +545,19 @@ begin
   pSciter := TObject(callbackParam) as TSciter;
   case pns.code of
     SciterApi.SC_LOAD_DATA:
-      Result := pSciter.HandleLoadData(LPSCN_LOAD_DATA(pns));
+      Result := pSciter.HandleLoadData(LPSCN_LOAD_DATA(pns)^);
       
     SciterApi.SC_DATA_LOADED:
-      Result := pSciter.HandleDataLoaded(LPSCN_DATA_LOADED(pns));
+      Result := pSciter.HandleDataLoaded(LPSCN_DATA_LOADED(pns)^);
 
     SciterApi.SC_ATTACH_BEHAVIOR:
-      Result := pSciter.HandleAttachBehavior(LPSCN_ATTACH_BEHAVIOR(pns));
+      Result := pSciter.HandleAttachBehavior(LPSCN_ATTACH_BEHAVIOR(pns)^);
 
     SciterApi.SC_ENGINE_DESTROYED:
-      Result := pSciter.HandleEngineDestroyed(LPSCN_ENGINE_DESTROYED(pns));
+      Result := pSciter.HandleEngineDestroyed(LPSCN_ENGINE_DESTROYED(pns)^);
 
     SciterApi.SC_POSTED_NOTIFICATION:
-      Result := pSciter.HandlePostedNotification(LPSCN_POSTED_NOTIFICATION(pns));
+      Result := pSciter.HandlePostedNotification(LPSCN_POSTED_NOTIFICATION(pns)^);
   end;
 end;
 
@@ -565,15 +566,15 @@ var
   pElement: TElement;
   sStr: AnsiString;
 begin
-  pElement := TElement(param);
-  if str_length > 0 then
+  pElement := TObject(param) as TElement;
+  if (str = nil) or (str_length = 0) then
   begin
-    sStr := AnsiString(str);
-    pElement.FTag := WideString(sStr); // implicit unicode->ascii
+    pElement.FTag := '';
   end
     else
   begin
-    pElement.FTag := '';
+    sStr := AnsiString(str);
+    pElement.FTag := WideString(sStr); // implicit unicode->ascii
   end;
 end;
 
@@ -584,7 +585,7 @@ var
   sStr: UTF8String;
   wStr: WideString;
 begin
-  pElement := TElement(param);
+  pElement := TObject(param) as TElement;
   if (bytes = nil) or (num_bytes = 0) then
   begin
     pElement.FHtml := '';
@@ -606,7 +607,7 @@ procedure ElementTextCallback(str: PWideChar; str_length: UINT; param: Pointer);
 var
   pElement: TElement;
 begin
-  pElement := TElement(param);
+  pElement := TObject(param) as TElement;
   if (str = nil) or (str_length = 0) then
   begin
     pElement.FText := '';
@@ -621,7 +622,7 @@ procedure NthAttributeNameCallback(str: PAnsiChar; str_length: UINT; param : Poi
 var
   pElement: TElement;
 begin
-  pElement := TElement(param);
+  pElement := TObject(param) as TElement;
   if (str_length = 0) or (str = nil) then
     pElement.FAttrAnsiName := ''
   else
@@ -632,7 +633,7 @@ procedure NthAttributeValueCallback(str: PWideChar; str_length: UINT; param : Po
 var
   pElement: TElement;
 begin
-  pElement := TElement(param);
+  pElement := TObject(param) as TElement;
   if (str_length = 0) or (str = nil) then
     pElement.FAttrValue := ''
   else
@@ -643,7 +644,7 @@ procedure AttributeTextCallback(str: PWideChar; str_length: UINT; param: Pointer
 var
   pElement: TElement;
 begin
-  pElement := TElement(param);
+  pElement := TObject(param) as TElement;
   if (str = nil) or (str_length = 0) then
   begin
     pElement.FAttrValue := '';
@@ -658,7 +659,7 @@ procedure StyleAttributeTextCallback(str: PWideChar; str_length: UINT; param: Po
 var
   pElement: TElement;
 begin
-  pElement := TElement(param);
+  pElement := TObject(param) as TElement;
   if (str = nil) or (str_length = 0) then
   begin
     pElement.FStyleAttrValue := '';
@@ -674,7 +675,7 @@ var
   pElementCollection: TElementCollection;
   pElement: TElement;
 begin
-  pElementCollection := TElementCollection(Param);
+  pElementCollection := TObject(Param) as TElementCollection;
   pElement := ElementFactory(pElementCollection.Sciter, he);
   pElementCollection.Add(pElement);
   Result := False; // Continue
@@ -684,12 +685,12 @@ function SelectSingleNodeCallback(he: HELEMENT; Param: Pointer ): BOOL; stdcall;
 var
   pElement: TElement;
 begin
-  pElement := TElement(Param);
+  pElement := TObject(Param) as TElement;
   pElement.FHChild := he;
   Result := True; // Stop at first element
 end;
 
-function WindowElementEventProc(tag: Pointer; he: HELEMENT; evtg: UINT; prms: Pointer): BOOL; stdcall;
+function WindowElementEventProc(tag: Pointer; he: HELEMENT; evtg: EVENT_GROUPS; prms: Pointer): BOOL; stdcall;
 const
   MAX_URL_LENGTH = 2048;
 var
@@ -702,27 +703,24 @@ begin
   Result := False;
   pSciter := TObject(tag) as TSciter;
 
-  if evtg = UINT(HANDLE_BEHAVIOR_EVENT) then
-  begin
-    pBehaviorEventParams := prms;
-    if pBehaviorEventParams.cmd = DOCUMENT_COMPLETE then
-    begin
-      if SciterVarType(@pBehaviorEventParams.data) = T_STRING then
-        sUri := SciterVarToString(@pBehaviorEventParams.data); 
-      Result := pSciter.HandleDocumentComplete(sUri);
-    end;
-  end
+  case evtg of
+    HANDLE_BEHAVIOR_EVENT:
+      begin
+        pBehaviorEventParams := prms;
+        if pBehaviorEventParams.cmd = DOCUMENT_COMPLETE then
+        begin
+          sUri := '';
+          if SciterVarType(@pBehaviorEventParams.data) = T_STRING then
+            sUri := SciterVarToString(@pBehaviorEventParams.data);
+          Result := pSciter.HandleDocumentComplete(sUri);
+        end;
+      end;
 
-  else if evtg = UINT(HANDLE_SCRIPTING_METHOD_CALL) then
-  begin
-    pScriptingMethodParams := prms;
-    Result := pSciter.HandleScriptingCall(pScriptingMethodParams);
-  end
-
-  else if evtg = UINT(HANDLE_TISCRIPT_METHOD_CALL) then
-  begin
-    pTiScriptMethodParams := prms;
-    Result := pSciter.HandleScriptingCall(pTiScriptMethodParams);
+    HANDLE_SCRIPTING_METHOD_CALL:
+      begin
+        pScriptingMethodParams := PSCRIPTING_METHOD_PARAMS(prms);
+        Result := pSciter.HandleScriptingCall(pScriptingMethodParams^);
+      end;
   end;
 end;
 
@@ -1033,7 +1031,7 @@ begin
     Result := nil;
 end;
 
-function TSciter.HandleAttachBehavior(data: LPSCN_ATTACH_BEHAVIOR): UINT;
+function TSciter.HandleAttachBehavior(var data: SCN_ATTACH_BEHAVIOR): UINT;
 var
   sBehaviorName: AnsiString;
   sTag: AnsiString;
@@ -1045,19 +1043,22 @@ begin
   Result := 0;
   
   sBehaviorName := AnsiString(data.behaviorName);
-  for i := 0 to Behaviors.Count - 1 do
+  if Behaviors <> nil then
   begin
-    pClass := TElementClass(Behaviors[i]);
-    if pClass.BehaviorName = sBehaviorName then
+    for i := 0 to Behaviors.Count - 1 do
     begin
-      pElement := pClass.Create(Self, data.element);
-      data.elementTag := pElement;
-      // data.elementProc := @ElementEventProc;
+      pClass := TElementClass(Behaviors[i]);
+      if pClass.BehaviorName = sBehaviorName then
+      begin
+        pElement := pClass.Create(Self, data.element);
+        data.elementTag := pElement;
+        // data.elementProc := @ElementEventProc;
+      end;
     end;
   end;
 end;
 
-function TSciter.HandleDataLoaded(data: LPSCN_DATA_LOADED): UINT;
+function TSciter.HandleDataLoaded(var data: SCN_DATA_LOADED): UINT;
 begin
   if Assigned(FOnDataLoaded) then
     FOnDataLoaded(Self, WideString(data.uri), data.dataType, data.data, data.dataSize, 0, Integer(data.status));
@@ -1076,7 +1077,7 @@ begin
   API.SciterProcND(Handle, WM_SIZE, 0, MAKELPARAM(ClientRect.Right - ClientRect.Left + 1, ClientRect.Bottom - ClientRect.Top), bHandled);
 end;
 
-function TSciter.HandleEngineDestroyed(data: LPSCN_ENGINE_DESTROYED): UINT;
+function TSciter.HandleEngineDestroyed(var data: SCN_ENGINE_DESTROYED): UINT;
 begin
   if data.hwnd = Handle then
   begin
@@ -1086,7 +1087,7 @@ begin
   Result := 0;
 end;
 
-function TSciter.HandleLoadData(data: LPSCN_LOAD_DATA): UINT;
+function TSciter.HandleLoadData(var data: SCN_LOAD_DATA): UINT;
 var
   discard: Boolean;
   wUrl: WideString;
@@ -1130,50 +1131,58 @@ begin
 end;
 
 function TSciter.HandlePostedNotification(
-  data: LPSCN_POSTED_NOTIFICATION): UINT;
+  var data: SCN_POSTED_NOTIFICATION): UINT;
 begin
   Result := 0;
 end;
 
 function TSciter.HandleScriptingCall(
-  params: PSCRIPTING_METHOD_PARAMS): BOOL;
+  var params: SCRIPTING_METHOD_PARAMS): BOOL;
 var
   pArgs: array of OleVariant;
   sMethodName: WideString;
   pResult: OleVariant;
   bHandled: Boolean;
+  pVal: PSciterValue;
   i: Integer;
+  SR: UINT;
 begin
   Result := False;
+
   bHandled := False;
 
   if Assigned(FOnMethodCall) then
   try
+    API.ValueInit(@params.rv);
     sMethodName := WideString(AnsiString(params.name));
     SetLength(pArgs, params.argc);
+    pVal := params.argv;
     if params.argc > 0 then
     begin
       for i := 0 to params.argc - 1 do
       begin
-        S2V(@params.argv[i], pArgs[i]);
+        S2V(pVal, pArgs[i]);
+        Inc(pVal, sizeof(TSciterValue));
       end;
     end;
     FOnMethodCall(Self, sMethodName, pArgs, pResult, bHandled);
     if bHandled then
-      V2S(pResult, @params.result);
+    begin
+      V2S(pResult, @params.rv);
+    end;
     Result := bHandled;
   except
     Exit;
   end;
 end;
 
-function TSciter.HandleScriptingCall(
-  params: PTISCRIPT_METHOD_PARAMS): BOOL;
-begin
-  Result := False;
-  { Don't know how to get method name! }
-  { if method returns False then overloaded HandleScriptingCall(params: PSCRIPTING_METHOD_PARAMS) will be called }
-end;
+//function TSciter.HandleScriptingCall(
+//  params: PTISCRIPT_METHOD_PARAMS): BOOL;
+//begin
+//  Result := False;
+//  { Don't know how to get method name! }
+//  { if method returns False then overloaded HandleScriptingCall(params: PSCRIPTING_METHOD_PARAMS) will be called }
+//end;
 
 function TSciter.JsonToSciterValue(const Json: WideString): TSciterValue;
 var
@@ -1553,7 +1562,7 @@ var
     Result := TRUE;
     if GetClassNameA(h, @pClassName, 256) = 0 then
       Exit; // and continue
-      
+
     if string(pClassName) = 'H-SMILE-FRAME' then
     begin
       if not IsWindowEnabled(h) then
@@ -1561,47 +1570,53 @@ var
       Result := FALSE;
     end;
   end;
+  
+  procedure TweakSciterModals;
+  begin
+    EnumThreadWindows(GetCurrentThreadId, @EnumChildProc, 0);
+  end;
+
 begin
   if not DesignMode then
   begin
-    // Tweaking Sciter modals VCL-related problem
-    // When showing a modal, Sciter calls EnableWindow(FALSE) for all the parent windows
-    // including application top-level form. And the main form disables all child controls including both Sciter window
-    // and the modal, so it gets disabled and cannot be closed with a mouse.
-    if Message.Msg = WM_KILLFOCUS then
-    begin
-      FMonitorModals := True;
-    end;
-    if Message.Msg = WM_SETFOCUS then
-    begin
-      FMonitorModals := False;
-    end;
-    if FMonitorModals then
-    begin
-      EnumThreadWindows(GetCurrentThreadId, @EnumChildProc, 0);
-    end;
-    
-    // Tweaking arrow keys and TAB handling (VCL-specific)
-    if Message.Msg = WM_GETDLGCODE then
-    begin
-      Message.Result := DLGC_WANTALLKEYS or DLGC_WANTTAB or DLGC_WANTARROWS or DLGC_WANTCHARS or DLGC_HASSETSEL;
-      if Message.lParam <> 0 then
-      begin
-        M := PMsg(Message.lParam);
-        case M.Message of
-          WM_SYSKEYDOWN, WM_SYSKEYUP, WM_SYSCHAR,
-          WM_KEYDOWN, WM_KEYUP, WM_CHAR:
-          begin
-            Perform(M.message, M.wParam, M.lParam);
-            // Message.Result := Message.Result or DLGC_WANTMESSAGE or DLGC_WANTTAB;
-          end;
-        end;
-      end;
-      Exit;
-    end;
-
     if HandleAllocated then
     begin
+      case Message.Msg of
+        WM_KILLFOCUS:
+          FMonitorModals := True;
+
+        WM_SETFOCUS:
+          FMonitorModals := False;
+
+        WM_GETDLGCODE:
+          // Tweaking arrow keys and TAB handling (VCL-specific)
+          begin
+            Message.Result := DLGC_WANTALLKEYS or DLGC_WANTTAB or DLGC_WANTARROWS or DLGC_WANTCHARS or DLGC_HASSETSEL;
+            if Message.lParam <> 0 then
+            begin
+              M := PMsg(Message.lParam);
+              case M.Message of
+                WM_SYSKEYDOWN, WM_SYSKEYUP, WM_SYSCHAR,
+                WM_KEYDOWN, WM_KEYUP, WM_CHAR:
+                begin
+                  Perform(M.message, M.wParam, M.lParam);
+                  // Message.Result := Message.Result or DLGC_WANTMESSAGE or DLGC_WANTTAB;
+                end;
+              end;
+            end;
+            Exit;
+          end;
+      end;
+
+      // Tweaking Sciter modals VCL-related problem
+      // Displaying a modal, Sciter calls EnableWindow(FALSE) for all the parent windows
+      // including application top-level form. And the main form disables all child controls including both Sciter window
+      // and the modal, so it gets disabled and cannot be closed with a mouse.
+      if FMonitorModals then
+      begin
+        TweakSciterModals;
+      end;
+
       llResult := API.SciterProcND(Handle, Message.Msg, Message.WParam, Message.LParam, bHandled);
       if bHandled <> 0 then
       begin
@@ -1619,6 +1634,7 @@ begin
   end
     else
   begin
+    FMonitorModals := False;
     inherited WndProc(Message);
   end
 end;
@@ -2118,7 +2134,16 @@ begin
 end;
 
 function TElement.HandleMethodCallEvents(params: PMETHOD_PARAMS): BOOL;
+var
+  x: BEHAVIOR_METHOD_IDENTIFIERS;
+  pEmptyParams: PIS_EMPTY_PARAMS;
 begin
+  x := params.methodID;
+  if x = IS_EMPTY then
+  begin
+    pEmptyParams := PIS_EMPTY_PARAMS(params);
+    pEmptyParams.is_empty := 0;
+  end;
   Result := False;
 end;
 
@@ -2146,21 +2171,27 @@ var
   pArgs: array of OleVariant;
   sMethodName: WideString;
   pResult: OleVariant;
+  pVal: PSciterValue;
   bHandled: Boolean;
   i: Integer;
 begin
   bHandled := False;
-
   if Assigned(FOnMethodCall) then
   try
+    API.ValueInit(@(params.rv));
     sMethodName := WideString(AnsiString(params.name));
     SetLength(pArgs, params.argc);
-    for i := 0 to params.argc - 1 do
+    if params.argc > 0 then
     begin
-      S2V(@params.argv[i], pArgs[i]);
+      pVal := params.argv;
+      for i := 0 to params.argc - 1 do
+      begin
+        S2V(pVal, pArgs[i]);
+        Inc(pVal);
+      end;
     end;
     FOnMethodCall(Sciter, Self, sMethodName, pArgs, pResult, bHandled);
-    V2S(pResult, @params.result);
+    V2S(pResult, @(params.rv));
   except
   end;
 
@@ -2543,11 +2574,12 @@ begin
 end;
 
 initialization
+  Behaviors := nil;
   CoInitialize(nil);
   OleInitialize(nil);
-  Behaviors := TList.Create;
 
 finalization
-  Behaviors.Free;
+  if Assigned(Behaviors) then
+    Behaviors.Free;
 
 end.

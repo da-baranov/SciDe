@@ -80,13 +80,6 @@ type
     procedure SayHello; safecall;
   end;
 
-  TTestBehavior = class(TElement)
-  protected
-    procedure HandleBehaviorAttach; override;
-    function HandleMouse(params: PMOUSE_PARAMS): BOOL; override;
-  public
-    class function BehaviorName: AnsiString; override;
-  end;
 
 function CreateObjectNative(vm: HVM): tiscript_value; cdecl;
 function SayHelloNative(c: HVM): tiscript_value; cdecl;
@@ -381,8 +374,9 @@ procedure TMainForm.Sciter1MethodCall(ASender: TObject; const MethodName:
 begin
   if MethodName = 'Foo' then
   begin
-    ShowMessage('Method ' + MethodName + ' is calling with argument ' + Args[0]);
+    ShowMessage('Method ' + MethodName + ' is being called');
     Handled := True;
+    ReturnValue := 100;
   end;
   // else Handled = False and Sciter will emit a warning message
 end;
@@ -435,31 +429,6 @@ begin
   ShowMessage('TTest: Hello!');
 end;
 
-{ TTestBehavior }
-
-class function TTestBehavior.BehaviorName: AnsiString;
-begin
-  Result := 'TestBehavior';
-end;
-
-procedure TTestBehavior.HandleBehaviorAttach;
-begin
-  Attr['style'] := 'border: 1px dotted #666666; background-color: #FFCCCC; padding: 20px';
-  InnerHtml := '<h4>Behavior attach OK. Class that implements the behavior is ' + Self.ClassName + '</h4>';
-  AppendChild(CreateElement('button', 'A button'));
-end;
-
-function TTestBehavior.HandleMouse(params: PMOUSE_PARAMS): BOOL;
-begin
-  if params.cmd = MOUSE_UP then
-  begin
-    ShowMessage('Behavior MouseUp event is being handled.');
-  end;
-  Result := False;
-end;
-
 initialization
-
-  SciterRegisterBehavior(TTestBehavior);
 
 end.
