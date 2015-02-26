@@ -219,6 +219,8 @@ type
     procedure Set_Value(Value: OleVariant);
   protected
     constructor Create(ASciter: TSciter; h: HELEMENT); virtual;
+    procedure HandleBehaviorAttach; virtual;
+    procedure HandleBehaviorDetach; virtual;
     function HandleBehaviorEvents(params: PBEHAVIOR_EVENT_PARAMS): BOOL; virtual;
     function HandleFocus(params: PFOCUS_PARAMS): BOOL; virtual;
     function HandleInitialization(params: PINITIALIZATION_PARAMS): BOOL; virtual;
@@ -237,6 +239,7 @@ type
     destructor Destroy; override;
     procedure AppendChild(const Element: IElement);
     function AttachHwndToElement(h: HWND): boolean;
+    class function BehaviorName: AnsiString; virtual;
     function Call(const Method: WideString; const Args: Array of OleVariant): OleVariant;
     procedure ClearAttributes;
     function CloneElement: IElement;
@@ -281,6 +284,8 @@ type
     property OnTimer: TElementOnTimer read Get_OnTimer write Set_OnTimer;
   end;
 
+  TElementClass = class of TElement;
+
   TElementList = class(TObjectList)
   private
     function GetItem(const Index: Integer): TElement;
@@ -309,13 +314,19 @@ type
     property Item[const Index: Integer]: IElement read Get_Item; default;
   end;
 
+  TSciterBehavior = class
+  public
+    class function ElementProc(tag: Pointer; he: HELEMENT; evtg: UINT; prms: Pointer): BOOL; virtual; stdcall; abstract; 
+    class function Name: String; virtual; abstract;
+  end;
+
   TSciter = class(TCustomControl)
   private
-    FMonitorModals: Boolean;
     FBaseUrl: WideString;
     FHomeURL: WideString;
     FHtml: WideString;
     FManagedElements: TElementList;
+    FMonitorModals: Boolean;
     FOnDataLoaded: TSciterOnDataLoaded;
     FOnDocumentComplete: TSciterOnDocumentComplete;
     FOnEngineDestroyed: TNotifyEvent;
@@ -446,6 +457,7 @@ type
 end;
 
 procedure SciterDebug(param: Pointer; subsystem: UINT; severity: UINT; text: PWideChar; text_length: UINT); stdcall;
+procedure SciterRegisterBehavior(Cls: TElementClass);
 
 {$IFDEF UNICODE}
 function LoadResourceAsStream(const ResName: String; const ResType: String): TCustomMemoryStream;
@@ -459,6 +471,15 @@ implementation
 
 uses
   SciterOle;
+
+var
+  Behaviors: TList;
+
+procedure SciterRegisterBehavior(Cls: TElementClass);
+begin
+  if Behaviors.IndexOf(Cls) = -1 then
+    Behaviors.Add(Cls);
+end;
 
 function SciterCheck(const SR: SCDOM_RESULT; const FmtString: String; const Args: array of const; const AllowNotHandled: Boolean = False): SCDOM_RESULT; overload;
 begin
@@ -1013,8 +1034,27 @@ begin
 end;
 
 function TSciter.HandleAttachBehavior(data: LPSCN_ATTACH_BEHAVIOR): UINT;
+var
+  sBehaviorName: AnsiString;
+  sTag: AnsiString;
+  pElement: TElement;
+  hw: HWINDOW;
+  i: Integer;
+  pClass: TElementClass;
 begin
   Result := 0;
+  
+  sBehaviorName := AnsiString(data.behaviorName);
+  for i := 0 to Behaviors.Count - 1 do
+  begin
+    pClass := TElementClass(Behaviors[i]);
+    if pClass.BehaviorName = sBehaviorName then
+    begin
+      pElement := pClass.Create(Self, data.element);
+      data.elementTag := pElement;
+      // data.elementProc := @ElementEventProc;
+    end;
+  end;
 end;
 
 function TSciter.HandleDataLoaded(data: LPSCN_DATA_LOADED): UINT;
@@ -1618,6 +1658,11 @@ begin
   Result := API.SciterAttachHwndToElement(FElement, h) = SCDOM_OK;
 end;
 
+class function TElement.BehaviorName: AnsiString;
+begin
+  Result := '';
+end;
+
 function TElement.Call(const Method: WideString;
   const Args: array of OleVariant): OleVariant;
 begin
@@ -1987,6 +2032,16 @@ begin
 {$R+}
 end;
 
+procedure TElement.HandleBehaviorAttach;
+begin
+
+end;
+
+procedure TElement.HandleBehaviorDetach;
+begin
+
+end;
+
 function TElement.HandleBehaviorEvents(
   params: PBEHAVIOR_EVENT_PARAMS): BOOL;
 var
@@ -2037,6 +2092,10 @@ end;
 function TElement.HandleInitialization(
   params: PINITIALIZATION_PARAMS): BOOL;
 begin
+  case params.cmd of
+    BEHAVIOR_ATTACH: HandleBehaviorAttach;
+    BEHAVIOR_DETACH: HandleBehaviorDetach;
+  end;
   Result := False;
 end;
 
@@ -2486,5 +2545,9 @@ end;
 initialization
   CoInitialize(nil);
   OleInitialize(nil);
+  Behaviors := TList.Create;
+
+finalization
+  Behaviors.Free;
 
 end.

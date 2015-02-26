@@ -1141,7 +1141,7 @@ begin
       begin
         // TODO: ?
         Result := FAPI.ValueInt64Data(Value, i64Result);
-        cResult := PCurrency(i64Result)^;
+        cResult := PCurrency(@i64Result)^;
         OleValue := cResult;
       end;
     T_DATE:
@@ -1233,6 +1233,7 @@ begin
       end;
   end;
 end;
+
 { Variant to SciterValue conversion }
 function V2S(const Value: OleVariant; SciterValue: PSciterValue): UINT;
 var

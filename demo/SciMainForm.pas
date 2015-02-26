@@ -11,30 +11,30 @@ uses
 type
   TMainForm = class(TForm)
     Actions1: TMenuItem;
+    Button1: TButton;
     cmdCallNative: TButton;
     cmdEval: TButton;
+    cmdGetCaseHistory: TButton;
+    cmdReload: TButton;
     ctxSciter: TPopupMenu;
     DumpHTML1: TMenuItem;
     GC: TButton;
     Label1: TLabel;
     mm1: TMainMenu;
     mnuElementAtCursor: TMenuItem;
+    mnuOpenFile: TMenuItem;
+    mnuSaveFile: TMenuItem;
+    N1: TMenuItem;
     NavigatetoSciterwebsite1: TMenuItem;
+    ofd: TOpenDialog;
     pnlCommands: TPanel;
     pnlContainer: TPanel;
     Sciter1: TSciter;
+    sfd: TSaveDialog;
     spl1: TSplitter;
     txt1: TEdit;
     txt2: TEdit;
     txtLog: TMemo;
-    cmdGetCaseHistory: TButton;
-    cmdReload: TButton;
-    Button1: TButton;
-    sfd: TSaveDialog;
-    ofd: TOpenDialog;
-    mnuOpenFile: TMenuItem;
-    mnuSaveFile: TMenuItem;
-    N1: TMenuItem;
     procedure Button1Click(Sender: TObject);
     procedure cmdCallNativeClick(Sender: TObject);
     procedure cmdEvalClick(Sender: TObject);
@@ -47,20 +47,21 @@ type
     procedure FormShow(Sender: TObject);
     procedure GCClick(Sender: TObject);
     procedure mnuElementAtCursorClick(Sender: TObject);
+    procedure mnuOpenFileClick(Sender: TObject);
     procedure NavigatetoSciterwebsite1Click(Sender: TObject);
     procedure OnSciterOut(ASender: TObject; const msg: WideString);
     procedure Sciter1DocumentComplete(ASender: TObject; const url: WideString);
     procedure Sciter1MethodCall(ASender: TObject; const MethodName: WideString;
         const Args: array of OLEVariant; var ReturnValue: OLEVariant; var Handled:
         Boolean);
-    procedure E(var Message: TMessage);// message WM_ENABLE;
-    procedure mnuOpenFileClick(Sender: TObject);
   private
-    FExamplesBase: WideString;
+    FBodyEvents: IElementEvents;
     FButton: TButton;
+    FExamplesBase: WideString;
     FHomeUrl: WideString;
     FTxtEvents: IElementEvents;
-    FBodyEvents: IElementEvents;
+    procedure OnBodyMethodCall(ASender: TObject; const target: IElement; const MethodName: WideString; const Args: array of OleVariant;
+      var ReturnValue: OleVariant; var Handled: boolean);
     procedure OnElementControlEvent(ASender: TObject; const target: IElement; eventType: BEHAVIOR_EVENTS;
                              reason: Integer; const source: IElement; var Handled: Boolean);
     procedure OnElementMouse(ASender: TObject; const target: IElement;
@@ -69,8 +70,6 @@ type
     procedure OnNativeButtonClick(Sender: TObject);
     procedure OnSciterControlEvent(ASender: TObject; const target: IElement; eventType: BEHAVIOR_EVENTS;
                              reason: Integer; const source: IElement; var Handled: Boolean);
-    procedure OnBodyMethodCall(ASender: TObject; const target: IElement; const MethodName: WideString; const Args: array of OleVariant;
-      var ReturnValue: OleVariant; var Handled: boolean);
   end;
 
   { For testing purposes }
@@ -79,6 +78,14 @@ type
     constructor Create;
     destructor Destroy; override;
     procedure SayHello; safecall;
+  end;
+
+  TTestBehavior = class(TElement)
+  protected
+    procedure HandleBehaviorAttach; override;
+    function HandleMouse(params: PMOUSE_PARAMS): BOOL; override;
+  public
+    class function BehaviorName: AnsiString; override;
   end;
 
 function CreateObjectNative(vm: HVM): tiscript_value; cdecl;
@@ -146,18 +153,6 @@ procedure TMainForm.DumpHTML1Click(Sender: TObject);
 begin
   txtLog.Lines.Clear;
   txtLog.Text := Sciter1.Root.OuterHtml;
-end;
-
-procedure TMainForm.E(var Message: TMessage);
-var
-  h: hWnd;
-begin
-  EnableWindow(Handle, True);
-  EnableWindow(Sciter1.Handle, True);
-  h := FindWindow('H-SMILE-FRAME', nil);
-  if h <> 0 then
-    EnableWindow(h, True);
-  inherited;
 end;
 
 procedure TMainForm.FormCreate(Sender: TObject);
@@ -440,7 +435,31 @@ begin
   ShowMessage('TTest: Hello!');
 end;
 
+{ TTestBehavior }
+
+class function TTestBehavior.BehaviorName: AnsiString;
+begin
+  Result := 'TestBehavior';
+end;
+
+procedure TTestBehavior.HandleBehaviorAttach;
+begin
+  Attr['style'] := 'border: 1px dotted #666666; background-color: #FFCCCC; padding: 20px';
+  InnerHtml := '<h4>Behavior attach OK. Class that implements the behavior is ' + Self.ClassName + '</h4>';
+  AppendChild(CreateElement('button', 'A button'));
+end;
+
+function TTestBehavior.HandleMouse(params: PMOUSE_PARAMS): BOOL;
+begin
+  if params.cmd = MOUSE_UP then
+  begin
+    ShowMessage('Behavior MouseUp event is being handled.');
+  end;
+  Result := False;
+end;
+
 initialization
-  
+
+  SciterRegisterBehavior(TTestBehavior);
 
 end.
