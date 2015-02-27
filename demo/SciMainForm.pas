@@ -11,6 +11,7 @@ uses
 type
   TMainForm = class(TForm)
     Actions1: TMenuItem;
+    ApplicationEvents1: TApplicationEvents;
     Button1: TButton;
     cmdCallNative: TButton;
     cmdEval: TButton;
@@ -35,7 +36,6 @@ type
     txt1: TEdit;
     txt2: TEdit;
     txtLog: TMemo;
-    ApplicationEvents1: TApplicationEvents;
     procedure Button1Click(Sender: TObject);
     procedure cmdCallNativeClick(Sender: TObject);
     procedure cmdEvalClick(Sender: TObject);
@@ -52,25 +52,25 @@ type
     procedure NavigatetoSciterwebsite1Click(Sender: TObject);
     procedure OnSciterOut(ASender: TObject; const msg: WideString);
     procedure Sciter1DocumentComplete(ASender: TObject; const url: WideString);
-    procedure Sciter1MethodCall(ASender: TObject; const MethodName: WideString;
-        const Args: array of OLEVariant; var ReturnValue: OLEVariant; var Handled:
-        Boolean);
+    procedure Sciter1Message(ASender: TObject; const Args: TSciterOnMessageEventArgs);
+    procedure Sciter1ScriptingCall(ASender: TObject; const Args:
+        TElementOnScriptingCallArgs);
   private
     FBodyEvents: IElementEvents;
     FButton: TButton;
+    FDivRequestEvents: IElementEvents;
     FExamplesBase: WideString;
     FHomeUrl: WideString;
+    FTimerDivEvents: IElementEvents;
     FTxtEvents: IElementEvents;
-    procedure OnBodyMethodCall(ASender: TObject; const target: IElement; const MethodName: WideString; const Args: array of OleVariant;
-      var ReturnValue: OleVariant; var Handled: boolean);
-    procedure OnElementControlEvent(ASender: TObject; const target: IElement; eventType: BEHAVIOR_EVENTS;
-                             reason: Integer; const source: IElement; var Handled: Boolean);
-    procedure OnElementMouse(ASender: TObject; const target: IElement;
-      eventType: MOUSE_EVENTS; x, y: Integer; buttons: MOUSE_BUTTONS; keys: KEYBOARD_STATES; var Handled: Boolean);
-    procedure OnElementSize(ASender: TObject; const target: IElement; var Handled: Boolean);
+    procedure OnBodyMethodCall(ASender: TObject; const Args: TElementOnScriptingCallArgs);
+    procedure OnDivRequestDataArrived(ASender: TObject; const Args: TElementOnDataArrivedEventArgs);
+    procedure OnDivTimer(ASender: TObject; const Args: TElementOnTimerEventArgs);
+    procedure OnElementControlEvent(ASender: TObject; const Args: TElementOnControlEventArgs);
+    procedure OnElementMouse(ASender: TObject; const Args: TElementOnMouseEventArgs);
+    procedure OnElementSize(ASender: TObject; const Args: TElementOnSizeEventArgs);
     procedure OnNativeButtonClick(Sender: TObject);
-    procedure OnSciterControlEvent(ASender: TObject; const target: IElement; eventType: BEHAVIOR_EVENTS;
-                             reason: Integer; const source: IElement; var Handled: Boolean);
+    procedure OnSciterControlEvent(ASender: TObject; const Args: TElementOnControlEventArgs);
   end;
 
   { For testing purposes }
@@ -213,32 +213,39 @@ begin
 end;
 
 procedure TMainForm.OnBodyMethodCall(ASender: TObject;
-  const target: IElement; const MethodName: WideString;
-  const Args: array of OleVariant; var ReturnValue: OleVariant;
-  var Handled: boolean);
+  const Args: TElementOnScriptingCallArgs);
 begin
-  if MethodName = 'Foo' then
+  if Args.Method = 'Foo' then
   begin
-    ShowMessage(Args[0]);
-    Handled := True;
+    ShowMessage(Args.Args[0]);
+    Args.Handled := True;
   end;
 end;
 
-procedure TMainForm.OnElementControlEvent(ASender: TObject;
-  const target: IElement; eventType: BEHAVIOR_EVENTS; reason: Integer;
-  const source: IElement; var Handled: Boolean);
+procedure TMainForm.OnDivRequestDataArrived(ASender: TObject; const Args: TElementOnDataArrivedEventArgs);
 begin
-  txtLog.Lines.Add(Format('ControlEvent of type %d on %s, value=%s', [Integer(eventType), target.Tag, target.Value]));
+  Args.Target.Text := Format('Got %d bytes of data from %s. HTTP status: %d', [Args.Stream.Size, Args.Uri, Args.Status]);
+  Args.Handled := True; 
 end;
 
-procedure TMainForm.OnElementMouse(ASender: TObject; const target: IElement;
-  eventType: MOUSE_EVENTS; x, y: Integer; buttons: MOUSE_BUTTONS; keys: KEYBOARD_STATES; var Handled: Boolean);
+procedure TMainForm.OnDivTimer(ASender: TObject; const Args: TElementOnTimerEventArgs);
 begin
-  txtLog.Lines.Add(Format('MouseEvent of type %d at %d:%d', [Integer(eventType), x, y]));
+  Args.Target.Text := 'Timer event at ' + DateTimeToStr(Now);
+  Args.Continue := False;
+end;
+
+procedure TMainForm.OnElementControlEvent(ASender: TObject; const Args: TElementOnControlEventArgs);
+begin
+  txtLog.Lines.Add(Format('ControlEvent of type %d on %s, value=%s', [Integer(Args.EventType), Args.Target.Tag, Args.Target.Value]));
+end;
+
+procedure TMainForm.OnElementMouse(ASender: TObject; const Args: TElementOnMouseEventArgs);
+begin
+  txtLog.Lines.Add(Format('MouseEvent of type %d at %d:%d', [Integer(Args.EventType), Args.X, Args.Y]));
 end;
 
 procedure TMainForm.OnElementSize(ASender: TObject;
-  const target: IElement; var Handled: Boolean);
+  const Args: TElementOnSizeEventArgs);
 begin
   txtLog.Lines.Add(Format('SizeEvent', []));
 end;
@@ -249,8 +256,7 @@ begin
 end;
 
 procedure TMainForm.OnSciterControlEvent(ASender: TObject;
-  const target: IElement; eventType: BEHAVIOR_EVENTS; reason: Integer;
-  const source: IElement; var Handled: Boolean);
+  const Args: TElementOnControlEventArgs);
 var
   pDiv: IElement;
   pCol: IElementCollection;
@@ -273,9 +279,9 @@ var
       Dump(El.GetChild(i), Text);
   end;
 begin
-  if eventType = BUTTON_CLICK then
+  if Args.EventType = BUTTON_CLICK then
   begin
-    if target.ID = 'cmdCreateHeadings' then
+    if Args.Target.ID = 'cmdCreateHeadings' then
     begin
       pDiv := Sciter1.Root.Select('#divHeadings');
       if pDiv <> nil then
@@ -287,7 +293,7 @@ begin
       end;
     end;
 
-    if target.ID = 'cmdCloneHeadings' then
+    if Args.Target.ID = 'cmdCloneHeadings' then
     begin
       pDiv := Sciter1.Root.Select('#divHeadings');
       if pDiv <> nil then
@@ -297,7 +303,7 @@ begin
       end;
     end;
 
-    if target.ID = 'cmdChangeHeadingsText' then
+    if Args.Target.ID = 'cmdChangeHeadingsText' then
     begin
       pDiv := Sciter1.Root.Select('#divHeadings');
       if pDiv <> nil then
@@ -308,7 +314,7 @@ begin
       end;
     end;
 
-    if target.ID = 'cmdRemoveHeadings' then
+    if Args.Target.ID = 'cmdRemoveHeadings' then
     begin
       pDiv := Sciter1.Root.Select('#divHeadings');
       if pDiv <> nil then
@@ -317,12 +323,32 @@ begin
       end;
     end;
 
-    if target.ID = 'cmdDump' then
+    if Args.Target.ID = 'cmdDump' then
     begin
       pPre := Sciter1.Root.Select('#preDump');
       sText := '';
       Dump(Sciter1.Root, sText);
       pPre.Text := sText;
+    end;
+
+    if Args.Target.ID = 'cmdStartTimer' then
+    begin
+      pDiv := Sciter1.Root.Select('#divTimer');
+      if pDiv <> nil then
+        pDiv.SetTimer(1000);
+    end;
+
+    if Args.Target.ID = 'cmdStopTimer' then
+    begin
+      pDiv := Sciter1.Root.Select('#divTimer');
+      if pDiv <> nil then
+        pDiv.StopTimer;
+    end;
+
+    if Args.Target.ID = 'cmdRequest' then
+    begin
+      pDiv := Sciter1.Root.Select('#divRequest');
+      pDiv.Request('http://terrainformatica.com/sciter', GET_ASYNC);
     end;
   end;
 end;
@@ -337,6 +363,7 @@ procedure TMainForm.Sciter1DocumentComplete(ASender: TObject; const url:
 var
   pBody: IElement;
   pDivContainer: IElement;
+  pDivTimer: IElement;
   pTxt: IElement;
 begin
   if FButton <> nil then
@@ -366,22 +393,40 @@ begin
     FTxtEvents.OnMouse := OnElementMouse;
     FTxtEvents.OnSize := OnElementSize;
   end;
+
+  pDivTimer := Sciter1.Root.Select('#divTimer');
+  if pDivTimer <> nil then
+  begin
+    FTimerDivEvents := pDivTimer as IElementEvents;
+    FTimerDivEvents.OnTimer := OnDivTimer;
+  end;
+
+  FDivRequestEvents := Sciter1.Root.Select('#divRequest') as IElementEvents;
+  FDivRequestEvents.OnDataArrived := OnDivRequestDataArrived;
 end;
 
-{ Intercepting non-existing function call }
-procedure TMainForm.Sciter1MethodCall(ASender: TObject; const MethodName:
-    WideString; const Args: array of OLEVariant; var ReturnValue: OleVariant;
-    var Handled: Boolean);
+procedure TMainForm.Sciter1Message(ASender: TObject; const Args:
+    TSciterOnMessageEventArgs);
 begin
-  if MethodName = 'Foo' then
+  case Args.Severity of
+    OS_INFO, OS_ERROR:
+      txtLog.Lines.Add(Args.Message);
+  end;
+end;
+
+procedure TMainForm.Sciter1ScriptingCall(ASender: TObject; const Args:
+    TElementOnScriptingCallArgs);
+begin
+  if Args.Method = 'Foo' then
   begin
-    ShowMessage('Method ' + MethodName + ' is being called');
-    Handled := True;
-    ReturnValue := 100;
+    ShowMessage('Method ' + Args.Method + ' is being called');
+    Args.Handled := True;
+    Args.ReturnValue := 100;
   end;
   // else Handled = False and Sciter will emit a warning message
 end;
 
+{ Intercepting non-existing function call }
 function SayHelloNative(c: HVM): tiscript_value; cdecl;
 begin
   ShowMessage('Hello!');

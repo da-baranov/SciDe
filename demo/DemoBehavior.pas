@@ -9,15 +9,15 @@ type
   TDemoBehavior = class(TElement)
   private
     FTextArea: IElement;
-    procedure OnMethodCallHandler(ASender: TObject; const target: IElement; const MethodName: WideString; const Args: array of OleVariant; var ReturnValue: OleVariant; var Handled: boolean);
+    procedure OnMethodCallHandler(ASender: TObject; const Args: TElementOnScriptingCallArgs);
   protected
     procedure DoBehaviorAttach; override;
-    function DoMouse(const target: IElement; eventType: MOUSE_EVENTS;
-      x, y: Integer; buttons: MOUSE_BUTTONS; keys: KEYBOARD_STATES): Boolean; override;
+    procedure DoMouse(const Args: TElementOnMouseEventArgs); override;
     function GetValue: OleVariant; override;
   public
     class function BehaviorName: AnsiString; override;
     constructor Create(ASciter: TSciter; AElement: HELEMENT); override;
+    destructor Destroy; override;
   end;
 
 implementation
@@ -48,29 +48,30 @@ begin
   AppendChild(FTextArea);
 end;
 
-function TDemoBehavior.DoMouse(const target: IElement; eventType: MOUSE_EVENTS;
-      x, y: Integer; buttons: MOUSE_BUTTONS; keys: KEYBOARD_STATES): Boolean;
+procedure TDemoBehavior.DoMouse(const Args: TElementOnMouseEventArgs);
 begin
-  if eventType = MOUSE_UP then
+  if Args.EventType = MOUSE_UP then
   begin
     ShowMessage('Behavior MouseUp event is being handled.');
   end;
-  Result := False;
 end;
 
-procedure TDemoBehavior.OnMethodCallHandler(ASender: TObject;
-  const target: IElement; const MethodName: WideString;
-  const Args: array of OleVariant; var ReturnValue: OleVariant;
-  var Handled: boolean);
+procedure TDemoBehavior.OnMethodCallHandler(ASender: TObject; const Args: TElementOnScriptingCallArgs);
 var
   sText: WideString;
 begin
-  if MethodName = 'nativeValue' then
+  if Args.Method = 'nativeValue' then
   begin
     sText := GetValue;
-    ReturnValue := sText;
-    Handled := True;
+    Args.ReturnValue := sText;
+    Args.Handled := True;
   end;
+end;
+
+destructor TDemoBehavior.Destroy;
+begin
+  
+  inherited;
 end;
 
 initialization

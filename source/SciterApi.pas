@@ -400,15 +400,97 @@ type
     BEHAVIOR_EVENTS_DUMMY = MAXINT
   );
 
+  EVENT_REASON =
+  (
+    BY_MOUSE_CLICK,
+    BY_KEY_CLICK,
+    SYNTHESIZED,
+    EVENT_REASON_DUMMY = MAXINT
+  );
+
+  EDIT_CHANGED_REASON =
+  (
+    BY_INS_CHAR,
+    BY_INS_CHARS,
+    BY_DEL_CHAR,
+    BY_DEL_CHARS,
+    EDIT_CHANGED_REASON_DUMMY = MAXINT
+  );
+
   BEHAVIOR_EVENT_PARAMS = packed record
          cmd: BEHAVIOR_EVENTS;
     heTarget: HELEMENT;
           he: HELEMENT;
-      reason: Pointer;
+      reason: Integer; // Actually UINT_PTR. This can be either EVENT_REASON or EDIT_CHANGED_REASON
         data: TSciterValue;
   end;
   PBEHAVIOR_EVENT_PARAMS = ^BEHAVIOR_EVENT_PARAMS;
 
+  GESTURE_CMD =
+  (
+    GESTURE_REQUEST = 0,
+    GESTURE_ZOOM,
+    GESTURE_PAN,
+    GESTURE_ROTATE,
+    GESTURE_TAP1,
+    GESTURE_TAP2,
+    GESTURE_CMD_DUMMY = MAXINT
+  );
+
+  GESTURE_STATE =
+  (
+    GESTURE_STATE_BEGIN   = 1,
+    GESTURE_STATE_INERTIA = 2,
+    GESTURE_STATE_END     = 4,
+    GESTURE_STATE_DUMMY   = MAXINT
+  );
+
+  GESTURE_TYPE_FLAGS =
+  (
+    GESTURE_FLAG_ZOOM               = $0001,
+    GESTURE_FLAG_ROTATE             = $0002,
+    GESTURE_FLAG_PAN_VERTICAL       = $0004,
+    GESTURE_FLAG_PAN_HORIZONTAL     = $0008,
+    GESTURE_FLAG_TAP1               = $0010,
+    GESTURE_FLAG_TAP2               = $0020,
+
+    GESTURE_FLAG_PAN_WITH_GUTTER    = $4000,
+    GESTURE_FLAG_PAN_WITH_INERTIA   = $8000,
+    GESTURE_FLAGS_ALL               = $FFFF,
+
+    GESTURE_TYPE_FLAGS_DUMMY = MAXINT
+  );
+
+  GESTURE_PARAMS = record
+         cmd  : GESTURE_CMD;
+      target  : HELEMENT;
+         pos  : TPoint;
+     pos_view : TPoint;
+        flags : Integer;    // for GESTURE_REQUEST combination of GESTURE_FLAGs.
+                            // for others it is a combination of GESTURE_STATe's
+   delta_time : UINT;       // period of time from previous event.
+     delta_xy : TSize;      // for GESTURE_PAN it is a direction vector
+      delta_v : Double;     // for GESTURE_ROTATE - delta angle (radians)
+                            // for GESTURE_ZOOM - zoom value, is less or greater than 1.0
+  end;
+  PGESTURE_PARAMS = ^GESTURE_PARAMS;
+
+  REQUEST_TYPE =
+  (
+    GET_ASYNC,  // async GET
+    POST_ASYNC, // async POST
+    GET_SYNC,   // synchronous GET
+    POST_SYNC,   // synchronous POST
+    REQUEST_TYPE_DUMMY = MAXINT
+  );
+
+  OUTPUT_SEVERITY =
+  (
+    OS_INFO,
+    OS_WARNING,
+    OS_ERROR,
+    OUTPUT_SEVERITY_DUMMY = MAXINT
+  );
 
   SciterWindowDelegate = function(hwnd: HWINDOW; msg: UINT; w: WParam; l: LPARAM; pParam: LPVOID; var pResult: LRESULT): BOOL; stdcall;
   PSciterWindowDelegate = ^SciterWindowDelegate;
@@ -512,7 +594,7 @@ type
     SciterCallBehaviorMethod: function(he: HELEMENT; params: PMETHOD_PARAMS): SCDOM_RESULT; stdcall;
     SciterRequestElementData: function(he: HELEMENT; url: PWideChar; dataType: UINT; initiator: HELEMENT ): SCDOM_RESULT; stdcall;
     SciterHttpRequest: function( he: HELEMENT; url: PWideChar; dataType: UINT;
-      requestType: UINT; requestParams: PREQUEST_PARAM;
+      requestType: REQUEST_TYPE; requestParams: PREQUEST_PARAM;
       nParams: UINT): SCDOM_RESULT; stdcall;
     SciterGetScrollInfo: function(he: HELEMENT; var scrollPos: TPoint; var viewRect:TRect; var contentSize: TSize): SCDOM_RESULT; stdcall;
     SciterSetScrollPos: function(he: HELEMENT; scrollPos: TPoint; smooth: BOOL): SCDOM_RESULT; stdcall;
@@ -763,7 +845,7 @@ type
 
 
   TIMER_PARAMS = packed record
-    timerId: Pointer;
+    timerId: UINT_PTR;
   end;
   PTIMER_PARAMS = ^TIMER_PARAMS;
 
