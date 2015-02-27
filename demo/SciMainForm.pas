@@ -35,6 +35,7 @@ type
     txt1: TEdit;
     txt2: TEdit;
     txtLog: TMemo;
+    ApplicationEvents1: TApplicationEvents;
     procedure Button1Click(Sender: TObject);
     procedure cmdCallNativeClick(Sender: TObject);
     procedure cmdEvalClick(Sender: TObject);
@@ -344,7 +345,7 @@ begin
   pBody := Sciter1.Root.Select('body');
   FBodyEvents := pBody as IElementEvents;
   FBodyEvents.OnControlEvent := OnSciterControlEvent;
-  FBodyEvents.OnMethodCall := OnBodyMethodCall;
+  FBodyEvents.OnScriptingCall := OnBodyMethodCall;
 
   pDivContainer := Sciter1.Root.Select('#divContainer');
   if pDivContainer <> nil then

@@ -233,7 +233,7 @@ type
       HANDLE_GESTURE               = $2000,
       HANDLE_ALL                   = $FFFF,
       SUBSCRIPTIONS_REQUEST        = -1,
-      EVENT_GROUPS_DUMMY           = High(Cardinal)
+      EVENT_GROUPS_DUMMY           = MAXINT
   );
 
 

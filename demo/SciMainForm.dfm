@@ -1,6 +1,6 @@
 object MainForm: TMainForm
-  Left = 481
-  Top = 379
+  Left = 438
+  Top = 123
   Width = 1191
   Height = 775
   Caption = 'SciDe - test form'
@@ -59,7 +59,7 @@ object MainForm: TMainForm
       PopupMenu = ctxSciter
       TabOrder = 1
       OnDocumentComplete = Sciter1DocumentComplete
-      OnMethodCall = Sciter1MethodCall
+      OnScriptingCall = Sciter1MethodCall
       OnStdErr = OnSciterOut
       OnStdOut = OnSciterOut
       OnStdWarn = OnSciterOut
@@ -196,5 +196,9 @@ object MainForm: TMainForm
     Filter = 'HTML files|*.htm*'
     Left = 223
     Top = 270
+  end
+  object ApplicationEvents1: TApplicationEvents
+    Left = 353
+    Top = 60
   end
 end

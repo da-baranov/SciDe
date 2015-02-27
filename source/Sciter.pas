@@ -39,7 +39,7 @@ type
   TElementOnScroll = procedure(ASender: TObject; const target: IElement; eventType: SCROLL_EVENTS;
                                                  pos: Integer; isVertical: WordBool; var Handled: Boolean) of object;
   TElementOnSize = procedure(ASender: TObject; const target: IElement; var Handled: Boolean) of object;
-  TElementOnMethodCall = procedure(ASender: TObject; const target: IElement; const MethodName: WideString; const Args: array of OleVariant;
+  TElementOnScriptingCall = procedure(ASender: TObject; const target: IElement; const MethodName: WideString; const Args: array of OleVariant;
     var ReturnValue: OleVariant; var Handled: boolean) of object;
 
   { Sciter events }
@@ -51,7 +51,7 @@ type
                                                     data: PByte; dataLength: Integer; status: Integer;
                                                     requestId: Integer) of object;
   TSciterOnDocumentComplete = procedure(ASender: TObject; const url: WideString) of object;
-  TSciterOnMethodCall = procedure(ASender: TObject; const MethodName: WideString; const Args: array of OleVariant;
+  TSciterOnScriptingCall = procedure(ASender: TObject; const MethodName: WideString; const Args: array of OleVariant;
     var ReturnValue: OleVariant; var Handled: boolean) of object;
 
   IElementEvents = interface
@@ -59,24 +59,24 @@ type
     function Get_OnControlEvent: TElementOnControlEvent;
     function Get_OnFocus: TElementOnFocus;
     function Get_OnKey: TElementOnKey;
-    function Get_OnMethodCall: TElementOnMethodCall;
     function Get_OnMouse: TElementOnMouse;
+    function Get_OnScriptingCall: TElementOnScriptingCall;
     function Get_OnScroll: TElementOnScroll;
     function Get_OnSize: TElementOnSize;
     function Get_OnTimer: TElementOnTimer;
     procedure Set_OnControlEvent(const Value: TElementOnControlEvent);
     procedure Set_OnFocus(const Value: TElementOnFocus);
     procedure Set_OnKey(const Value: TElementOnKey);
-    procedure Set_OnMethodCall(const Value: TElementOnMethodCall);
     procedure Set_OnMouse(const Value: TElementOnMouse);
+    procedure Set_OnScriptingCall(const Value: TElementOnScriptingCall);
     procedure Set_OnScroll(const Value: TElementOnScroll);
     procedure Set_OnSize(const Value: TElementOnSize);
     procedure Set_OnTimer(const Value: TElementOnTimer);
     property OnControlEvent: TElementOnControlEvent read Get_OnControlEvent write Set_OnControlEvent;
     property OnFocus: TElementOnFocus read Get_OnFocus write Set_OnFocus;
     property OnKey: TElementOnKey read Get_OnKey write Set_OnKey;
-    property OnMethodCall: TElementOnMethodCall read Get_OnMethodCall write Set_OnMethodCall;
     property OnMouse: TElementOnMouse read Get_OnMouse write Set_OnMouse;
+    property OnScriptingCall: TElementOnScriptingCall read Get_OnScriptingCall write Set_OnScriptingCall;
     property OnScroll: TElementOnScroll read Get_OnScroll write Set_OnScroll;
     property OnSize: TElementOnSize read Get_OnSize write Set_OnSize;
     property OnTimer: TElementOnTimer read Get_OnTimer write Set_OnTimer;
@@ -167,8 +167,8 @@ type
     FOnControlEvent: TElementOnControlEvent;
     FOnFocus: TElementOnFocus;
     FOnKey: TElementOnKey;
-    FOnMethodCall: TElementOnMethodCall;
     FOnMouse: TElementOnMouse;
+    FOnScriptingCall: TElementOnScriptingCall;
     FOnScroll: TElementOnScroll;
     FOnSize: TElementOnSize;
     FOnTimer: TElementOnTimer;
@@ -190,8 +190,8 @@ type
     function Get_OnControlEvent: TElementOnControlEvent;
     function Get_OnFocus: TElementOnFocus;
     function Get_OnKey: TElementOnKey;
-    function Get_OnMethodCall: TElementOnMethodCall;
     function Get_OnMouse: TElementOnMouse;
+    function Get_OnScriptingCall: TElementOnScriptingCall;
     function Get_OnScroll: TElementOnScroll;
     function Get_OnSize: TElementOnSize;
     function Get_OnTimer: TElementOnTimer;
@@ -199,6 +199,18 @@ type
     function Get_Parent: IElement;
     function Get_StyleAttr(const AttrName: WideString): WideString;
     function Get_Tag: WideString;
+    procedure HandleBehaviorAttach;
+    procedure HandleBehaviorDetach;
+    function HandleControlEvent(params: PBEHAVIOR_EVENT_PARAMS): BOOL;
+    function HandleFocus(params: PFOCUS_PARAMS): BOOL;
+    function HandleInitialization(params: PINITIALIZATION_PARAMS): BOOL;
+    function HandleKey(params: PKEY_PARAMS): BOOL;
+    function HandleMethodCallEvents(params: PMETHOD_PARAMS): BOOL;
+    function HandleMouse(params: PMOUSE_PARAMS): BOOL;
+    function HandleScriptingCall(params: PSCRIPTING_METHOD_PARAMS): BOOL;
+    function HandleScrollEvents(params: PSCROLL_PARAMS): BOOL;
+    function HandleSize: BOOL;
+    function HandleTimer(params: PTIMER_PARAMS): BOOL;
     procedure SetState(const Value: Integer);
     procedure Set_Attr(const AttrName: WideString; const Value: WideString);
     procedure Set_ID(const Value: WideString);
@@ -206,8 +218,8 @@ type
     procedure Set_OnControlEvent(const Value: TElementOnControlEvent);
     procedure Set_OnFocus(const Value: TElementOnFocus);
     procedure Set_OnKey(const Value: TElementOnKey);
-    procedure Set_OnMethodCall(const Value: TElementOnMethodCall);
     procedure Set_OnMouse(const Value: TElementOnMouse);
+    procedure Set_OnScriptingCall(const Value: TElementOnScriptingCall);
     procedure Set_OnScroll(const Value: TElementOnScroll);
     procedure Set_OnSize(const Value: TElementOnSize);
     procedure Set_OnTimer(const Value: TElementOnTimer);
@@ -215,21 +227,18 @@ type
     procedure Set_StyleAttr(const AttrName: WideString; const Value: WideString);
   protected
     constructor Create(ASciter: TSciter; h: HELEMENT); virtual;
+    procedure DoBehaviorAttach; virtual;
+    procedure DoBehaviorDetach; virtual;
+    function DoControlEvents(const target: IElement; eventType: BEHAVIOR_EVENTS; reason: Integer; const source: IElement): Boolean; virtual;
+    function DoFocus(const target: IElement; eventType: FOCUS_EVENTS): Boolean; virtual;
+    function DoKey(const target: IElement; eventType: KEY_EVENTS; code: Integer; keys: KEYBOARD_STATES): Boolean; virtual;
+    function DoMouse(const target: IElement; eventType: MOUSE_EVENTS; x: Integer; y: Integer; buttons: MOUSE_BUTTONS; keys: KEYBOARD_STATES): Boolean; virtual;
+    function DoScriptingCall(const target: IElement; const MethodName: WideString; const Args: array of OleVariant;      var ReturnValue: OleVariant): Boolean; virtual;
+    function DoScroll(const target: IElement; eventType: SCROLL_EVENTS; pos: Integer; isVertical: WordBool): Boolean; virtual;
+    function DoSize(const target: IElement): Boolean; virtual;
+    function DoTimer(const target: IElement; timerId: Integer): Boolean; virtual;
     function Get_Text: WideString; virtual;
     function Get_Value: OleVariant; virtual;
-    procedure HandleBehaviorAttach; virtual;
-    procedure HandleBehaviorDetach; virtual;
-    function HandleBehaviorEvents(params: PBEHAVIOR_EVENT_PARAMS): BOOL; virtual;
-    function HandleFocus(params: PFOCUS_PARAMS): BOOL; virtual;
-    function HandleInitialization(params: PINITIALIZATION_PARAMS): BOOL; virtual;
-    function HandleKey(params: PKEY_PARAMS): BOOL; virtual;
-    function HandleMethodCallEvents(params: PMETHOD_PARAMS): BOOL; virtual;
-    function HandleMouse(params: PMOUSE_PARAMS): BOOL; virtual;
-    function HandleScriptingCall(params: PSCRIPTING_METHOD_PARAMS): BOOL; overload; virtual;
-    function HandleScriptingCall(params: PTISCRIPT_METHOD_PARAMS): BOOL; overload; virtual;
-    function HandleScrollEvents(params: PSCROLL_PARAMS): BOOL; virtual;
-    function HandleSize: BOOL; virtual;
-    function HandleTimer(params: PTIMER_PARAMS): BOOL; virtual;
     procedure Set_Text(const Value: WideString); virtual;
     procedure Set_Value(Value: OleVariant); virtual;
     procedure ThrowException(const Message: String); overload;
@@ -277,8 +286,8 @@ type
     property OnControlEvent: TElementOnControlEvent read Get_OnControlEvent write Set_OnControlEvent;
     property OnFocus: TElementOnFocus read Get_OnFocus write Set_OnFocus;
     property OnKey: TElementOnKey read Get_OnKey write Set_OnKey;
-    property OnMethodCall: TElementOnMethodCall read Get_OnMethodCall write Set_OnMethodCall;
     property OnMouse: TElementOnMouse read Get_OnMouse write Set_OnMouse;
+    property OnScriptingCall: TElementOnScriptingCall read Get_OnScriptingCall write Set_OnScriptingCall;
     property OnScroll: TElementOnScroll read Get_OnScroll write Set_OnScroll;
     property OnSize: TElementOnSize read Get_OnSize write Set_OnSize;
     property OnTimer: TElementOnTimer read Get_OnTimer write Set_OnTimer;
@@ -314,12 +323,6 @@ type
     property Item[const Index: Integer]: IElement read Get_Item; default;
   end;
 
-  TSciterBehavior = class
-  public
-    class function ElementProc(tag: Pointer; he: HELEMENT; evtg: UINT; prms: Pointer): BOOL; virtual; stdcall; abstract; 
-    class function Name: String; virtual; abstract;
-  end;
-
   TSciter = class(TCustomControl)
   private
     FBaseUrl: WideString;
@@ -332,7 +335,7 @@ type
     FOnEngineDestroyed: TNotifyEvent;
     FOnHandleCreated: TNotifyEvent;
     FOnLoadData: TSciterOnLoadData;
-    FOnMethodCall: TSciterOnMethodCall;
+    FOnScriptingCall: TSciterOnScriptingCall;
     FOnStdErr: TSciterOnStdErr;
     FOnStdOut: TSciterOnStdOut;
     FOnStdWarn: TSciterOnStdOut;
@@ -449,7 +452,7 @@ type
     property OnEngineDestroyed: TNotifyEvent read FOnEngineDestroyed write FOnEngineDestroyed;
     property OnHandleCreated: TNotifyEvent read FOnHandleCreated write FOnHandleCreated;
     property OnLoadData: TSciterOnLoadData read FOnLoadData write FOnLoadData;
-    property OnMethodCall: TSciterOnMethodCall read FOnMethodCall write FOnMethodCall;
+    property OnScriptingCall: TSciterOnScriptingCall read FOnScriptingCall write FOnScriptingCall;
     property OnStdErr: TSciterOnStdErr read FOnStdErr write SetOnStdErr;
     property OnStdOut: TSciterOnStdOut read FOnStdOut write SetOnStdOut;
     property OnStdWarn: TSciterOnStdOut read FOnStdWarn write SetOnStdWarn;
@@ -697,7 +700,6 @@ var
   pSciter: TSciter;
   pBehaviorEventParams:   PBEHAVIOR_EVENT_PARAMS;
   pScriptingMethodParams: PSCRIPTING_METHOD_PARAMS;
-  pTiScriptMethodParams:  PTISCRIPT_METHOD_PARAMS;
   sUri: WideString;
 begin
   Result := False;
@@ -780,7 +782,7 @@ begin
     HANDLE_BEHAVIOR_EVENT:
     begin
       pBehaviorEventParams := prms;
-      Result := pElement.HandleBehaviorEvents(pBehaviorEventParams);
+      Result := pElement.HandleControlEvent(pBehaviorEventParams);
     end;
 
     HANDLE_METHOD_CALL:
@@ -1034,9 +1036,7 @@ end;
 function TSciter.HandleAttachBehavior(var data: SCN_ATTACH_BEHAVIOR): UINT;
 var
   sBehaviorName: AnsiString;
-  sTag: AnsiString;
   pElement: TElement;
-  hw: HWINDOW;
   i: Integer;
   pClass: TElementClass;
 begin
@@ -1145,13 +1145,12 @@ var
   bHandled: Boolean;
   pVal: PSciterValue;
   i: Integer;
-  SR: UINT;
 begin
   Result := False;
 
   bHandled := False;
 
-  if Assigned(FOnMethodCall) then
+  if Assigned(FOnScriptingCall) then
   try
     API.ValueInit(@params.rv);
     sMethodName := WideString(AnsiString(params.name));
@@ -1165,7 +1164,7 @@ begin
         Inc(pVal, sizeof(TSciterValue));
       end;
     end;
-    FOnMethodCall(Self, sMethodName, pArgs, pResult, bHandled);
+    FOnScriptingCall(Self, sMethodName, pArgs, pResult, bHandled);
     if bHandled then
     begin
       V2S(pResult, @params.rv);
@@ -1553,7 +1552,6 @@ var
   llResult: LRESULT;
   bHandled: Integer;
   M: PMsg;
-  i: Integer;
 
   function EnumChildProc(h: HWND; l: LPARAM): BOOL; stdcall;
   var
@@ -1709,7 +1707,6 @@ var
   pElement: TElement;
   pHandle: HELEMENT;
   sTag: AnsiString;
-  SR: SCDOM_RESULT;
 begin
   sTag := AnsiString(Tag);
   SciterCheck(
@@ -1730,6 +1727,98 @@ begin
     True
   );
   FELEMENT := nil;
+end;
+
+procedure TElement.DoBehaviorAttach;
+begin
+
+end;
+
+procedure TElement.DoBehaviorDetach;
+begin
+
+end;
+
+function TElement.DoControlEvents(const target: IElement;
+  eventType: BEHAVIOR_EVENTS; reason: Integer; const source: IElement): Boolean;
+var
+  bHandled: Boolean;
+begin
+  bHandled := False;
+  if Assigned(FOnControlEvent) then
+    FOnControlEvent(Sciter, target, eventType, reason, source, bHandled);
+  Result := bHandled;
+end;
+
+function TElement.DoFocus(const target: IElement;
+  eventType: FOCUS_EVENTS): Boolean;
+var
+  bHandled: Boolean;
+begin
+  bHandled := False;
+  if Assigned(FOnFocus) then
+    FOnFocus(Sciter, target, eventType, bHandled);
+  Result := bHandled;
+end;
+
+function TElement.DoKey(const target: IElement; eventType: KEY_EVENTS;
+  code: Integer; keys: KEYBOARD_STATES): Boolean;
+var
+  bHandled: Boolean;
+begin
+  bHandled := False;
+  if Assigned(FOnKey) then
+    FOnKey(Sciter, target, eventType, code, keys, bHandled);
+  Result := bHandled;
+end;
+
+function TElement.DoMouse(const target: IElement; eventType: MOUSE_EVENTS;
+  x, y: Integer; buttons: MOUSE_BUTTONS; keys: KEYBOARD_STATES): Boolean;
+var
+  bHandled: Boolean;
+begin
+  bHandled := False;
+  if Assigned(FOnMouse) then
+    FOnMouse(Sciter, target, eventType, x, y, buttons, keys, bHandled);
+  Result := bHandled;
+end;
+
+function TElement.DoScriptingCall(const target: IElement;
+  const MethodName: WideString; const Args: array of OleVariant;
+  var ReturnValue: OleVariant): Boolean;
+var
+  bHandled: Boolean;
+begin
+  bHandled := False;
+
+  if Assigned(FOnScriptingCall) then
+    FOnScriptingCall(Sciter, target, MethodName, Args, ReturnValue, bHandled);
+  Result := bHandled;
+end;
+
+function TElement.DoScroll(const target: IElement;
+  eventType: SCROLL_EVENTS; pos: Integer; isVertical: WordBool): Boolean;
+var
+  bHandled: Boolean;
+begin
+  bHandled := False;
+  if Assigned(FOnScroll) then
+    FOnScroll(Sciter, target, eventType, pos, isVertical, bHandled);
+  Result := bHandled;
+end;
+
+function TElement.DoSize(const Target: IElement): Boolean;
+begin
+  Result := False;
+  if Assigned(FOnSize) then
+    FOnSize(Sciter, target, Result);
+end;
+
+function TElement.DoTimer(const target: IElement; timerId: Integer): Boolean;
+begin
+  Result := False;
+  if Assigned(FOnTimer) then
+    FOnTimer(Sciter, timerId, Result);
 end;
 
 function TElement.EqualsTo(const Element: IElement): WordBool;
@@ -1946,14 +2035,14 @@ begin
   Result := FOnKey;
 end;
 
-function TElement.Get_OnMethodCall: TElementOnMethodCall;
-begin
-  Result := FOnMethodCall;
-end;
-
 function TElement.Get_OnMouse: TElementOnMouse;
 begin
   Result := FOnMouse;
+end;
+
+function TElement.Get_OnScriptingCall: TElementOnScriptingCall;
+begin
+  Result := FOnScriptingCall;
 end;
 
 function TElement.Get_OnScroll: TElementOnScroll;
@@ -2050,59 +2139,49 @@ end;
 
 procedure TElement.HandleBehaviorAttach;
 begin
-
+  DoBehaviorAttach;
 end;
 
 procedure TElement.HandleBehaviorDetach;
 begin
-
+  DoBehaviorDetach;
 end;
 
-function TElement.HandleBehaviorEvents(
+function TElement.HandleControlEvent(
   params: PBEHAVIOR_EVENT_PARAMS): BOOL;
 var
   pSource: IElement;
   pTarget: IElement;
-  bHandled: Boolean;
 begin
-  bHandled := False;
-  if Assigned(FOnControlEvent) then
-  begin
-    if params.heTarget <> nil then
-      pTarget := ElementFactory(Self.Sciter, params.heTarget)
-    else
-      pTarget := nil;
-    if params.he <> nil then
-      pSource := ElementFactory(Self.Sciter, params.he)
-    else
-      pSource := nil;
+  if params.heTarget <> nil then
+    pTarget := ElementFactory(Self.Sciter, params.heTarget)
+  else
+    pTarget := nil;
+  if params.he <> nil then
+    pSource := ElementFactory(Self.Sciter, params.he)
+  else
+    pSource := nil;
 
-    FOnControlEvent(Sciter, pTarget, params.cmd, Integer(params.reason), pSource, bHandled);
+  Result := DoControlEvents(pTarget, params.cmd, Integer(params.reason), pSource);
 
-    if pSource <> nil then
-      pSource := nil;
-    if pTarget <> nil then
-      pTarget := nil;
-  end;
-  Result := bHandled;
+  if pSource <> nil then
+    pSource := nil;
+  if pTarget <> nil then
+    pTarget := nil;
 end;
 
 function TElement.HandleFocus(params: PFOCUS_PARAMS): BOOL;
 var
   pTarget: IElement;
-  bHandled: Boolean;
 begin
-  bHandled := False;
   pTarget := nil;
-  if Assigned(FOnFocus) then
-  begin
-    if params.target <> nil then
-      pTarget := ElementFactory(Self.Sciter, params.target);
-    FOnFocus(Sciter, pTarget, params.cmd, bHandled);
-    if pTarget <> nil then
-      pTarget := nil;
-  end;
-  Result := bHandled;
+
+  if params.target <> nil then
+    pTarget := ElementFactory(Self.Sciter, params.target);
+  Result := DoFocus(pTarget, params.cmd);
+
+  if pTarget <> nil then
+    pTarget := nil;
 end;
 
 function TElement.HandleInitialization(
@@ -2118,19 +2197,14 @@ end;
 function TElement.HandleKey(params: PKEY_PARAMS): BOOL;
 var
   pTarget: IElement;
-  bHandled: Boolean;
 begin
-  bHandled := False;
   pTarget := nil;
-  if Assigned(FOnKey) then
-  begin
-    if params.target <> nil then
-      pTarget := ElementFactory(Self.Sciter, params.target);
-    FOnKey(Sciter, pTarget, params.cmd, params.key_code, params.alt_state, bHandled);
-    if pTarget <> nil then
-      pTarget := nil;
-  end;
-  Result := bHandled;
+  if params.target <> nil then
+    pTarget := ElementFactory(Self.Sciter, params.target);
+
+  Result := DoKey(pTarget, params.cmd, params.key_code, params.alt_state);
+  if pTarget <> nil then
+    pTarget := nil;
 end;
 
 function TElement.HandleMethodCallEvents(params: PMETHOD_PARAMS): BOOL;
@@ -2150,19 +2224,13 @@ end;
 function TElement.HandleMouse(params: PMOUSE_PARAMS): BOOL;
 var
   pTarget: IElement;
-  bHandled: Boolean;
 begin
-  bHandled := False;
   pTarget := nil;
-  if Assigned(FOnMouse) then
-  begin
-    if params.target <> nil then
-      pTarget := ElementFactory(Self.Sciter, params.target);
-    FOnMouse(Sciter, pTarget, params.cmd, params.pos.x, params.pos.Y, params.button_state, params.alt_state, bHandled);
-    if pTarget <> nil then
-      pTarget := nil;
-  end;
-  Result := bHandled;
+  if params.target <> nil then
+    pTarget := ElementFactory(Self.Sciter, params.target);
+  Result := DoMouse(pTarget, params.cmd, params.pos.x, params.pos.Y, params.button_state, params.alt_state);
+  if pTarget <> nil then
+    pTarget := nil;
 end;
 
 function TElement.HandleScriptingCall(
@@ -2172,76 +2240,46 @@ var
   sMethodName: WideString;
   pResult: OleVariant;
   pVal: PSciterValue;
-  bHandled: Boolean;
   i: Integer;
 begin
-  bHandled := False;
-  if Assigned(FOnMethodCall) then
-  try
-    API.ValueInit(@(params.rv));
-    sMethodName := WideString(AnsiString(params.name));
-    SetLength(pArgs, params.argc);
-    if params.argc > 0 then
+  API.ValueInit(@(params.rv));
+  sMethodName := WideString(AnsiString(params.name));
+  SetLength(pArgs, params.argc);
+  if params.argc > 0 then
+  begin
+    pVal := params.argv;
+    for i := 0 to params.argc - 1 do
     begin
-      pVal := params.argv;
-      for i := 0 to params.argc - 1 do
-      begin
-        S2V(pVal, pArgs[i]);
-        Inc(pVal);
-      end;
+      S2V(pVal, pArgs[i]);
+      Inc(pVal);
     end;
-    FOnMethodCall(Sciter, Self, sMethodName, pArgs, pResult, bHandled);
-    V2S(pResult, @(params.rv));
-  except
   end;
-
-  Result := bHandled;
-end;
-
-function TElement.HandleScriptingCall(
-  params: PTISCRIPT_METHOD_PARAMS): BOOL;
-begin
-  Result := False; // redirect to overloaded
+  Result := DoScriptingCall(Self, sMethodName, pArgs, pResult);
+  V2S(pResult, @(params.rv));
 end;
 
 function TElement.HandleScrollEvents(params: PSCROLL_PARAMS): BOOL;
 var
   pTarget: IElement;
-  bHandled: Boolean;
 begin
   pTarget := nil;
-  bHandled := False;
-  if Assigned(FOnScroll) then
-  begin
-    if params.target <> nil then
-      pTarget := ElementFactory(Self.Sciter, params.target);
-    FOnScroll(Sciter, pTarget, params.cmd, params.pos, params.vertical, bHandled);
-    if pTarget <> nil then
-      pTarget := nil;
-  end;
-  Result := bHandled;
+
+  if params.target <> nil then
+    pTarget := ElementFactory(Self.Sciter, params.target);
+  Result := DoScroll(pTarget, params.cmd, params.pos, params.vertical);
+
+  if pTarget <> nil then
+    pTarget := nil;
 end;
 
 function TElement.HandleSize: BOOL;
-var
-  bHandled: Boolean;
 begin
-  bHandled := False;
-  if Assigned(FOnSize) then
-  begin
-    FOnSize(Sciter, Self, bHandled);
-  end;
-  Result := bHandled;
+  Result := DoSize(Self);
 end;
 
 function TElement.HandleTimer(params: PTIMER_PARAMS): BOOL;
-var
-  bHandled: Boolean;
 begin
-  bHandled := False;
-  if Assigned(FOnTimer) then
-    FOnTimer(Sciter, Integer(params.timerId), bHandled);
-  Result := bHandled;
+  Result := DoTimer(Self, Integer(params.timerId));
 end;
 
 procedure TElement.InsertElement(const Child: IElement; const AIndex: Integer);
@@ -2365,14 +2403,14 @@ begin
   FOnKey := Value;
 end;
 
-procedure TElement.Set_OnMethodCall(const Value: TElementOnMethodCall);
-begin
-  FOnMethodCall := Value;
-end;
-
 procedure TElement.Set_OnMouse(const Value: TElementOnMouse);
 begin
   FOnMouse := Value;
+end;
+
+procedure TElement.Set_OnScriptingCall(const Value: TElementOnScriptingCall);
+begin
+  FOnScriptingCall := Value;
 end;
 
 procedure TElement.Set_OnScroll(const Value: TElementOnScroll);

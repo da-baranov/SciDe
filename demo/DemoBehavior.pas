@@ -11,8 +11,9 @@ type
     FTextArea: IElement;
     procedure OnMethodCallHandler(ASender: TObject; const target: IElement; const MethodName: WideString; const Args: array of OleVariant; var ReturnValue: OleVariant; var Handled: boolean);
   protected
-    procedure HandleBehaviorAttach; override;
-    function HandleMouse(params: PMOUSE_PARAMS): BOOL; override;
+    procedure DoBehaviorAttach; override;
+    function DoMouse(const target: IElement; eventType: MOUSE_EVENTS;
+      x, y: Integer; buttons: MOUSE_BUTTONS; keys: KEYBOARD_STATES): Boolean; override;
     function Get_Value: OleVariant; override;
   public
     class function BehaviorName: AnsiString; override;
@@ -31,7 +32,7 @@ end;
 constructor TDemoBehavior.Create(ASciter: TSciter; AElement: HELEMENT);
 begin
   inherited;
-  Self.OnMethodCall := OnMethodCallHandler;
+  Self.OnScriptingCall := OnMethodCallHandler;
 end;
 
 function TDemoBehavior.Get_Value: OleVariant;
@@ -39,7 +40,7 @@ begin
   Result := FTextArea.Text;
 end;
 
-procedure TDemoBehavior.HandleBehaviorAttach;
+procedure TDemoBehavior.DoBehaviorAttach;
 begin
   Attr['style'] := 'border: 1px dotted #666666; background-color: #FFCCCC; padding: 20px';
   InnerHtml := '<h4>Behavior attach OK. Class that implements the behavior is ' + Self.ClassName + '</h4>';
@@ -47,9 +48,10 @@ begin
   AppendChild(FTextArea);
 end;
 
-function TDemoBehavior.HandleMouse(params: PMOUSE_PARAMS): BOOL;
+function TDemoBehavior.DoMouse(const target: IElement; eventType: MOUSE_EVENTS;
+      x, y: Integer; buttons: MOUSE_BUTTONS; keys: KEYBOARD_STATES): Boolean;
 begin
-  if params.cmd = MOUSE_UP then
+  if eventType = MOUSE_UP then
   begin
     ShowMessage('Behavior MouseUp event is being handled.');
   end;
