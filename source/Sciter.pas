@@ -56,30 +56,30 @@ type
 
   IElementEvents = interface
     ['{CC651703-89C1-411D-875E-735D48D6E311}']
-    function Get_OnControlEvent: TElementOnControlEvent;
-    function Get_OnFocus: TElementOnFocus;
-    function Get_OnKey: TElementOnKey;
-    function Get_OnMouse: TElementOnMouse;
-    function Get_OnScriptingCall: TElementOnScriptingCall;
-    function Get_OnScroll: TElementOnScroll;
-    function Get_OnSize: TElementOnSize;
-    function Get_OnTimer: TElementOnTimer;
-    procedure Set_OnControlEvent(const Value: TElementOnControlEvent);
-    procedure Set_OnFocus(const Value: TElementOnFocus);
-    procedure Set_OnKey(const Value: TElementOnKey);
-    procedure Set_OnMouse(const Value: TElementOnMouse);
-    procedure Set_OnScriptingCall(const Value: TElementOnScriptingCall);
-    procedure Set_OnScroll(const Value: TElementOnScroll);
-    procedure Set_OnSize(const Value: TElementOnSize);
-    procedure Set_OnTimer(const Value: TElementOnTimer);
-    property OnControlEvent: TElementOnControlEvent read Get_OnControlEvent write Set_OnControlEvent;
-    property OnFocus: TElementOnFocus read Get_OnFocus write Set_OnFocus;
-    property OnKey: TElementOnKey read Get_OnKey write Set_OnKey;
-    property OnMouse: TElementOnMouse read Get_OnMouse write Set_OnMouse;
-    property OnScriptingCall: TElementOnScriptingCall read Get_OnScriptingCall write Set_OnScriptingCall;
-    property OnScroll: TElementOnScroll read Get_OnScroll write Set_OnScroll;
-    property OnSize: TElementOnSize read Get_OnSize write Set_OnSize;
-    property OnTimer: TElementOnTimer read Get_OnTimer write Set_OnTimer;
+    function GetOnControlEvent: TElementOnControlEvent;
+    function GetOnFocus: TElementOnFocus;
+    function GetOnKey: TElementOnKey;
+    function GetOnMouse: TElementOnMouse;
+    function GetOnScriptingCall: TElementOnScriptingCall;
+    function GetOnScroll: TElementOnScroll;
+    function GetOnSize: TElementOnSize;
+    function GetOnTimer: TElementOnTimer;
+    procedure SetOnControlEvent(const Value: TElementOnControlEvent);
+    procedure SetOnFocus(const Value: TElementOnFocus);
+    procedure SetOnKey(const Value: TElementOnKey);
+    procedure SetOnMouse(const Value: TElementOnMouse);
+    procedure SetOnScriptingCall(const Value: TElementOnScriptingCall);
+    procedure SetOnScroll(const Value: TElementOnScroll);
+    procedure SetOnSize(const Value: TElementOnSize);
+    procedure SetOnTimer(const Value: TElementOnTimer);
+    property OnControlEvent: TElementOnControlEvent read GetOnControlEvent write SetOnControlEvent;
+    property OnFocus: TElementOnFocus read GetOnFocus write SetOnFocus;
+    property OnKey: TElementOnKey read GetOnKey write SetOnKey;
+    property OnMouse: TElementOnMouse read GetOnMouse write SetOnMouse;
+    property OnScriptingCall: TElementOnScriptingCall read GetOnScriptingCall write SetOnScriptingCall;
+    property OnScroll: TElementOnScroll read GetOnScroll write SetOnScroll;
+    property OnSize: TElementOnSize read GetOnSize write SetOnSize;
+    property OnTimer: TElementOnTimer read GetOnTimer write SetOnTimer;
   end;
 
   IElement = interface
@@ -92,25 +92,25 @@ type
     procedure Delete;
     function EqualsTo(const Element: IElement): WordBool;
     function FindNearestParent(const Selector: WideString): IElement;
+    function GetAttr(const AttrName: WideString): WideString;
     function GetAttrCount: Integer;
     function GetAttributeName(Index: Integer): WideString;
     function GetAttributeValue(Index: Integer): WideString;
     function GetChild(Index: Integer): IElement;
+    function GetChildrenCount: Integer;
     function GetEnabled: boolean;
+    function GetHandle: HELEMENT;
+    function GetID: WideString;
+    function GetIndex: Integer;
+    function GetInnerHtml: WideString;
+    function GetOuterHtml: WideString;
+    function GetParent: IElement;
     function GetState: Integer;
+    function GetStyleAttr(const AttrName: WideString): WideString;
+    function GetTag: WideString;
+    function GetText: WideString;
+    function GetValue: OleVariant;
     function GetVisible: boolean;
-    function Get_Attr(const AttrName: WideString): WideString;
-    function Get_ChildrenCount: Integer;
-    function Get_Handle: HELEMENT;
-    function Get_ID: WideString;
-    function Get_Index: Integer;
-    function Get_InnerHtml: WideString;
-    function Get_OuterHtml: WideString;
-    function Get_Parent: IElement;
-    function Get_StyleAttr(const AttrName: WideString): WideString;
-    function Get_Tag: WideString;
-    function Get_Text: WideString;
-    function Get_Value: OleVariant;
     procedure InsertElement(const Child: IElement; const Index: Integer);
     function PostEvent(EventCode: BEHAVIOR_EVENTS): Boolean;
     procedure RemoveChildren;
@@ -118,40 +118,40 @@ type
     function Select(const Selector: WideString): IElement;
     function SelectAll(const Selector: WideString): IElementCollection;
     function SendEvent(EventCode: BEHAVIOR_EVENTS): Boolean;
+    procedure SetAttr(const AttrName: WideString; const Value: WideString);
+    procedure SetID(const Value: WideString);
+    procedure SetInnerHtml(const Value: WideString);
+    procedure SetOuterHtml(const Value: WideString);
     procedure SetState(const Value: Integer);
-    procedure Set_Attr(const AttrName: WideString; const Value: WideString);
-    procedure Set_ID(const Value: WideString);
-    procedure Set_InnerHtml(const Value: WideString);
-    procedure Set_OuterHtml(const Value: WideString);
-    procedure Set_StyleAttr(const AttrName: WideString; const Value: WideString);
-    procedure Set_Text(const Value: WideString);
-    procedure Set_Value(Value: OleVariant);
+    procedure SetStyleAttr(const AttrName: WideString; const Value: WideString);
+    procedure SetText(const Value: WideString);
+    procedure SetValue(Value: OleVariant);
     function TryCall(const Method: WideString; const Args: array of OleVariant; out RetVal: OleVariant): Boolean;
-    property Attr[const AttrName: WideString]: WideString read Get_Attr write Set_Attr;
+    property Attr[const AttrName: WideString]: WideString read GetAttr write SetAttr;
     property AttrCount: Integer read GetAttrCount;
-    property ChildrenCount: Integer read Get_ChildrenCount;
+    property ChildrenCount: Integer read GetChildrenCount;
     property Enabled: boolean read GetEnabled;
-    property Handle: HELEMENT read Get_Handle;
-    property ID: WideString read Get_ID write Set_ID;
-    property Index: Integer read Get_Index;
-    property InnerHtml: WideString read Get_InnerHtml write Set_InnerHtml;
-    property OuterHtml: WideString read Get_OuterHtml write Set_OuterHtml;
-    property Parent: IElement read Get_Parent;
+    property Handle: HELEMENT read GetHandle;
+    property ID: WideString read GetID write SetID;
+    property Index: Integer read GetIndex;
+    property InnerHtml: WideString read GetInnerHtml write SetInnerHtml;
+    property OuterHtml: WideString read GetOuterHtml write SetOuterHtml;
+    property Parent: IElement read GetParent;
     property State: Integer read GetState write SetState;
-    property StyleAttr[const AttrName: WideString]: WideString read Get_StyleAttr write Set_StyleAttr;
-    property Tag: WideString read Get_Tag;
-    property Text: WideString read Get_Text write Set_Text;
-    property Value: OleVariant read Get_Value write Set_Value;
+    property StyleAttr[const AttrName: WideString]: WideString read GetStyleAttr write SetStyleAttr;
+    property Tag: WideString read GetTag;
+    property Text: WideString read GetText write SetText;
+    property Value: OleVariant read GetValue write SetValue;
     property Visible: boolean read GetVisible;
   end;
 
   IElementCollection = interface
     ['{2E262CE3-43DE-4266-9424-EBA0241F77F8}']
-    function Get_Count: Integer;
-    function Get_Item(const Index: Integer): IElement;
+    function GetCount: Integer;
+    function GetItem(const Index: Integer): IElement;
     procedure RemoveAll;
-    property Count: Integer read Get_Count;
-    property Item[const Index: Integer]: IElement read Get_Item; default;
+    property Count: Integer read GetCount;
+    property Item[const Index: Integer]: IElement read GetItem; default;
   end;
 
   IElements = type IElementCollection;
@@ -177,54 +177,54 @@ type
     FStyleAttrValue: WideString;
     FTag: WideString;
     FText: WideString;
+    function GetAttr(const AttrName: WideString): WideString;
     function GetAttrCount: Integer;
+    function GetChildrenCount: Integer;
     function GetEnabled: boolean;
+    function GetHandle: HELEMENT;
+    function GetID: WideString;
+    function GetIndex: Integer;
+    function GetInnerHtml: WideString;
+    function GetOnControlEvent: TElementOnControlEvent;
+    function GetOnFocus: TElementOnFocus;
+    function GetOnKey: TElementOnKey;
+    function GetOnMouse: TElementOnMouse;
+    function GetOnScriptingCall: TElementOnScriptingCall;
+    function GetOnScroll: TElementOnScroll;
+    function GetOnSize: TElementOnSize;
+    function GetOnTimer: TElementOnTimer;
+    function GetOuterHtml: WideString;
+    function GetParent: IElement;
     function GetState: Integer;
+    function GetStyleAttr(const AttrName: WideString): WideString;
+    function GetTag: WideString;
     function GetVisible: boolean;
-    function Get_Attr(const AttrName: WideString): WideString;
-    function Get_ChildrenCount: Integer;
-    function Get_Handle: HELEMENT;
-    function Get_ID: WideString;
-    function Get_Index: Integer;
-    function Get_InnerHtml: WideString;
-    function Get_OnControlEvent: TElementOnControlEvent;
-    function Get_OnFocus: TElementOnFocus;
-    function Get_OnKey: TElementOnKey;
-    function Get_OnMouse: TElementOnMouse;
-    function Get_OnScriptingCall: TElementOnScriptingCall;
-    function Get_OnScroll: TElementOnScroll;
-    function Get_OnSize: TElementOnSize;
-    function Get_OnTimer: TElementOnTimer;
-    function Get_OuterHtml: WideString;
-    function Get_Parent: IElement;
-    function Get_StyleAttr(const AttrName: WideString): WideString;
-    function Get_Tag: WideString;
     procedure HandleBehaviorAttach;
     procedure HandleBehaviorDetach;
-    function HandleControlEvent(params: PBEHAVIOR_EVENT_PARAMS): BOOL;
-    function HandleFocus(params: PFOCUS_PARAMS): BOOL;
-    function HandleInitialization(params: PINITIALIZATION_PARAMS): BOOL;
-    function HandleKey(params: PKEY_PARAMS): BOOL;
-    function HandleMethodCallEvents(params: PMETHOD_PARAMS): BOOL;
-    function HandleMouse(params: PMOUSE_PARAMS): BOOL;
-    function HandleScriptingCall(params: PSCRIPTING_METHOD_PARAMS): BOOL;
-    function HandleScrollEvents(params: PSCROLL_PARAMS): BOOL;
+    function HandleControlEvent(var params: BEHAVIOR_EVENT_PARAMS): BOOL;
+    function HandleFocus(var params: FOCUS_PARAMS): BOOL;
+    function HandleInitialization(var params: INITIALIZATION_PARAMS): BOOL;
+    function HandleKey(var params: KEY_PARAMS): BOOL;
+    function HandleMethodCallEvents(var params: METHOD_PARAMS): BOOL;
+    function HandleMouse(var params: MOUSE_PARAMS): BOOL;
+    function HandleScriptingCall(var params: SCRIPTING_METHOD_PARAMS): BOOL;
+    function HandleScrollEvents(var params: SCROLL_PARAMS): BOOL;
     function HandleSize: BOOL;
-    function HandleTimer(params: PTIMER_PARAMS): BOOL;
+    function HandleTimer(var params: TIMER_PARAMS): BOOL;
+    procedure SetAttr(const AttrName: WideString; const Value: WideString);
+    procedure SetID(const Value: WideString);
+    procedure SetInnerHtml(const Value: WideString);
+    procedure SetOnControlEvent(const Value: TElementOnControlEvent);
+    procedure SetOnFocus(const Value: TElementOnFocus);
+    procedure SetOnKey(const Value: TElementOnKey);
+    procedure SetOnMouse(const Value: TElementOnMouse);
+    procedure SetOnScriptingCall(const Value: TElementOnScriptingCall);
+    procedure SetOnScroll(const Value: TElementOnScroll);
+    procedure SetOnSize(const Value: TElementOnSize);
+    procedure SetOnTimer(const Value: TElementOnTimer);
+    procedure SetOuterHtml(const Value: WideString);
     procedure SetState(const Value: Integer);
-    procedure Set_Attr(const AttrName: WideString; const Value: WideString);
-    procedure Set_ID(const Value: WideString);
-    procedure Set_InnerHtml(const Value: WideString);
-    procedure Set_OnControlEvent(const Value: TElementOnControlEvent);
-    procedure Set_OnFocus(const Value: TElementOnFocus);
-    procedure Set_OnKey(const Value: TElementOnKey);
-    procedure Set_OnMouse(const Value: TElementOnMouse);
-    procedure Set_OnScriptingCall(const Value: TElementOnScriptingCall);
-    procedure Set_OnScroll(const Value: TElementOnScroll);
-    procedure Set_OnSize(const Value: TElementOnSize);
-    procedure Set_OnTimer(const Value: TElementOnTimer);
-    procedure Set_OuterHtml(const Value: WideString);
-    procedure Set_StyleAttr(const AttrName: WideString; const Value: WideString);
+    procedure SetStyleAttr(const AttrName: WideString; const Value: WideString);
   protected
     constructor Create(ASciter: TSciter; h: HELEMENT); virtual;
     procedure DoBehaviorAttach; virtual;
@@ -237,10 +237,10 @@ type
     function DoScroll(const target: IElement; eventType: SCROLL_EVENTS; pos: Integer; isVertical: WordBool): Boolean; virtual;
     function DoSize(const target: IElement): Boolean; virtual;
     function DoTimer(const target: IElement; timerId: Integer): Boolean; virtual;
-    function Get_Text: WideString; virtual;
-    function Get_Value: OleVariant; virtual;
-    procedure Set_Text(const Value: WideString); virtual;
-    procedure Set_Value(Value: OleVariant); virtual;
+    function GetText: WideString; virtual;
+    function GetValue: OleVariant; virtual;
+    procedure SetText(const Value: WideString); virtual;
+    procedure SetValue(Value: OleVariant); virtual;
     procedure ThrowException(const Message: String); overload;
     procedure ThrowException(const Message: String; const Args: Array of const); overload;
     property Sciter: TSciter read FSciter;
@@ -269,28 +269,28 @@ type
     function SelectAll(const Selector: WideString): IElementCollection;
     function SendEvent(EventCode: BEHAVIOR_EVENTS): Boolean;
     function TryCall(const Method: WideString; const Args: array of OleVariant; out RetVal: OleVariant): Boolean;
-    property Attr[const AttrName: WideString]: WideString read Get_Attr write Set_Attr;
+    property Attr[const AttrName: WideString]: WideString read GetAttr write SetAttr;
     property AttrCount: Integer read GetAttrCount;
-    property ChildrenCount: Integer read Get_ChildrenCount;
+    property ChildrenCount: Integer read GetChildrenCount;
     property Enabled: boolean read GetEnabled;
-    property Handle: HELEMENT read Get_Handle;
-    property ID: WideString read Get_ID write Set_ID;
-    property InnerHtml: WideString read Get_InnerHtml write Set_InnerHtml;
-    property OuterHtml: WideString read Get_OuterHtml write Set_OuterHtml;
+    property Handle: HELEMENT read GetHandle;
+    property ID: WideString read GetID write SetID;
+    property InnerHtml: WideString read GetInnerHtml write SetInnerHtml;
+    property OuterHtml: WideString read GetOuterHtml write SetOuterHtml;
     property State: Integer read GetState write SetState;
-    property StyleAttr[const AttrName: WideString]: WideString read Get_StyleAttr write Set_StyleAttr;
-    property Tag: WideString read Get_Tag;
-    property Text: WideString read Get_Text write Set_Text;
-    property Value: OleVariant read Get_Value write Set_Value;
+    property StyleAttr[const AttrName: WideString]: WideString read GetStyleAttr write SetStyleAttr;
+    property Tag: WideString read GetTag;
+    property Text: WideString read GetText write SetText;
+    property Value: OleVariant read GetValue write SetValue;
     property Visible: boolean read GetVisible;
-    property OnControlEvent: TElementOnControlEvent read Get_OnControlEvent write Set_OnControlEvent;
-    property OnFocus: TElementOnFocus read Get_OnFocus write Set_OnFocus;
-    property OnKey: TElementOnKey read Get_OnKey write Set_OnKey;
-    property OnMouse: TElementOnMouse read Get_OnMouse write Set_OnMouse;
-    property OnScriptingCall: TElementOnScriptingCall read Get_OnScriptingCall write Set_OnScriptingCall;
-    property OnScroll: TElementOnScroll read Get_OnScroll write Set_OnScroll;
-    property OnSize: TElementOnSize read Get_OnSize write Set_OnSize;
-    property OnTimer: TElementOnTimer read Get_OnTimer write Set_OnTimer;
+    property OnControlEvent: TElementOnControlEvent read GetOnControlEvent write SetOnControlEvent;
+    property OnFocus: TElementOnFocus read GetOnFocus write SetOnFocus;
+    property OnKey: TElementOnKey read GetOnKey write SetOnKey;
+    property OnMouse: TElementOnMouse read GetOnMouse write SetOnMouse;
+    property OnScriptingCall: TElementOnScriptingCall read GetOnScriptingCall write SetOnScriptingCall;
+    property OnScroll: TElementOnScroll read GetOnScroll write SetOnScroll;
+    property OnSize: TElementOnSize read GetOnSize write SetOnSize;
+    property OnTimer: TElementOnTimer read GetOnTimer write SetOnTimer;
   end;
 
   TElementClass = class of TElement;
@@ -308,19 +308,17 @@ type
   private
     FList: TObjectList;
     FSciter: TSciter;
-    function Get_Element(const Index: Integer): TElement;
   protected
     constructor Create(ASciter: TSciter);
-    function Get_Count: Integer;
-    function Get_Item(const Index: Integer): IElement;
+    function GetCount: Integer;
+    function GetItem(const Index: Integer): IElement;
     property Sciter: TSciter read FSciter;
   public
     destructor Destroy; override;
     procedure Add(const Item: TElement);
     procedure RemoveAll;
-    property Count: Integer read Get_Count;
-    property Element[const Index: Integer]: TElement read Get_Element;
-    property Item[const Index: Integer]: IElement read Get_Item; default;
+    property Count: Integer read GetCount;
+    property Item[const Index: Integer]: IElement read GetItem; default;
   end;
 
   TSciter = class(TCustomControl)
@@ -339,12 +337,11 @@ type
     FOnStdErr: TSciterOnStdErr;
     FOnStdOut: TSciterOnStdOut;
     FOnStdWarn: TSciterOnStdOut;
-    FSilent: Boolean;
     FUrl: WideString;
+    function GetHtml: WideString;
     function GetHVM: HVM;
+    function GetRoot: IElement;
     function GetVersion: WideString;
-    function Get_Html: WideString;
-    function Get_Root: IElement;
     procedure SetOnStdErr(const Value: TSciterOnStdErr);
     procedure SetOnStdOut(const Value: TSciterOnStdOut);
     procedure SetOnStdWarn(const Value: TSciterOnStdOut);
@@ -401,8 +398,8 @@ type
     function TryCall(const FunctionName: WideString; const Args: array of OleVariant): boolean; overload;
     function TryCall(const FunctionName: WideString; const Args: array of OleVariant; out RetVal: OleVariant): boolean; overload;
     procedure UpdateWindow;
-    property Html: WideString read Get_Html;
-    property Root: IElement read Get_Root;
+    property Html: WideString read GetHtml;
+    property Root: IElement read GetRoot;
     property Version: WideString read GetVersion;
     property VM: HVM read GetHVM;
   published
@@ -443,7 +440,6 @@ type
     property ParentShowHint;
     property PopupMenu;
     property ShowHint;
-    property Silent: Boolean read FSilent write FSilent default false;
     property TabOrder;
     property TabStop default True;
     property Visible;
@@ -458,7 +454,6 @@ type
     property OnStdWarn: TSciterOnStdOut read FOnStdWarn write SetOnStdWarn;
 end;
 
-procedure SciterDebug(param: Pointer; subsystem: UINT; severity: UINT; text: PWideChar; text_length: UINT); stdcall;
 procedure SciterRegisterBehavior(Cls: TElementClass);
 
 {$IFDEF UNICODE}
@@ -483,6 +478,18 @@ begin
     Behaviors := TList.Create;
   if Behaviors.IndexOf(Cls) = -1 then
     Behaviors.Add(Cls);
+end;
+
+procedure SciterDebug(param: Pointer; subsystem: UINT; severity: UINT; text: PWideChar; text_length: UINT); stdcall;
+var
+  FSciter: TSciter;
+begin
+  FSciter := TSciter(param);
+  case severity of
+    0: if Assigned(FSciter.FOnStdOut)  then FSciter.FOnStdOut(FSciter, WideString(text));
+    1: if Assigned(FSciter.FOnStdWarn) then FSciter.FOnStdWarn(FSciter, WideString(text));
+    2: if Assigned(FSciter.FOnStdErr)  then FSciter.FOnStdErr(FSciter, WideString(text));
+  end;
 end;
 
 function SciterCheck(const SR: SCDOM_RESULT; const FmtString: String; const Args: array of const; const AllowNotHandled: Boolean = False): SCDOM_RESULT; overload;
@@ -752,43 +759,43 @@ begin
     HANDLE_INITIALIZATION:
     begin
       pInitParams := prms;
-      Result := pElement.HandleInitialization(pInitParams);
+      Result := pElement.HandleInitialization(pInitParams^);
     end;
 
     HANDLE_MOUSE:
     begin
       pMouseParams := prms;
-      Result := pElement.HandleMouse(pMouseParams);
+      Result := pElement.HandleMouse(pMouseParams^);
     end;
 
     HANDLE_KEY:
     begin
       pKeyParams := prms;
-      Result := pElement.HandleKey(pKeyParams);
+      Result := pElement.HandleKey(pKeyParams^);
     end;
 
     HANDLE_FOCUS:
     begin
       pFocusParams := prms;
-      Result := pElement.HandleFocus(pFocusParams);
+      Result := pElement.HandleFocus(pFocusParams^);
     end;
 
     HANDLE_TIMER:
     begin
       pTimerParams := prms;
-      Result := pElement.HandleTimer(pTimerParams);
+      Result := pElement.HandleTimer(pTimerParams^);
     end;
 
     HANDLE_BEHAVIOR_EVENT:
     begin
       pBehaviorEventParams := prms;
-      Result := pElement.HandleControlEvent(pBehaviorEventParams);
+      Result := pElement.HandleControlEvent(pBehaviorEventParams^);
     end;
 
     HANDLE_METHOD_CALL:
     begin
       pMethodCallParams := prms;
-      Result := pElement.HandleMethodCallEvents(pMethodCallParams);
+      Result := pElement.HandleMethodCallEvents(pMethodCallParams^);
     end;
 
     HANDLE_DATA_ARRIVED:
@@ -799,7 +806,7 @@ begin
     HANDLE_SCROLL:
     begin
       pScrollParams := prms;
-      Result := pElement.HandleScrollEvents(pScrollParams);
+      Result := pElement.HandleScrollEvents(pScrollParams^);
     end;
     
     HANDLE_SIZE:
@@ -810,7 +817,7 @@ begin
     HANDLE_SCRIPTING_METHOD_CALL:
     begin
       pScriptingMethodParams := prms;
-      Result := pElement.HandleScriptingCall(pScriptingMethodParams);
+      Result := pElement.HandleScriptingCall(pScriptingMethodParams^);
     end;
 
     HANDLE_TISCRIPT_METHOD_CALL:
@@ -971,6 +978,22 @@ begin
   Result := ElementFactory(Self, HELEMENT(Handle));
 end;
 
+function TSciter.GetHtml: WideString;
+var
+  pRoot: IElement;
+begin
+  pRoot := GetRoot;
+  if pRoot = nil then
+  begin
+    Result := ''
+  end
+    else
+  begin
+    Result := pRoot.OuterHtml;
+  end;
+  pRoot := nil;
+end;
+
 function TSciter.GetHVM: HVM;
 begin
   Result := API.SciterGetVM(Self.Handle);
@@ -986,37 +1009,7 @@ begin
   Result := API.SciterGetMinWidth(Handle);
 end;
 
-function TSciter.GetVersion: WideString;
-type
-  TVer = record
-    a: Word;
-    b: Word;
-  end;
-  PVer = ^TVer;
-var
-  ver: UINT;
-begin
-  ver := API.SciterVersion(true);
-  Result := '3.0.' + Format('%d.%d', [PVer(@ver)^.a, PVer(@ver)^.b]);
-end;
-
-function TSciter.Get_Html: WideString;
-var
-  pRoot: IElement;
-begin
-  pRoot := Get_Root;
-  if pRoot = nil then
-  begin
-    Result := ''
-  end
-    else
-  begin
-    Result := pRoot.OuterHtml;
-  end;
-  pRoot := nil;
-end;
-
-function TSciter.Get_Root: IElement;
+function TSciter.GetRoot: IElement;
 var
   he: HELEMENT;
 begin
@@ -1031,6 +1024,20 @@ begin
     Result := ElementFactory(Self, he)
   else
     Result := nil;
+end;
+
+function TSciter.GetVersion: WideString;
+type
+  TVer = record
+    a: Word;
+    b: Word;
+  end;
+  PVer = ^TVer;
+var
+  ver: UINT;
+begin
+  ver := API.SciterVersion(true);
+  Result := '3.0.' + Format('%d.%d', [PVer(@ver)^.a, PVer(@ver)^.b]);
 end;
 
 function TSciter.HandleAttachBehavior(var data: SCN_ATTACH_BEHAVIOR): UINT;
@@ -1406,7 +1413,7 @@ function TSciter.Select(const Selector: WideString): IElement;
 var
   pRoot: IElement;
 begin
-  pRoot := Get_Root;
+  pRoot := GetRoot;
   Result := pRoot.Select(Selector);
 end;
 
@@ -1414,7 +1421,7 @@ function TSciter.SelectAll(const Selector: WideString): IElementCollection;
 var
   pRoot: IElement;
 begin
-  pRoot := Get_Root;
+  pRoot := GetRoot;
   Result := pRoot.SelectAll(Selector);
 end;
 
@@ -1839,6 +1846,40 @@ begin
   Result := ElementFactory(Sciter, pHE);
 end;
 
+function TElement.GetAttr(const AttrName: WideString): WideString;
+var
+  sAttrName: AnsiString;
+  SR: SCDOM_RESULT;
+begin
+  Result := '';
+  
+  if AttrName = '' then
+  begin
+    Result := '';
+    Exit;
+  end;
+  
+  sAttrName := AnsiString(AttrName);
+  Self.FAttrName := AttrName;
+  
+  SR := SciterCheck(
+    API.SciterGetAttributeByNameCB(FElement, PAnsiChar(sAttrName), @AttributeTextCallback, Self),
+    'Failed to get attribute value (attribute name: %s)',
+    [AttrName],
+    True
+  );
+
+  case SR of
+    SCDOM_OK_NOT_HANDLED:
+      begin
+        FAttrValue := '';
+        Result := '';
+      end;
+    SCDOM_OK:
+      Result := Self.FAttrValue;
+  end;
+end;
+
 function TElement.GetAttrCount: Integer;
 var
   Cnt: UINT;
@@ -1888,7 +1929,7 @@ end;
 
 function TElement.GetAttributeValue(const Name: WideString): WideString;
 begin
-  Result := Get_Attr(Name);
+  Result := GetAttr(Name);
 end;
 
 function TElement.GetChild(Index: Integer): IElement;
@@ -1897,7 +1938,7 @@ var
   pResult: TElement;
   nCnt: Integer;
 begin
-  nCnt := Get_ChildrenCount;
+  nCnt := GetChildrenCount;
 
   if Index >= nCnt then
     ThrowException('Child element index (%d) is out of range.', [Index]);
@@ -1919,65 +1960,7 @@ begin
   end;
 end;
 
-function TElement.GetEnabled: boolean;
-var
-  pResult: LongBool;
-begin
-  API.SciterIsElementEnabled(FELEMENT, pResult);
-  Result := pResult;
-end;
-
-function TElement.GetState: Integer;
-var
-  uState: UINT;
-begin
-  API.SciterGetElementState(FElement, uState);
-  Result := Integer(uState);
-end;
-
-function TElement.GetVisible: boolean;
-var
-  pResult: LongBool;
-begin
-  API.SciterIsElementVisible(FELEMENT, pResult);
-  Result := pResult;
-end;
-
-function TElement.Get_Attr(const AttrName: WideString): WideString;
-var
-  sAttrName: AnsiString;
-  SR: SCDOM_RESULT;
-begin
-  Result := '';
-  
-  if AttrName = '' then
-  begin
-    Result := '';
-    Exit;
-  end;
-  
-  sAttrName := AnsiString(AttrName);
-  Self.FAttrName := AttrName;
-  
-  SR := SciterCheck(
-    API.SciterGetAttributeByNameCB(FElement, PAnsiChar(sAttrName), @AttributeTextCallback, Self),
-    'Failed to get attribute value (attribute name: %s)',
-    [AttrName],
-    True
-  );
-
-  case SR of
-    SCDOM_OK_NOT_HANDLED:
-      begin
-        FAttrValue := '';
-        Result := '';
-      end;
-    SCDOM_OK:
-      Result := Self.FAttrValue;
-  end;
-end;
-
-function TElement.Get_ChildrenCount: Integer;
+function TElement.GetChildrenCount: Integer;
 var
   cnt: UINT;
 begin
@@ -1988,17 +1971,25 @@ begin
   Result := Integer(cnt);
 end;
 
-function TElement.Get_Handle: HELEMENT;
+function TElement.GetEnabled: boolean;
+var
+  pResult: LongBool;
+begin
+  API.SciterIsElementEnabled(FELEMENT, pResult);
+  Result := pResult;
+end;
+
+function TElement.GetHandle: HELEMENT;
 begin
   Result := FELEMENT;
 end;
 
-function TElement.Get_ID: WideString;
+function TElement.GetID: WideString;
 begin
-  Result := Get_Attr('id');
+  Result := GetAttr('id');
 end;
 
-function TElement.Get_Index: Integer;
+function TElement.GetIndex: Integer;
 var
   pResult: UINT;
 begin
@@ -2010,7 +2001,7 @@ begin
   Result := Integer(pResult);
 end;
 
-function TElement.Get_InnerHtml: WideString;
+function TElement.GetInnerHtml: WideString;
 begin
   SciterCheck(
     API.SciterGetElementHtmlCB(FElement, False, @ElementHtmlCallback, Self),
@@ -2020,47 +2011,47 @@ begin
   Result := Self.FHtml;
 end;
 
-function TElement.Get_OnControlEvent: TElementOnControlEvent;
+function TElement.GetOnControlEvent: TElementOnControlEvent;
 begin
   Result := FOnControlEvent;
 end;
 
-function TElement.Get_OnFocus: TElementOnFocus;
+function TElement.GetOnFocus: TElementOnFocus;
 begin
   Result := FOnFocus;
 end;
 
-function TElement.Get_OnKey: TElementOnKey;
+function TElement.GetOnKey: TElementOnKey;
 begin
   Result := FOnKey;
 end;
 
-function TElement.Get_OnMouse: TElementOnMouse;
+function TElement.GetOnMouse: TElementOnMouse;
 begin
   Result := FOnMouse;
 end;
 
-function TElement.Get_OnScriptingCall: TElementOnScriptingCall;
+function TElement.GetOnScriptingCall: TElementOnScriptingCall;
 begin
   Result := FOnScriptingCall;
 end;
 
-function TElement.Get_OnScroll: TElementOnScroll;
+function TElement.GetOnScroll: TElementOnScroll;
 begin
   Result := FOnScroll;
 end;
 
-function TElement.Get_OnSize: TElementOnSize;
+function TElement.GetOnSize: TElementOnSize;
 begin
   Result := FOnSize;
 end;
 
-function TElement.Get_OnTimer: TElementOnTimer;
+function TElement.GetOnTimer: TElementOnTimer;
 begin
   Result := FOnTimer;
 end;
 
-function TElement.Get_OuterHtml: WideString;
+function TElement.GetOuterHtml: WideString;
 begin
   SciterCheck(
     API.SciterGetElementHtmlCB(FElement, True, @ElementHtmlCallback, Self),
@@ -2069,7 +2060,7 @@ begin
   Result := Self.FHtml;
 end;
 
-function TElement.Get_Parent: IElement;
+function TElement.GetParent: IElement;
 var
   pParent: HELEMENT;
   pResult: TElement;
@@ -2091,7 +2082,15 @@ begin
   end;
 end;
 
-function TElement.Get_StyleAttr(const AttrName: WideString): WideString;
+function TElement.GetState: Integer;
+var
+  uState: UINT;
+begin
+  API.SciterGetElementState(FElement, uState);
+  Result := Integer(uState);
+end;
+
+function TElement.GetStyleAttr(const AttrName: WideString): WideString;
 var
   sStyleAttrName: AnsiString;
 begin
@@ -2105,7 +2104,7 @@ begin
   Result := Self.FStyleAttrValue;
 end;
 
-function TElement.Get_Tag: WideString;
+function TElement.GetTag: WideString;
 begin
   SciterCheck(
     API.SciterGetElementTypeCB(FElement, @ElementTagCallback, Self),
@@ -2114,7 +2113,7 @@ begin
   Result := FTag
 end;
 
-function TElement.Get_Text: WideString;
+function TElement.GetText: WideString;
 begin
   SciterCheck(
     API.SciterGetElementTextCB(FELEMENT, @ElementTextCallback, Self),
@@ -2123,7 +2122,7 @@ begin
   Result := FText
 end;
 
-function TElement.Get_Value: OleVariant;
+function TElement.GetValue: OleVariant;
 var
   pValue: TSciterValue;
 begin
@@ -2137,6 +2136,14 @@ begin
 {$R+}
 end;
 
+function TElement.GetVisible: boolean;
+var
+  pResult: LongBool;
+begin
+  API.SciterIsElementVisible(FELEMENT, pResult);
+  Result := pResult;
+end;
+
 procedure TElement.HandleBehaviorAttach;
 begin
   DoBehaviorAttach;
@@ -2148,7 +2155,7 @@ begin
 end;
 
 function TElement.HandleControlEvent(
-  params: PBEHAVIOR_EVENT_PARAMS): BOOL;
+  var params: BEHAVIOR_EVENT_PARAMS): BOOL;
 var
   pSource: IElement;
   pTarget: IElement;
@@ -2170,7 +2177,7 @@ begin
     pTarget := nil;
 end;
 
-function TElement.HandleFocus(params: PFOCUS_PARAMS): BOOL;
+function TElement.HandleFocus(var params: FOCUS_PARAMS): BOOL;
 var
   pTarget: IElement;
 begin
@@ -2185,7 +2192,7 @@ begin
 end;
 
 function TElement.HandleInitialization(
-  params: PINITIALIZATION_PARAMS): BOOL;
+  var params: INITIALIZATION_PARAMS): BOOL;
 begin
   case params.cmd of
     BEHAVIOR_ATTACH: HandleBehaviorAttach;
@@ -2194,7 +2201,7 @@ begin
   Result := False;
 end;
 
-function TElement.HandleKey(params: PKEY_PARAMS): BOOL;
+function TElement.HandleKey(var params: KEY_PARAMS): BOOL;
 var
   pTarget: IElement;
 begin
@@ -2207,7 +2214,7 @@ begin
     pTarget := nil;
 end;
 
-function TElement.HandleMethodCallEvents(params: PMETHOD_PARAMS): BOOL;
+function TElement.HandleMethodCallEvents(var params: METHOD_PARAMS): BOOL;
 var
   x: BEHAVIOR_METHOD_IDENTIFIERS;
   pEmptyParams: PIS_EMPTY_PARAMS;
@@ -2215,13 +2222,13 @@ begin
   x := params.methodID;
   if x = IS_EMPTY then
   begin
-    pEmptyParams := PIS_EMPTY_PARAMS(params);
-    pEmptyParams.is_empty := 0;
+    //pEmptyParams := PIS_EMPTY_PARAMS(params);
+    //pEmptyParams.is_empty := 0;
   end;
   Result := False;
 end;
 
-function TElement.HandleMouse(params: PMOUSE_PARAMS): BOOL;
+function TElement.HandleMouse(var params: MOUSE_PARAMS): BOOL;
 var
   pTarget: IElement;
 begin
@@ -2234,7 +2241,7 @@ begin
 end;
 
 function TElement.HandleScriptingCall(
-  params: PSCRIPTING_METHOD_PARAMS): BOOL;
+  var params: SCRIPTING_METHOD_PARAMS): BOOL;
 var
   pArgs: array of OleVariant;
   sMethodName: WideString;
@@ -2258,7 +2265,7 @@ begin
   V2S(pResult, @(params.rv));
 end;
 
-function TElement.HandleScrollEvents(params: PSCROLL_PARAMS): BOOL;
+function TElement.HandleScrollEvents(var params: SCROLL_PARAMS): BOOL;
 var
   pTarget: IElement;
 begin
@@ -2277,7 +2284,7 @@ begin
   Result := DoSize(Self);
 end;
 
-function TElement.HandleTimer(params: PTIMER_PARAMS): BOOL;
+function TElement.HandleTimer(var params: TIMER_PARAMS): BOOL;
 begin
   Result := DoTimer(Self, Integer(params.timerId));
 end;
@@ -2307,7 +2314,7 @@ end;
 
 procedure TElement.RemoveChildren;
 begin
-  Set_Text('');
+  SetText('');
 end;
 
 procedure TElement.ScrollToView;
@@ -2350,12 +2357,7 @@ begin
   Result := API.SciterSendEvent(FELEMENT, UINT(EventCode), nil, nil, handled) = SCDOM_OK;
 end;
 
-procedure TElement.SetState(const Value: Integer);
-begin
-  API.SciterSetElementState(FElement, UINT(Value), 0, True);
-end;
-
-procedure TElement.Set_Attr(const AttrName, Value: WideString);
+procedure TElement.SetAttr(const AttrName, Value: WideString);
 var
   sAttrName: AnsiString;
 begin
@@ -2367,12 +2369,12 @@ begin
   );
 end;
 
-procedure TElement.Set_ID(const Value: WideString);
+procedure TElement.SetID(const Value: WideString);
 begin
   Attr['id'] := Value;
 end;
 
-procedure TElement.Set_InnerHtml(const Value: WideString);
+procedure TElement.SetInnerHtml(const Value: WideString);
 var
   sStr: UTF8String;
   pStr: PAnsiChar;
@@ -2388,47 +2390,47 @@ begin
   );
 end;
 
-procedure TElement.Set_OnControlEvent(const Value: TElementOnControlEvent);
+procedure TElement.SetOnControlEvent(const Value: TElementOnControlEvent);
 begin
   FOnControlEvent := Value;
 end;
 
-procedure TElement.Set_OnFocus(const Value: TElementOnFocus);
+procedure TElement.SetOnFocus(const Value: TElementOnFocus);
 begin
   FOnFocus := Value;
 end;
 
-procedure TElement.Set_OnKey(const Value: TElementOnKey);
+procedure TElement.SetOnKey(const Value: TElementOnKey);
 begin
   FOnKey := Value;
 end;
 
-procedure TElement.Set_OnMouse(const Value: TElementOnMouse);
+procedure TElement.SetOnMouse(const Value: TElementOnMouse);
 begin
   FOnMouse := Value;
 end;
 
-procedure TElement.Set_OnScriptingCall(const Value: TElementOnScriptingCall);
+procedure TElement.SetOnScriptingCall(const Value: TElementOnScriptingCall);
 begin
   FOnScriptingCall := Value;
 end;
 
-procedure TElement.Set_OnScroll(const Value: TElementOnScroll);
+procedure TElement.SetOnScroll(const Value: TElementOnScroll);
 begin
   FOnScroll := Value;
 end;
 
-procedure TElement.Set_OnSize(const Value: TElementOnSize);
+procedure TElement.SetOnSize(const Value: TElementOnSize);
 begin
   FOnSize := Value;
 end;
 
-procedure TElement.Set_OnTimer(const Value: TElementOnTimer);
+procedure TElement.SetOnTimer(const Value: TElementOnTimer);
 begin
   FOnTimer := Value;
 end;
 
-procedure TElement.Set_OuterHtml(const Value: WideString);
+procedure TElement.SetOuterHtml(const Value: WideString);
 var
   sStr: UTF8String;
   pStr: PAnsiChar;
@@ -2444,7 +2446,12 @@ begin
   );
 end;
 
-procedure TElement.Set_StyleAttr(const AttrName, Value: WideString);
+procedure TElement.SetState(const Value: Integer);
+begin
+  API.SciterSetElementState(FElement, UINT(Value), 0, True);
+end;
+
+procedure TElement.SetStyleAttr(const AttrName, Value: WideString);
 var
   sStyleAttrName: AnsiString;
 begin
@@ -2456,7 +2463,7 @@ begin
   );
 end;
 
-procedure TElement.Set_Text(const Value: WideString);
+procedure TElement.SetText(const Value: WideString);
 begin
   SciterCheck(
     API.SciterSetElementText(FElement, PWideChar(Value), Length(Value)),
@@ -2464,7 +2471,7 @@ begin
   );
 end;
 
-procedure TElement.Set_Value(Value: OleVariant);
+procedure TElement.SetValue(Value: OleVariant);
 var
   sValue: TSciterValue;
 begin
@@ -2547,17 +2554,12 @@ begin
   FList.Add(Item);
 end;
 
-function TElementCollection.Get_Count: Integer;
+function TElementCollection.GetCount: Integer;
 begin
   Result := FList.Count;
 end;
 
-function TElementCollection.Get_Element(const Index: Integer): TElement;
-begin
-  Result := FList[Index] as TElement;
-end;
-
-function TElementCollection.Get_Item(const Index: Integer): IElement;
+function TElementCollection.GetItem(const Index: Integer): IElement;
 var
   pElement: IElement;
 begin
@@ -2574,18 +2576,6 @@ begin
     Item[i].Delete;
   end;
   FList.Clear;
-end;
-
-procedure SciterDebug(param: Pointer; subsystem: UINT; severity: UINT; text: PWideChar; text_length: UINT); stdcall;
-var
-  FSciter: TSciter;
-begin
-  FSciter := TSciter(param);
-  case severity of
-    0: if Assigned(FSciter.FOnStdOut)  then FSciter.FOnStdOut(FSciter, WideString(text));
-    1: if Assigned(FSciter.FOnStdWarn) then FSciter.FOnStdWarn(FSciter, WideString(text));
-    2: if Assigned(FSciter.FOnStdErr)  then FSciter.FOnStdErr(FSciter, WideString(text));
-  end;
 end;
 
 procedure Register;

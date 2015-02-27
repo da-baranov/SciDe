@@ -14,7 +14,7 @@ type
     procedure DoBehaviorAttach; override;
     function DoMouse(const target: IElement; eventType: MOUSE_EVENTS;
       x, y: Integer; buttons: MOUSE_BUTTONS; keys: KEYBOARD_STATES): Boolean; override;
-    function Get_Value: OleVariant; override;
+    function GetValue: OleVariant; override;
   public
     class function BehaviorName: AnsiString; override;
     constructor Create(ASciter: TSciter; AElement: HELEMENT); override;
@@ -35,7 +35,7 @@ begin
   Self.OnScriptingCall := OnMethodCallHandler;
 end;
 
-function TDemoBehavior.Get_Value: OleVariant;
+function TDemoBehavior.GetValue: OleVariant;
 begin
   Result := FTextArea.Text;
 end;
@@ -67,7 +67,7 @@ var
 begin
   if MethodName = 'nativeValue' then
   begin
-    sText := Get_Value;
+    sText := GetValue;
     ReturnValue := sText;
     Handled := True;
   end;
