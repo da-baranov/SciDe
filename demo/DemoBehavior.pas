@@ -9,7 +9,7 @@ type
   TDemoBehavior = class(TElement)
   private
     FTextArea: IElement;
-    procedure OnMethodCallHandler(ASender: TObject; const target: IElement; const MethodName: WideString; const Args: array of OleVariant; var ReturnValue: OleVariant; var Handled: boolean);
+    procedure OnMethodCallHandler(ASender: TObject; const Args: TElementOnScriptingCallArgs);
   protected
     procedure DoBehaviorAttach; override;
     function DoMouse(const target: IElement; eventType: MOUSE_EVENTS;
@@ -58,18 +58,15 @@ begin
   Result := False;
 end;
 
-procedure TDemoBehavior.OnMethodCallHandler(ASender: TObject;
-  const target: IElement; const MethodName: WideString;
-  const Args: array of OleVariant; var ReturnValue: OleVariant;
-  var Handled: boolean);
+procedure TDemoBehavior.OnMethodCallHandler(ASender: TObject; const Args: TElementOnScriptingCallArgs);
 var
   sText: WideString;
 begin
-  if MethodName = 'nativeValue' then
+  if Args.Method = 'nativeValue' then
   begin
     sText := GetValue;
-    ReturnValue := sText;
-    Handled := True;
+    Args.ReturnValue := sText;
+    Args.Handled := True;
   end;
 end;
 
