@@ -350,6 +350,11 @@ begin
       pDiv := Sciter1.Root.Select('#divRequest');
       pDiv.Request('http://terrainformatica.com/sciter', GET_ASYNC);
     end;
+
+    if Args.Target.ID = 'cmdInsertBefore' then
+      Sciter1.Root.Select('#spanBeforeAfter').InsertBefore('<span style="color: red">Before</span>');
+    if Args.Target.ID = 'cmdInsertAfter' then
+      Sciter1.Root.Select('#spanBeforeAfter').InsertAfter('<span style="color: lime">After</span>');
   end;
 end;
 

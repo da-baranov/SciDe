@@ -291,6 +291,8 @@ type
     function GetText: WideString;
     function GetValue: OleVariant;
     function GetVisible: boolean;
+    procedure InsertAfter(const Html: WideString);
+    procedure InsertBefore(const Html: WideString);
     procedure InsertElement(const Child: IElement; const Index: Integer);
     function PostEvent(EventCode: BEHAVIOR_EVENTS): Boolean;
     procedure RemoveChildren;
@@ -456,6 +458,8 @@ type
     function GetAttributeValue(const Name: WideString): WideString; overload;
     function GetChild(Index: Integer): IElement;
     function GetHWND: HWND;
+    procedure InsertAfter(const Html: WideString);
+    procedure InsertBefore(const Html: WideString);
     procedure InsertElement(const Child: IElement; const AIndex: Integer);
     function IsValid: Boolean;
     function PostEvent(EventCode: BEHAVIOR_EVENTS): Boolean;
@@ -475,8 +479,10 @@ type
     property Enabled: boolean read GetEnabled;
     property Handle: HELEMENT read GetHandle;
     property ID: WideString read GetID write SetID;
+    property Index: Integer read GetIndex;
     property InnerHtml: WideString read GetInnerHtml write SetInnerHtml;
     property OuterHtml: WideString read GetOuterHtml write SetOuterHtml;
+    property Parent: IElement read GetParent;
     property State: Integer read GetState write SetState;
     property StyleAttr[const AttrName: WideString]: WideString read GetStyleAttr write SetStyleAttr;
     property Tag: WideString read GetTag;
@@ -1391,16 +1397,7 @@ begin
     SetLength(pEventArgs.FArgs, 0);
     pEventArgs.Free;
   end;
-  
 end;
-
-//function TSciter.HandleScriptingCall(
-//  params: PTISCRIPT_METHOD_PARAMS): BOOL;
-//begin
-//  Result := False;
-//  { Don't know how to get method name! }
-//  { if method returns False then overloaded HandleScriptingCall(params: PSCRIPTING_METHOD_PARAMS) will be called }
-//end;
 
 function TSciter.JsonToSciterValue(const Json: WideString): TSciterValue;
 var
@@ -2597,6 +2594,32 @@ begin
   Result := pArgs.Continue;
   pArgs.FTarget := nil;
   pArgs.Free;
+end;
+
+procedure TElement.InsertAfter(const Html: WideString);
+var
+  pParent: IElement;
+  iIndex: Integer;
+  pEl: IElement;
+begin
+  pParent := Self.GetParent;
+  iIndex  := Self.GetIndex;
+  pEl := pParent.CreateElement('span', '');
+  pParent.InsertElement(pEl, iIndex + 1);
+  pEl.OuterHtml := Html;
+end;
+
+procedure TElement.InsertBefore(const Html: WideString);
+var
+  pParent: IElement;
+  iIndex: Integer;
+  pEl: IElement;
+begin
+  pParent := Self.GetParent;
+  iIndex  := Self.GetIndex;
+  pEl := pParent.CreateElement('span', '');
+  pParent.InsertElement(pEl, iIndex);
+  pEl.OuterHtml := Html;
 end;
 
 procedure TElement.InsertElement(const Child: IElement; const AIndex: Integer);
