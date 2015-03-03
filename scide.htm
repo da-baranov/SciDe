@@ -221,9 +221,21 @@
     view.msgbox(#alert, "Sciter");
   }
   
-  function self#cmdDemoBehavior.onClick()
+  function self#cmdDemoBehaviorGetValue.onClick()
   {
-    view.msgbox(#alert, self#divDemoBehavior.nativeValue());
+    view.msgbox(#alert, self#divDemoBehavior.value);
+  }
+  function self#cmdDemoBehaviorSetValue.onClick()
+  {
+    self#divDemoBehavior.value = "New value";
+  }
+  function self#cmdDemoBehaviorGetText.onClick()
+  {
+    view.msgbox(#alert, self#divDemoBehavior.text);
+  }
+  function self#cmdDemoBehaviorSetText.onClick()
+  {
+    self#divDemoBehavior.value = "New text";
   }
   
   </script>
@@ -532,7 +544,10 @@ end;
     <div style="behavior: DemoBehavior" id="divDemoBehavior">
     
     </div>
-    <button id="cmdDemoBehavior">Show value</button>
+    <button id="cmdDemoBehaviorGetValue">Show value</button>
+    <button id="cmdDemoBehaviorSetValue">Change value</button>
+    <button id="cmdDemoBehaviorGetText">Show text</button>
+    <button id="cmdDemoBehaviorSetText">Change text</button>
   </section>
   
 <!--************************************************************************-->  
@@ -559,6 +574,15 @@ end;
     <button id="cmdInsertBefore">Insert before</button>
     <button id="cmdInsertAfter">Insert after</button>
     <span id="spanBeforeAfter">|text|</span>
+  </section>
+  
+<!--************************************************************************-->  
+  <section>
+    <h2>Custom URL protocol handler</h2>
+    <pre class="code">
+      &lt;img src="scide://scide.png" /&gt;
+    </pre>
+    <img src="scide://scide.png" />
   </section>
 
 </body>

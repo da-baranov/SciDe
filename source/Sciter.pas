@@ -217,7 +217,7 @@ type
 
   TSciterOnMessage = procedure(ASender: TObject; const Args: TSciterOnMessageEventArgs) of object;
 
-  TSciterOnLoadData = procedure(ASender: TObject; var url: WideString; resType: SciterResourceType;
+  TSciterOnLoadData = procedure(ASender: TObject; const url: WideString; resType: SciterResourceType;
                                                   requestId: Integer; out discard: Boolean) of object;
   TSciterOnDataLoaded = procedure(ASender: TObject; const url: WideString; resType: SciterResourceType;
                                                     data: PByte; dataLength: Integer; status: Integer;
@@ -313,6 +313,7 @@ type
     procedure StopTimer;
     procedure Swap(const Element: IElement);
     function TryCall(const Method: WideString; const Args: array of OleVariant; out RetVal: OleVariant): Boolean;
+    procedure Update;
     property Attr[const AttrName: WideString]: WideString read GetAttr write SetAttr;
     property AttrCount: Integer read GetAttrCount;
     property ChildrenCount: Integer read GetChildrenCount;
@@ -473,6 +474,7 @@ type
     procedure StopTimer;
     procedure Swap(const Element: IElement);
     function TryCall(const Method: WideString; const Args: array of OleVariant; out RetVal: OleVariant): Boolean;
+    procedure Update;
     property Attr[const AttrName: WideString]: WideString read GetAttr write SetAttr;
     property AttrCount: Integer read GetAttrCount;
     property ChildrenCount: Integer read GetChildrenCount;
@@ -565,13 +567,13 @@ type
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure Paint; override;
     procedure SetName(const NewName: TComponentName); override;
-    procedure SetParent(AParent: TWinControl); override;
     procedure WndProc(var Message: TMessage); override;
     property ManagedElements: TElementList read FManagedElements;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     function Call(const FunctionName: WideString; const Args: array of OleVariant): OleVariant;
+    procedure DataReady(const uri: WideString; data: PByte; dataLength: UINT);
     function Eval(const Script: WideString): OleVariant;
     function FilePathToURL(const FileName: String): String;
     function FindElement(Point: TPoint): IElement;
@@ -595,6 +597,7 @@ type
     function Select(const Selector: WideString): IElement;
     function SelectAll(const Selector: WideString): IElementCollection;
     procedure SetHomeURL(const URL: WideString);
+    function SetMediaType(const MediaType: WideString): Boolean;
     procedure SetObject(const Name: WideString; const Json: WideString);
     procedure SetOption(const Key: SCITER_RT_OPTIONS; const Value: UINT_PTR);
     procedure ShowInspector(const Element: IElement = nil);
@@ -1119,6 +1122,13 @@ begin
   end;
 end;
 
+procedure TSciter.DataReady(const uri: WideString; data: PByte;
+  dataLength: UINT);
+begin
+  if not API.SciterDataReady(Handle, PWideChar(uri), data, dataLength) then
+    raise ESciterException.CreateFmt('Failed to handle resource "%s".', [AnsiString(uri)]);
+end;
+
 function TSciter.DesignMode: boolean;
 begin
   Result := csDesigning in ComponentState;
@@ -1254,7 +1264,7 @@ var
   ver: UINT;
 begin
   ver := API.SciterVersion(true);
-  Result := '3.0.' + Format('%d.%d', [PVer(@ver)^.a, PVer(@ver)^.b]);
+  Result := WideFormat('3.0.%d.%d', [PVer(@ver)^.a, PVer(@ver)^.b]);
 end;
 
 function TSciter.HandleAttachBehavior(var data: SCN_ATTACH_BEHAVIOR): UINT;
@@ -1265,7 +1275,7 @@ var
   pClass: TElementClass;
 begin
   Result := 0;
-  
+
   sBehaviorName := AnsiString(data.behaviorName);
   if Behaviors <> nil then
   begin
@@ -1335,7 +1345,7 @@ begin
     pStream := LoadResourceAsStream(wResName, 'HTML');
     if pStream <> nil then
     begin
-      API.SciterDataReady(Handle, data.uri, pStream.Memory, pStream.Size);
+      DataReady(data.uri, pStream.Memory, pStream.Size);
       Result := LOAD_OK;
       pStream.Free;
       Exit;
@@ -1347,7 +1357,6 @@ begin
     begin
       wUrl := WideString(data.uri);
       FOnLoadData(Self, wUrl, data.dataType, Integer(data.requestId), discard);
-      data.uri := PWideChar(wUrl);
       if discard then
         Result := LOAD_DISCARD;
     end;
@@ -1369,10 +1378,11 @@ var
 begin
   Result := False;
 
+  pEventArgs := nil;
   if Assigned(FOnScriptingCall) then
-  begin
-    API.ValueInit(@params.rv);
+  try
     pEventArgs := TElementOnScriptingCallArgs.Create;
+    API.ValueInit(@params.rv);
     pEventArgs.FMethod := WideString(AnsiString(params.name));
     pEventArgs.FReturnValue := Unassigned;
 
@@ -1392,10 +1402,13 @@ begin
       V2S(pEventArgs.FReturnValue, @params.rv);
     end;
     Result := pEventArgs.Handled;
-
-    pEventArgs.FReturnValue := Unassigned;
-    SetLength(pEventArgs.FArgs, 0);
-    pEventArgs.Free;
+  finally
+    if pEventArgs <> nil then
+    begin
+      pEventArgs.FReturnValue := Unassigned;
+      SetLength(pEventArgs.FArgs, 0);
+      pEventArgs.Free;
+    end;
   end;
 end;
 
@@ -1623,6 +1636,8 @@ var
   pRoot: IElement;
 begin
   pRoot := GetRoot;
+  if pRoot = nil then
+    raise ESciterException.Create('Select method failed. Cannot get Sciter root element.');
   Result := pRoot.Select(Selector);
 end;
 
@@ -1631,6 +1646,8 @@ var
   pRoot: IElement;
 begin
   pRoot := GetRoot;
+  if pRoot = nil then
+    raise ESciterException.Create('SelectAll method failed. Cannot get Sciter root element.');
   Result := pRoot.SelectAll(Selector);
 end;
 
@@ -1639,15 +1656,23 @@ begin
   FHomeURL := URL;
   if HandleAllocated then
   begin
+    if FHomeURL = '' then Exit;
+    
     if not API.SciterSetHomeURL(Handle, PWideChar(URL)) then
       raise ESciterException.Create('Failed to set Sciter home URL');
   end;
 end;
 
+function TSciter.SetMediaType(const MediaType: WideString): Boolean;
+begin
+  Result := API.SciterSetMediaType(Handle, PWideChar(MediaType));
+end;
+
 procedure TSciter.SetName(const NewName: TComponentName);
 begin
   inherited;
-  Invalidate;
+  if DesignMode then
+    Invalidate;
 end;
 
 { Exprerimental }
@@ -1677,11 +1702,6 @@ procedure TSciter.SetOption(const Key: SCITER_RT_OPTIONS;
   const Value: UINT_PTR);
 begin
   API.SciterSetOption(Handle, Key, Value);
-end;
-
-procedure TSciter.SetParent(AParent: TWinControl);
-begin
-  inherited SetParent(AParent);
 end;
 
 procedure TSciter.ShowInspector(const Element: IElement);
@@ -2384,6 +2404,7 @@ end;
 function TElement.HandleDataArrived(var params: DATA_ARRIVED_PARAMS): BOOL;
 var
   pArgs: TElementOnDataArrivedEventArgs;
+  pMemStream: TMemoryStream;
 begin
   if (params.data = nil) or (params.dataSize = 0) then
   begin
@@ -2398,7 +2419,9 @@ begin
     pArgs.FInitiator := ElementFactory(Sciter, params.initiator);
   pArgs.FDataType := params.dataType;
   pArgs.FStatus := params.status;
-  pArgs.FStream := TByteStream.Create(params.data, params.dataSize);
+  pMemStream := TMemoryStream.Create;
+  pMemStream.WriteBuffer(params.data, params.dataSize);
+  pArgs.FStream := pMemStream;
   pArgs.FStream.Position := 0;
   pArgs.FUri := WideString(params.uri);
   DoDataArrived(pArgs);
@@ -2479,17 +2502,57 @@ begin
   pArgs.Free;
 end;
 
+{ Handling behavior predefined properties (value and text) }
 function TElement.HandleMethodCallEvents(var params: METHOD_PARAMS): BOOL;
 var
   x: BEHAVIOR_METHOD_IDENTIFIERS;
+  EmptyParams: PIS_EMPTY_PARAMS;
+  TextValueParams: PTEXT_VALUE_PARAMS;
+  ValueParams: PVALUE_PARAMS;
+  vValue: OleVariant;
+  sText: WideString;
 begin
-  x := params.methodID;
-  if x = IS_EMPTY then
-  begin
-    //pEmptyParams := PIS_EMPTY_PARAMS(params);
-    //pEmptyParams.is_empty := 0;
-  end;
   Result := False;
+
+  if BehaviorName = '' then Exit;
+  
+  x := params.methodID;
+  case x of
+    IS_EMPTY:
+      begin
+        EmptyParams := PIS_EMPTY_PARAMS(@params);
+        EmptyParams.is_empty := 0;
+        Result := True;
+      end;
+    GET_TEXT_VALUE:
+      begin
+        TextValueParams := PTEXT_VALUE_PARAMS(@params);
+        sText := Self.GetText;
+        TextValueParams.text := SysAllocString(PWideChar(sText));
+        TextValueParams.length := Length(sText);
+        Result := True;
+      end;
+    SET_TEXT_VALUE:
+      begin
+        TextValueParams := PTEXT_VALUE_PARAMS(@params);
+        SetText(WideString(TextValueParams.text));
+      end;
+    GET_VALUE:
+      begin
+        ValueParams := PVALUE_PARAMS(@params);
+        API.ValueInit(@ValueParams.val);
+        vValue := GetValue;
+        V2S(vValue, @ValueParams.val);
+        Result := True;
+      end;
+    SET_VALUE:
+      begin
+        ValueParams := PVALUE_PARAMS(@params);
+        S2V(@ValueParams.val, vValue);
+        SetValue(vValue);
+        Result := True;
+      end;
+  end;
 end;
 
 function TElement.HandleMouse(var params: MOUSE_PARAMS): BOOL;
@@ -2918,6 +2981,11 @@ begin
     S2V(@pRetVal, RetVal);
     Result := True;
   end;
+end;
+
+procedure TElement.Update;
+begin
+  API.SciterUpdateElement(FElement, false);
 end;
 
 constructor TElementCollection.Create;

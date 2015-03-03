@@ -52,6 +52,8 @@ type
     procedure NavigatetoSciterwebsite1Click(Sender: TObject);
     procedure OnSciterOut(ASender: TObject; const msg: WideString);
     procedure Sciter1DocumentComplete(ASender: TObject; const url: WideString);
+    procedure Sciter1LoadData(ASender: TObject; const url: WideString; resType:
+        SciterResourceType; requestId: Integer; out discard: Boolean);
     procedure Sciter1Message(ASender: TObject; const Args: TSciterOnMessageEventArgs);
     procedure Sciter1ScriptingCall(ASender: TObject; const Args:
         TElementOnScriptingCallArgs);
@@ -408,6 +410,24 @@ begin
 
   FDivRequestEvents := Sciter1.Root.Select('#divRequest') as IElementEvents;
   FDivRequestEvents.OnDataArrived := OnDivRequestDataArrived;
+end;
+
+procedure TMainForm.Sciter1LoadData(ASender: TObject; const url: WideString;
+    resType: SciterResourceType; requestId: Integer; out discard: Boolean);
+var
+  sFileName: AnsiString;
+  pMemStm: TMemoryStream;
+begin
+  if Pos(WideString('scide://'), Url) = 1 then
+  begin
+    sFileName := StringReplace(Url, 'scide://', '', []);
+    pMemStm := TMemoryStream.Create;
+    pMemStm.LoadFromFile(sFileName);
+    pMemStm.Position := 0;
+    Sciter1.DataReady(url, pMemStm.Memory, pMemStm.Size);
+    pMemStm.Free;
+    Discard := True;
+  end;
 end;
 
 procedure TMainForm.Sciter1Message(ASender: TObject; const Args:

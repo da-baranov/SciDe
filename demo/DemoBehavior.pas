@@ -14,6 +14,9 @@ type
     procedure DoBehaviorAttach; override;
     procedure DoMouse(const Args: TElementOnMouseEventArgs); override;
     function GetValue: OleVariant; override;
+    procedure SetValue(Value: OleVariant); override;
+    function GetText: WideString; override;
+    procedure SetText(const Value: WideString); override;
   public
     class function BehaviorName: AnsiString; override;
     constructor Create(ASciter: TSciter; AElement: HELEMENT); override;
@@ -70,8 +73,23 @@ end;
 
 destructor TDemoBehavior.Destroy;
 begin
-  
+
   inherited;
+end;
+
+function TDemoBehavior.GetText: WideString;
+begin
+  Result := FTextArea.Text;
+end;
+
+procedure TDemoBehavior.SetText(const Value: WideString);
+begin
+  FTextArea.Text := Value;
+end;
+
+procedure TDemoBehavior.SetValue(Value: OleVariant);
+begin
+  FTextArea.Value := Value;
 end;
 
 initialization

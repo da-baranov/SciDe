@@ -44,6 +44,7 @@ const
   LOAD_DELAYED: UINT       = 2;
 
 type
+
   SCDOM_RESULT =
   (
     SCDOM_OK                = 0,
@@ -68,21 +69,17 @@ type
   LPCSTR_RECEIVER = procedure(str: PAnsiChar; str_length: UINT; param : Pointer); stdcall;
   PLPCSTR_RECEIVER = ^LPCSTR_RECEIVER;
 
-
   LPCWSTR_RECEIVER = procedure(str: PWideChar; str_length: UINT; param: Pointer); stdcall;
   PLPCWSTR_RECEIVER = ^LPCWSTR_RECEIVER;
 
-
   LPCBYTE_RECEIVER = procedure(bytes: PByte; num_bytes: UINT; param: Pointer); stdcall;
   PLPCBYTE_RECEIVER = ^LPCBYTE_RECEIVER;
-
 
   SCITER_CALLBACK_NOTIFICATION = packed record
     code: UINT;
     hwnd: HWINDOW;
   end;
   LPSCITER_CALLBACK_NOTIFICATION = ^SCITER_CALLBACK_NOTIFICATION;
-
 
   SciterHostCallback = function(pns: LPSCITER_CALLBACK_NOTIFICATION; callbackParam: Pointer): UINT; stdcall;
   LPSciterHostCallback = ^SciterHostCallback;
@@ -217,59 +214,59 @@ type
 
   EVENT_GROUPS =
   (
-      HANDLE_INITIALIZATION        = $0000,
-      HANDLE_MOUSE                 = $0001,
-      HANDLE_KEY                   = $0002,
-      HANDLE_FOCUS                 = $0004,
-      HANDLE_SCROLL                = $0008,
-      HANDLE_TIMER                 = $0010,
-      HANDLE_SIZE                  = $0020,
-      HANDLE_DATA_ARRIVED          = $080,
-      HANDLE_BEHAVIOR_EVENT        = $0100,
-      HANDLE_METHOD_CALL           = $0200,
-      HANDLE_SCRIPTING_METHOD_CALL = $0400,
-      HANDLE_TISCRIPT_METHOD_CALL  = $0800,
-      HANDLE_EXCHANGE              = $1000,
-      HANDLE_GESTURE               = $2000,
-      HANDLE_ALL                   = $FFFF,
-      SUBSCRIPTIONS_REQUEST        = -1,
-      EVENT_GROUPS_DUMMY           = MAXINT
+    HANDLE_INITIALIZATION        = $0000,
+    HANDLE_MOUSE                 = $0001,
+    HANDLE_KEY                   = $0002,
+    HANDLE_FOCUS                 = $0004,
+    HANDLE_SCROLL                = $0008,
+    HANDLE_TIMER                 = $0010,
+    HANDLE_SIZE                  = $0020,
+    HANDLE_DATA_ARRIVED          = $080,
+    HANDLE_BEHAVIOR_EVENT        = $0100,
+    HANDLE_METHOD_CALL           = $0200,
+    HANDLE_SCRIPTING_METHOD_CALL = $0400,
+    HANDLE_TISCRIPT_METHOD_CALL  = $0800,
+    HANDLE_EXCHANGE              = $1000,
+    HANDLE_GESTURE               = $2000,
+    HANDLE_ALL                   = $FFFF,
+    SUBSCRIPTIONS_REQUEST        = -1,
+    EVENT_GROUPS_DUMMY           = MAXINT
   );
 
 
   ELEMENT_STATE_BITS =
   (
-   STATE_LINK             = $00000001,
-   STATE_HOVER            = $00000002,
-   STATE_ACTIVE           = $00000004,
-   STATE_FOCUS            = $00000008,
-   STATE_VISITED          = $00000010,
-   STATE_CURRENT          = $00000020,
-   STATE_CHECKED          = $00000040,
-   STATE_DISABLED         = $00000080,
-   STATE_READONLY         = $00000100,
-   STATE_EXPANDED         = $00000200,
-   STATE_COLLAPSED        = $00000400,
-   STATE_INCOMPLETE       = $00000800,
-   STATE_ANIMATING        = $00001000,
-   STATE_FOCUSABLE        = $00002000,
-   STATE_ANCHOR           = $00004000,
-   STATE_SYNTHETIC        = $00008000,
-   STATE_OWNS_POPUP       = $00010000,
-   STATE_TABFOCUS         = $00020000,
-   STATE_EMPTY            = $00040000,
-   STATE_BUSY             = $00080000,
-   STATE_DRAG_OVER        = $00100000,
-   STATE_DROP_TARGET      = $00200000,
-   STATE_MOVING           = $00400000,
-   STATE_COPYING          = $00800000,
-   STATE_DRAG_SOURCE      = $01000000,
-   STATE_DROP_MARKER      = $02000000,
-   STATE_PRESSED          = $04000000,
-   STATE_POPUP            = $08000000,
-   STATE_IS_LTR           = $10000000,
-   STATE_IS_RTL           = $20000000,
-   ELEMENT_STATE_BITS_DUMMY = MAXINT
+    STATE_LINK             = $00000001,
+    STATE_HOVER            = $00000002,
+    STATE_ACTIVE           = $00000004,
+    STATE_FOCUS            = $00000008,
+    STATE_VISITED          = $00000010,
+    STATE_CURRENT          = $00000020,
+    STATE_CHECKED          = $00000040,
+    STATE_DISABLED         = $00000080,
+    STATE_READONLY         = $00000100,
+    STATE_EXPANDED         = $00000200,
+    STATE_COLLAPSED        = $00000400,
+    STATE_INCOMPLETE       = $00000800,
+    STATE_ANIMATING        = $00001000,
+    STATE_FOCUSABLE        = $00002000,
+    STATE_ANCHOR           = $00004000,
+    STATE_SYNTHETIC        = $00008000,
+    STATE_OWNS_POPUP       = $00010000,
+    STATE_TABFOCUS         = $00020000,
+    STATE_EMPTY            = $00040000,
+    STATE_BUSY             = $00080000,
+    STATE_DRAG_OVER        = $00100000,
+    STATE_DROP_TARGET      = $00200000,
+    STATE_MOVING           = $00400000,
+    STATE_COPYING          = $00800000,
+    STATE_DRAG_SOURCE      = $01000000,
+    STATE_DROP_MARKER      = $02000000,
+    STATE_PRESSED          = $04000000,
+    STATE_POPUP            = $08000000,
+    STATE_IS_LTR           = $10000000,
+    STATE_IS_RTL           = $20000000,
+    ELEMENT_STATE_BITS_DUMMY = MAXINT
   );
 
 
@@ -322,7 +319,7 @@ type
     SCROLL_BAR_GET_VALUE,
     SCROLL_BAR_SET_VALUE,
 
-    TEXT_EDIT_GET_CARET_POSITION, 
+    TEXT_EDIT_GET_CARET_POSITION,
     TEXT_EDIT_GET_SELECTION_TEXT, // p - TEXT_SELECTION_PARAMS
     TEXT_EDIT_GET_SELECTION_HTML, // p - TEXT_SELECTION_PARAMS
     TEXT_EDIT_CHAR_POS_AT_XY,     // p - TEXT_EDIT_CHAR_POS_AT_XY_PARAMS
@@ -340,12 +337,48 @@ type
   end;
   PMETHOD_PARAMS = ^METHOD_PARAMS;
 
-  IS_EMPTY_PARAMS = packed record
+  TEXT_VALUE_PARAMS = record
+    methodID: BEHAVIOR_METHOD_IDENTIFIERS;
+    text: PWideChar;
+    length: UINT;
+  end;
+  PTEXT_VALUE_PARAMS = ^TEXT_VALUE_PARAMS;
+
+  VALUE_PARAMS = packed record
+    methodID: BEHAVIOR_METHOD_IDENTIFIERS;
+    val: TSciterValue;
+  end;
+  PVALUE_PARAMS = ^VALUE_PARAMS;
+
+  TEXT_EDIT_SELECTION_PARAMS = record
+    methodID: BEHAVIOR_METHOD_IDENTIFIERS;
+    selection_start: UINT;
+    selection_end: UINT;
+  end;
+  PTEXT_EDIT_SELECTION_PARAMS = ^TEXT_EDIT_SELECTION_PARAMS;
+
+  TEXT_EDIT_REPLACE_SELECTION_PARAMS = record
+    methodID: BEHAVIOR_METHOD_IDENTIFIERS;
+    text: PWideChar;
+    text_length: UINT;
+  end;
+  PTEXT_EDIT_REPLACE_SELECTION_PARAMS = ^TEXT_EDIT_REPLACE_SELECTION_PARAMS;
+
+  TEXT_EDIT_CHAR_POS_AT_XY_PARAMS = record
+    methodID: BEHAVIOR_METHOD_IDENTIFIERS;
+    x: Integer; // in
+    y: Integer; // in
+    char_pos: Integer; // out
+    he: HELEMENT; // out
+    he_pos: Integer; // out
+  end;
+  PTEXT_EDIT_CHAR_POS_AT_XY_PARAMS = ^TEXT_EDIT_CHAR_POS_AT_XY_PARAMS;
+
+  IS_EMPTY_PARAMS = record
     methodID: BEHAVIOR_METHOD_IDENTIFIERS;
     is_empty: UINT;
   end;
   PIS_EMPTY_PARAMS = ^IS_EMPTY_PARAMS;
-
 
   REQUEST_PARAM = record
     name: PWideChar;

@@ -59,6 +59,7 @@ object MainForm: TMainForm
       PopupMenu = ctxSciter
       TabOrder = 1
       OnDocumentComplete = Sciter1DocumentComplete
+      OnLoadData = Sciter1LoadData
       OnMessage = Sciter1Message
       OnScriptingCall = Sciter1ScriptingCall
     end
