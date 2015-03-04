@@ -969,7 +969,12 @@ begin
   if prms = nil then Exit;
   if tag = nil then Exit;
 
-  pElement := TObject(tag) as TElement;
+  try
+    pElement := TObject(tag) as TElement;
+  except
+    on E:EInvalidCast do
+      Exit;
+  end;
 
   if pElement = nil then Exit;
 
@@ -1275,7 +1280,6 @@ var
   pClass: TElementClass;
 begin
   Result := 0;
-
   sBehaviorName := AnsiString(data.behaviorName);
   if Behaviors <> nil then
   begin
@@ -2476,11 +2480,14 @@ end;
 function TElement.HandleInitialization(
   var params: INITIALIZATION_PARAMS): BOOL;
 begin
+  Result := False;
+  if BehaviorName = '' then Exit;
+  
   case params.cmd of
     BEHAVIOR_ATTACH: HandleBehaviorAttach;
     BEHAVIOR_DETACH: HandleBehaviorDetach;
   end;
-  Result := False;
+
 end;
 
 function TElement.HandleKey(var params: KEY_PARAMS): BOOL;

@@ -8,10 +8,17 @@ uses
 type
   TDemoBehavior = class(TElement)
   private
-    FTextArea: IElement;
+    FWeight: IElement;
+    FWeightEvents: IElementEvents;
+    FHeight: IElement;
+    FHeightEvents: IElementEvents;
+    FBodyIndex: IElement;
     procedure OnMethodCallHandler(ASender: TObject; const Args: TElementOnScriptingCallArgs);
+    procedure OnValueChanged(Sender: TObject; const Args: TElementOnControlEventArgs);
+    procedure RecalcBMI;
   protected
     procedure DoBehaviorAttach; override;
+    procedure DoBehaviorDetach; override;
     procedure DoMouse(const Args: TElementOnMouseEventArgs); override;
     function GetValue: OleVariant; override;
     procedure SetValue(Value: OleVariant); override;
@@ -24,6 +31,9 @@ type
   end;
 
 implementation
+
+uses
+  Variants;
 
 { TDemoBehavior }
 
@@ -40,56 +50,87 @@ end;
 
 function TDemoBehavior.GetValue: OleVariant;
 begin
-  Result := FTextArea.Text;
+  Result := FBodyIndex.Value;
 end;
 
 procedure TDemoBehavior.DoBehaviorAttach;
 begin
   Attr['style'] := 'border: 1px dotted #666666; background-color: #FFCCCC; padding: 20px';
-  InnerHtml := '<h4>Behavior attach OK. Class that implements the behavior is ' + Self.ClassName + '</h4>';
-  FTextArea := CreateElement('textarea', 'some text');
-  AppendChild(FTextArea);
+  InnerHtml :=  '<h4>Calculate your Body Mass Index (BMI)</h4>' +
+    '<div>' +
+    '<div><label for="txtWeight">Weight (kg): </label><input format="fdigits:0; leading-zero:true;" type="decimal" id="txtWeight" style="width: 100px" min="0" max="200" step="1" value="65.0"/></div>' +
+    '<div><label for="txtHeight">Height (cm): </label><input format="fdigits:0; leading-zero:true;" type="decimal" id="txtHeight" style="width: 100px" min="0" max="300" step="1" value="170.0"/></div>' +
+    '<div><label for="txtBodyIndex">Body index: </label><input format="fdigits:2; leading-zero:true;" type="decimal" id="txtBodyIndex" style="width: 100px" step="0.1" readonly="readonly" value="0.0" /></div>' +
+    '</div>';
+  FWeight := Self.Select('#txtWeight');
+  FWeightEvents := FWeight as IElementEvents;
+  FWeightEvents.OnControlEvent := Self.OnValueChanged;
+  FHeight := Self.Select('#txtHeight');
+  FHeightEvents := FHeight as IElementEvents;
+  FHeightEvents.OnControlEvent := Self.OnValueChanged;
+  FBodyIndex := Self.Select('#txtBodyIndex');
+  RecalcBMI;
 end;
 
 procedure TDemoBehavior.DoMouse(const Args: TElementOnMouseEventArgs);
 begin
-  if Args.EventType = MOUSE_UP then
-  begin
-    ShowMessage('Behavior MouseUp event is being handled.');
-  end;
+  
 end;
 
 procedure TDemoBehavior.OnMethodCallHandler(ASender: TObject; const Args: TElementOnScriptingCallArgs);
-var
-  sText: WideString;
 begin
-  if Args.Method = 'nativeValue' then
-  begin
-    sText := GetValue;
-    Args.ReturnValue := sText;
-    Args.Handled := True;
-  end;
+
 end;
 
 destructor TDemoBehavior.Destroy;
 begin
-
+  FWeightEvents := nil;
+  FHeightEvents := nil;
+  FHeight := nil;
+  FWeight := nil;
   inherited;
 end;
 
 function TDemoBehavior.GetText: WideString;
 begin
-  Result := FTextArea.Text;
+  Result := FBodyIndex.Text;
 end;
 
 procedure TDemoBehavior.SetText(const Value: WideString);
 begin
-  FTextArea.Text := Value;
 end;
 
 procedure TDemoBehavior.SetValue(Value: OleVariant);
 begin
-  FTextArea.Value := Value;
+end;
+
+procedure TDemoBehavior.OnValueChanged(Sender: TObject;
+  const Args: TElementOnControlEventArgs);
+begin
+  if Args.EventType = EDIT_VALUE_CHANGED then
+    RecalcBMI;
+end;
+
+procedure TDemoBehavior.RecalcBMI;
+var
+  w: OleVariant;
+  h: OleVariant;
+begin
+  try
+    w := FWeight.Value;
+    h := FHeight.Value;
+    if VarIsNumeric(w) and VarIsNumeric(h) and (h <> 0) then
+      FBodyIndex.Value := w / ((h / 100) * (h / 100))
+    else
+      FBodyIndex.Value := Unassigned;
+  except
+    FBodyIndex.Value := Unassigned;
+  end;
+end;
+
+procedure TDemoBehavior.DoBehaviorDetach;
+begin
+  inherited;
 end;
 
 initialization

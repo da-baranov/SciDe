@@ -1120,7 +1120,7 @@ begin
   end
     else
   begin
-    raise ESciterException.CreateFmt('Cannot register native function "%s" (unexprected error). Seems that object with same name already exists.', [Name]);
+    raise ESciterException.CreateFmt('Cannot register native function "%s" (unexpected error). Seems that object with same name already exists.', [Name]);
   end;
 end;
 
@@ -1261,8 +1261,8 @@ var
   j: Integer;
 begin
   API.ValueInit(@sArrItem);
-  
-  API.ValueType(Value, pType, pUnits);
+  if API.ValueType(Value, pType, pUnits) <> HV_OK then
+    raise ESciterException.Create('Unknown Sciter value type.');
   case pType of
     T_ARRAY:
       begin

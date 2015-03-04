@@ -223,7 +223,7 @@
   
   function self#cmdDemoBehaviorGetValue.onClick()
   {
-    view.msgbox(#alert, self#divDemoBehavior.value);
+    view.msgbox(#alert, self#txtBodyIndex.value);
   }
   function self#cmdDemoBehaviorSetValue.onClick()
   {
@@ -541,6 +541,27 @@ end;
 <!--************************************************************************-->  
   <section>
     <h2>Native behavior demo</h2>
+    <pre class="code">
+&lt;!-- HTML --&gt;
+&lt;div style="behavior: DemoBehavior" id="divDemoBehavior"/&gt;
+
+{ Delphi code }
+TDemoBehavior = class(TElement)
+...
+
+class function TDemoBehavior.BehaviorName: AnsiString;
+begin
+  Result := 'DemoBehavior';
+end;
+
+...
+
+initialization
+  <b>SciterRegisterBehavior(TDemoBehavior);</b>
+
+</pre>
+
+    
     <div style="behavior: DemoBehavior" id="divDemoBehavior">
     
     </div>
