@@ -81,7 +81,7 @@ object MainForm: TMainForm
     end
     object GC: TButton
       Left = 10
-      Top = 140
+      Top = 172
       Width = 160
       Height = 25
       Caption = 'Invoke GC'
@@ -118,13 +118,13 @@ object MainForm: TMainForm
       Top = 110
       Width = 160
       Height = 25
-      Caption = 'Call native SayHello'
+      Caption = 'Call native method "Echo"'
       TabOrder = 4
       OnClick = cmdCallNativeClick
     end
     object cmdGetCaseHistory: TButton
       Left = 10
-      Top = 170
+      Top = 202
       Width = 160
       Height = 25
       Caption = 'Show case history JSON'
@@ -142,12 +142,21 @@ object MainForm: TMainForm
     end
     object Button1: TButton
       Left = 10
-      Top = 210
+      Top = 242
       Width = 161
       Height = 25
       Caption = 'Test JSON serialization'
       TabOrder = 7
       OnClick = Button1Click
+    end
+    object cmdCallTiScript: TButton
+      Left = 10
+      Top = 142
+      Width = 160
+      Height = 25
+      Caption = 'Call TIScript method "Echo"'
+      TabOrder = 8
+      OnClick = cmdCallTiScriptClick
     end
   end
   object mm1: TMainMenu
@@ -195,9 +204,5 @@ object MainForm: TMainForm
     Filter = 'HTML files|*.htm*'
     Left = 223
     Top = 270
-  end
-  object ApplicationEvents1: TApplicationEvents
-    Left = 353
-    Top = 60
   end
 end

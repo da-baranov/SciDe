@@ -640,7 +640,7 @@ begin
       OleCheck(typeInfo.GetFuncDesc(i, funcDesc));
 
       sfuncName := nil;
-      typeInfo.GetNames(funcDesc.memid, @sfuncName, 1, cNames);
+      typeInfo.GetNames(funcDesc.memid, PBStrList(@sfuncName), 1, cNames);
       funcName := WideString(sfuncName);
 
       pMethodInfo := Methods.LookupMethod(AnsiString(funcName));

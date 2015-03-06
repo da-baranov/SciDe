@@ -11,7 +11,6 @@ uses
 type
   TMainForm = class(TForm)
     Actions1: TMenuItem;
-    ApplicationEvents1: TApplicationEvents;
     Button1: TButton;
     cmdCallNative: TButton;
     cmdEval: TButton;
@@ -36,8 +35,10 @@ type
     txt1: TEdit;
     txt2: TEdit;
     txtLog: TMemo;
+    cmdCallTiScript: TButton;
     procedure Button1Click(Sender: TObject);
     procedure cmdCallNativeClick(Sender: TObject);
+    procedure cmdCallTiScriptClick(Sender: TObject);
     procedure cmdEvalClick(Sender: TObject);
     procedure cmdGetCaseHistoryClick(Sender: TObject);
     procedure cmdReloadClick(Sender: TObject);
@@ -108,8 +109,12 @@ end;
 
 procedure TMainForm.cmdCallNativeClick(Sender: TObject);
 begin
-  Sciter1.Eval('SayHello()');
-  // Sciter1.Call('global::SayHello', []); // crashes here
+  ShowMessage(Sciter1.Call('Echo', ['Echo "Hello World" OK']));
+end;
+
+procedure TMainForm.cmdCallTiScriptClick(Sender: TObject);
+begin
+  ShowMessage(Sciter1.TiScriptCall('', 'Echo', ['Echo "Hello World" OK']));
 end;
 
 procedure TMainForm.cmdEvalClick(Sender: TObject);
@@ -164,8 +169,8 @@ begin
   Sciter1.LoadUrl(FHomeURL);
 
   // Registering native functions
-  Sciter1.RegisterNativeFunction('CreateObject', @CreateObjectNative);
-  Sciter1.RegisterNativeFunction('SayHello',     @SayHelloNative);
+  Sciter1.RegisterNativeFunction('CreateObject', ptiscript_method(@CreateObjectNative));
+  Sciter1.RegisterNativeFunction('SayHello',     ptiscript_method(@SayHelloNative));
 
   // Registering native form
   nf := TNativeForm.Create;
@@ -179,6 +184,8 @@ begin
   pXml := CreateOleObject('MSXML2.DOMDocument');
   pXml.LoadXML('<xml><item>Foo</item><item>Bar</item></xml>');
   Sciter1.RegisterComObject('XML', pXml);
+
+  Sciter1.Println('Hello', []);
 end;
 
 procedure TMainForm.FormShow(Sender: TObject);

@@ -454,7 +454,7 @@ type
          cmd: BEHAVIOR_EVENTS;
     heTarget: HELEMENT;
           he: HELEMENT;
-      reason: Integer; // Actually UINT_PTR. This can be either EVENT_REASON or EDIT_CHANGED_REASON
+      reason: UINT_PTR;
         data: TSciterValue;
   end;
   PBEHAVIOR_EVENT_PARAMS = ^BEHAVIOR_EVENT_PARAMS;
