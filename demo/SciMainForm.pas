@@ -226,7 +226,7 @@ procedure TMainForm.OnBodyMethodCall(ASender: TObject;
 begin
   if Args.Method = 'Foo' then
   begin
-    ShowMessage(Args.Args[0]);
+    ShowMessage(Args.Argument[0]);
     Args.Handled := True;
   end;
 end;

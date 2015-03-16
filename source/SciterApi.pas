@@ -113,9 +113,10 @@ type
    SCITER_SET_SCRIPT_RUNTIME_FEATURES = 8, // value - combination of SCRIPT_RUNTIME_FEATURES flags.
    SCITER_SET_GFX_LAYER = 9,      // hWnd = NULL, value - GFX_LAYER
    SCITER_SET_DEBUG_MODE = 10,    // hWnd, value - TRUE/FALSE
-   SCITER_SET_UX_THEMING = 11     // hWnd = NULL, value - BOOL, TRUE - the engine will use "unisex" theme that is common for all platforms.
+   SCITER_SET_UX_THEMING = 11,    // hWnd = NULL, value - BOOL, TRUE - the engine will use "unisex" theme that is common for all platforms.
                                   // That UX theme is not using OS primitives for rendering input elements. Use it if you want exactly
                                   // the same (modulo fonts) look-n-feel on all platforms.
+   SCITER_RT_OPTIONS_DUMMY = MAXINT
   );
 
   SCN_LOAD_DATA = packed record
@@ -290,7 +291,8 @@ type
   TSciterValue = record
     t: UINT;
     u: UINT;
-    d: UInt64;
+    //d: UInt64;
+    d: Int64; // For D6 compatibility
   end;
   PSciterValue = ^TSciterValue;
 
@@ -341,13 +343,13 @@ type
     methodID: BEHAVIOR_METHOD_IDENTIFIERS;
     text: PWideChar;
     length: UINT;
-  end;
+  end deprecated;
   PTEXT_VALUE_PARAMS = ^TEXT_VALUE_PARAMS;
 
   VALUE_PARAMS = packed record
     methodID: BEHAVIOR_METHOD_IDENTIFIERS;
     val: TSciterValue;
-  end;
+  end deprecated;
   PVALUE_PARAMS = ^VALUE_PARAMS;
 
   TEXT_EDIT_SELECTION_PARAMS = record

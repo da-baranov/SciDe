@@ -166,17 +166,20 @@ type
   TElementOnScriptingCallArgs = class
   private
     FArgs: TOleVariantArray;
+    FArgumentsCount: Integer;
     FHandled: Boolean;
     FMethod: WideString;
     FParams: PSCRIPTING_METHOD_PARAMS;
     FReturnValue: OleVariant;
     FTarget: IElement;
+    function GetArg(const Index: Integer): OleVariant;
   protected
     constructor Create(const Sciter: TSciter; const ASelf: IElement; var params: SCRIPTING_METHOD_PARAMS); 
     procedure WriteRetVal;
   public
     destructor Destroy; override;
-    property Args: TOleVariantArray read FArgs;
+    property Argument[const Index: Integer]: OleVariant read GetArg;
+    property ArgumentsCount: Integer read FArgumentsCount;
     property Handled: Boolean read FHandled write FHandled;
     property Method: WideString read FMethod;
     property ReturnValue: OleVariant read FReturnValue write FReturnValue;
@@ -1308,10 +1311,12 @@ type
   end;
   PVer = ^TVer;
 var
-  ver: UINT;
+  verA: UINT;
+  verB: UINT;
 begin
-  ver := API.SciterVersion(true);
-  Result := WideFormat('3.0.%d.%d', [PVer(@ver)^.a, PVer(@ver)^.b]);
+  verA := API.SciterVersion(true);
+  verB := API.SciterVersion(false);
+  Result := WideFormat('%d.%d.%d.%d', [PVer(@verA)^.b, PVer(@verA)^.a, PVer(@verB)^.b, PVer(@verB)^.a]);
 end;
 
 function TSciter.HandleAttachBehavior(var data: SCN_ATTACH_BEHAVIOR): UINT;
@@ -2584,7 +2589,6 @@ begin
     GET_VALUE:
       begin
         ValueParams := PVALUE_PARAMS(@params);
-        API.ValueInit(@ValueParams.val);
         vValue := GetValue;
         V2S(vValue, @ValueParams.val);
         Result := True;
@@ -3247,16 +3251,17 @@ begin
   FHandled := False;
   FParams := @params;
   FTarget := ASelf;
+  FArgumentsCount := Integer(params.argc);
 
   API.ValueInit(@(params.rv));
 
-  SetLength(FArgs, params.argc);
+  SetLength(FArgs, FArgumentsCount);
   FMethod := WideString(AnsiString(params.name));
   
-  if params.argc > 0 then
+  if FArgumentsCount > 0 then
   begin
     pVal := params.argv;
-    for i := 0 to params.argc - 1 do
+    for i := 0 to FArgumentsCount - 1 do
     begin
       S2V(pVal, FArgs[i]);
       Inc(pVal);
@@ -3270,6 +3275,12 @@ begin
   SetLength(FArgs, 0);
   FReturnValue := Unassigned;
   inherited;
+end;
+
+function TElementOnScriptingCallArgs.GetArg(
+  const Index: Integer): OleVariant;
+begin
+  Result := FArgs[Index];
 end;
 
 procedure TElementOnScriptingCallArgs.WriteRetVal;
