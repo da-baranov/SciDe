@@ -1,6 +1,6 @@
 object MainForm: TMainForm
-  Left = 271
-  Top = 46
+  Left = 496
+  Top = 125
   Width = 1191
   Height = 775
   Caption = 'SciDe - test form'
@@ -21,14 +21,14 @@ object MainForm: TMainForm
     Left = 193
     Top = 0
     Width = 982
-    Height = 717
+    Height = 698
     Align = alClient
     BevelOuter = bvNone
     Caption = 'pnlContainer'
     TabOrder = 0
     object spl1: TSplitter
       Left = 0
-      Top = 528
+      Top = 509
       Width = 982
       Height = 5
       Cursor = crVSplit
@@ -36,7 +36,7 @@ object MainForm: TMainForm
     end
     object txtLog: TMemo
       Left = 0
-      Top = 533
+      Top = 514
       Width = 982
       Height = 184
       Align = alBottom
@@ -54,7 +54,7 @@ object MainForm: TMainForm
       Left = 0
       Top = 0
       Width = 982
-      Height = 528
+      Height = 509
       Align = alClient
       PopupMenu = ctxSciter
       TabOrder = 1
@@ -68,7 +68,7 @@ object MainForm: TMainForm
     Left = 0
     Top = 0
     Width = 193
-    Height = 717
+    Height = 698
     Align = alLeft
     BevelOuter = bvNone
     TabOrder = 1
@@ -79,21 +79,12 @@ object MainForm: TMainForm
       Height = 13
       Caption = '+'
     end
-    object GC: TButton
-      Left = 10
-      Top = 172
-      Width = 160
-      Height = 25
-      Caption = 'Invoke GC'
-      TabOrder = 0
-      OnClick = GCClick
-    end
     object txt1: TEdit
       Left = 20
       Top = 70
       Width = 33
       Height = 21
-      TabOrder = 1
+      TabOrder = 0
       Text = '2'
     end
     object txt2: TEdit
@@ -101,7 +92,7 @@ object MainForm: TMainForm
       Top = 70
       Width = 41
       Height = 21
-      TabOrder = 2
+      TabOrder = 1
       Text = '2'
     end
     object cmdEval: TButton
@@ -110,7 +101,7 @@ object MainForm: TMainForm
       Width = 61
       Height = 25
       Caption = 'Eval'
-      TabOrder = 3
+      TabOrder = 2
       OnClick = cmdEvalClick
     end
     object cmdCallNative: TButton
@@ -119,17 +110,8 @@ object MainForm: TMainForm
       Width = 160
       Height = 25
       Caption = 'Call native method "Echo"'
-      TabOrder = 4
+      TabOrder = 3
       OnClick = cmdCallNativeClick
-    end
-    object cmdGetCaseHistory: TButton
-      Left = 10
-      Top = 202
-      Width = 160
-      Height = 25
-      Caption = 'Show case history JSON'
-      TabOrder = 5
-      OnClick = cmdGetCaseHistoryClick
     end
     object cmdReload: TButton
       Left = 20
@@ -137,16 +119,16 @@ object MainForm: TMainForm
       Width = 151
       Height = 25
       Caption = 'Refresh'
-      TabOrder = 6
+      TabOrder = 4
       OnClick = cmdReloadClick
     end
     object Button1: TButton
       Left = 10
-      Top = 242
+      Top = 172
       Width = 161
       Height = 25
       Caption = 'Test JSON serialization'
-      TabOrder = 7
+      TabOrder = 5
       OnClick = Button1Click
     end
     object cmdCallTiScript: TButton
@@ -155,9 +137,17 @@ object MainForm: TMainForm
       Width = 160
       Height = 25
       Caption = 'Call TIScript method "Echo"'
-      TabOrder = 8
+      TabOrder = 6
       OnClick = cmdCallTiScriptClick
     end
+  end
+  object sbr: TStatusBar
+    Left = 0
+    Top = 698
+    Width = 1175
+    Height = 19
+    Panels = <>
+    SimplePanel = True
   end
   object mm1: TMainMenu
     Left = 209
@@ -204,5 +194,10 @@ object MainForm: TMainForm
     Filter = 'HTML files|*.htm*'
     Left = 223
     Top = 270
+  end
+  object ApplicationEvents1: TApplicationEvents
+    OnMessage = ApplicationEvents1Message
+    Left = 60
+    Top = 230
   end
 end

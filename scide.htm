@@ -5,7 +5,7 @@
   <title>SciDe examples</title>
   <style>  
   @import url(res:richtext.css);
-  @import url(res:plus.css);
+  //@import url(res:plus.css);
   
   h2
   {
@@ -29,7 +29,7 @@
   }
   </style>
   <script type="text/tiscript">
-  include "res:plus.tis";
+  //include "res:plus.tis";
   
   function Echo(a)
   {
@@ -194,33 +194,7 @@
       i++;
     }
   }
-  
-  function self#frmCaseHistory.onControlEvent(e)
-  {
-    if (e.type == Event.EDIT_VALUE_CHANGED) 
-    {
-      self#preCaseHistory.text = String.printf("%V", caseHistory);
-    }
-  }
-
-  var caseHistory = {
-    id: "2015-1-12",
-    patient: {
-      firstName: "John",
-      lastName: "Doe"
-    },
-    visits: [
-      { date: "2015-01-01", reason: "Abdominal pain" },
-      { date: "2015-02-01", reason: "Bone fracture" }
-    ]
-  };
-  
-  function self#cmdAddVisit.onClick()
-  {
-    var visit = { date: "2015-03-01", reason: "Headache" };
-    caseHistory.visits.push(visit);
-  }
-  
+    
   function self#cmdSciterAlert.onClick()
   {
     view.msgbox(#alert, "Sciter");
@@ -267,46 +241,20 @@
   
 <!--************************************************************************-->
   <section>
-    <h2>Event handling</h2>
+    <h2>Event handling using IElementEvents interface</h2>
     <input type="text" id="txtEvents" style="width: 50%" value="This input has event handlers attached" />
   </section>
-
-<!--************************************************************************-->  
+  
+<!--************************************************************************-->
   <section>
-    <h2>Case History - Plus databinding demo (experimental)</h2>
-    
-    <form id="frmCaseHistory" model="caseHistory" >
-      <table>
-        <tr>
-          <td>ID</td><td><input type="text" name="id" /></td>
-        </tr>
-        <tr>
-          <td>Patient First Name</td><td><input type="text" name="patient.firstName" /></td>
-        </tr>
-        <tr>
-          <td>Patient Last Name</td><td><input type="text" name="patient.lastName" /></td>
-        </tr>
-      </table>
-      <label><strong>Visits</strong></label>
-      <table>
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Reason</th>
-          </tr>
-        </thead>
-        <tbody each="visit in visits">
-          <tr>
-            <td><input type="text" name="visit.date"   /></td>
-            <td><input type="text" name="visit.reason" /></td>
-          </tr>
-        </tbody>
-      </table>
-      <button id="cmdAddVisit">Add visit</button>
-    </form>
-    <pre class="out" id="preCaseHistory">
-    
-    </pre>
+    <h2>Event handling using TSciter.Subscribe function</h2>
+    <div>
+      <div>input|text: <input class="es" /></div>
+      <div>input|checkbox: <input type="checkbox" class="es" /></div>
+      <div>textarea: <textarea class="es"></textarea></div>
+      <div><button class="es1">Click me</button></div>
+      <div>Type something here: <input class="es2" /></div>
+    </div>
   </section>
 
 <!--************************************************************************-->  
@@ -539,7 +487,7 @@ end;
 
 <!--************************************************************************-->  
   <section>
-    <h2>Popups problem (partially resolved)</h2>
+    <h2>Popups problem (resolved)</h2>
     <button id="cmdPopup">Show alert</button>
   </section>
   

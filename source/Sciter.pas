@@ -30,6 +30,7 @@ type
   TElementOnMouseEventArgs = class
   private
     FButtons: MOUSE_BUTTONS;
+    FElement: IElement;
     FEventType: MOUSE_EVENTS;
     FHandled: Boolean;
     FKeys: KEYBOARD_STATES;
@@ -39,10 +40,11 @@ type
     FX: Integer;
     FY: Integer;
   protected
-    constructor Create(const Sciter: TSciter; var params: MOUSE_PARAMS);
+    constructor Create(const Sciter: TSciter; const ASelf: IElement; var params: MOUSE_PARAMS);
   public
     destructor Destroy; override;
     property Buttons: MOUSE_BUTTONS read FButtons;
+    property Element: IElement read FElement;
     property EventType: MOUSE_EVENTS read FEventType;
     property Handled: Boolean read FHandled write FHandled;
     property Keys: KEYBOARD_STATES read FKeys;
@@ -57,15 +59,17 @@ type
 
   TElementOnKeyEventArgs = class
   private
+    FElement: IElement;
     FEventType: KEY_EVENTS;
     FHandled: Boolean;
     FKeyCode: Integer;
     FKeys: KEYBOARD_STATES;
     FTarget: IElement;
   protected
-    constructor Create(const Sciter: TSciter; var params: KEY_PARAMS);
+    constructor Create(const Sciter: TSciter; const ASelf: IElement; var params: KEY_PARAMS);
   public
     destructor Destroy; override;
+    property Element: IElement read FElement;
     property EventType: KEY_EVENTS read FEventType;
     property Handled: Boolean read FHandled write FHandled;
     property KeyCode: Integer read FKeyCode;
@@ -77,13 +81,15 @@ type
 
   TElementOnFocusEventArgs = class
   private
+    FElement: IElement;
     FEventType: FOCUS_EVENTS;
     FHandled: Boolean;
     FTarget: IElement;
   protected
-    constructor Create(const Sciter: TSciter; var params: FOCUS_PARAMS);
+    constructor Create(const Sciter: TSciter; const ASelf: IElement; var params: FOCUS_PARAMS);
   public
     destructor Destroy; override;
+    property Element: IElement read FElement;
     property EventType: FOCUS_EVENTS read FEventType;
     property Handled: Boolean read FHandled write FHandled;
     property Target: IElement read FTarget;
@@ -94,14 +100,14 @@ type
   TElementOnTimerEventArgs = class
   private
     FContinue: Boolean;
-    FTarget: IElement;
+    FElement: IElement;
     FTimerId: UINT;
   protected
     constructor Create(const AThis: IElement; var params: TIMER_PARAMS);
   public
     destructor Destroy; override;
     property Continue: Boolean read FContinue write FContinue;
-    property Target: IElement read FTarget;
+    property Element: IElement read FElement;
     property TimerId: UINT read FTimerId;
   end;
 
@@ -109,15 +115,17 @@ type
 
   TElementOnControlEventArgs = class
   private
+    FElement: IElement;
     FEventType: BEHAVIOR_EVENTS;
     FHandled: Boolean;
     FReason: Integer;
     FSource: IElement;
     FTarget: IElement;
   protected
-    constructor Create(const Sciter: TSciter; var params: BEHAVIOR_EVENT_PARAMS);
+    constructor Create(const Sciter: TSciter; const ASelf: IElement; var params: BEHAVIOR_EVENT_PARAMS);
   public
     destructor Destroy; override;
+    property Element: IElement read FElement;
     property EventType: BEHAVIOR_EVENTS read FEventType;
     property Handled: Boolean read FHandled write FHandled;
     property Reason: Integer read FReason;
@@ -129,15 +137,17 @@ type
 
   TElementOnScrollEventArgs = class
   private
+    FElement: IElement;
     FEventType: SCROLL_EVENTS;
     FHandled: Boolean;
     FIsVertical: Boolean;
     FPos: Integer;
     FTarget: IElement;
   protected
-    constructor Create(const Sciter: TSciter; var params: SCROLL_PARAMS);
+    constructor Create(const Sciter: TSciter; const ASelf: IElement; var params: SCROLL_PARAMS);
   public
     destructor Destroy; override;
+    property Element: IElement read FElement;
     property EventType: SCROLL_EVENTS read FEventType;
     property Handled: Boolean read FHandled write FHandled;
     property IsVertical: Boolean read FIsVertical;
@@ -149,14 +159,14 @@ type
 
   TElementOnSizeEventArgs = class
   private
+    FElement: IElement;
     FHandled: Boolean;
-    FTarget: IElement;
   protected
     constructor Create(const ASelf: IElement);
   public
     destructor Destroy; override;
+    property Element: IElement read FElement;
     property Handled: Boolean read FHandled write FHandled;
-    property Target: IElement read FTarget;
   end;
 
   TElementOnSize = procedure(ASender: TObject; const Args: TElementOnSizeEventArgs) of object;
@@ -167,23 +177,23 @@ type
   private
     FArgs: TOleVariantArray;
     FArgumentsCount: Integer;
+    FElement: IElement;
     FHandled: Boolean;
     FMethod: WideString;
     FParams: PSCRIPTING_METHOD_PARAMS;
     FReturnValue: OleVariant;
-    FTarget: IElement;
     function GetArg(const Index: Integer): OleVariant;
   protected
-    constructor Create(const Sciter: TSciter; const ASelf: IElement; var params: SCRIPTING_METHOD_PARAMS); 
+    constructor Create(const Sciter: TSciter; const ASelf: IElement; var params: SCRIPTING_METHOD_PARAMS);
     procedure WriteRetVal;
   public
     destructor Destroy; override;
     property Argument[const Index: Integer]: OleVariant read GetArg;
     property ArgumentsCount: Integer read FArgumentsCount;
+    property Element: IElement read FElement;
     property Handled: Boolean read FHandled write FHandled;
     property Method: WideString read FMethod;
     property ReturnValue: OleVariant read FReturnValue write FReturnValue;
-    property Target: IElement read FTarget;
   end;
 
   TElementOnScriptingCall = procedure(ASender: TObject; const Args: TElementOnScriptingCallArgs) of object;
@@ -194,19 +204,21 @@ type
     FDeltaTime: UINT;
     FDeltaV: Double;
     FDeltaXY: TSize;
+    FElement: IElement;
     FFlags: Integer;
     FHandled: Boolean;
     FPos: TPoint;
     FPosView: TPoint;
     FTarget: IElement;
   protected
-    constructor Create(const Sciter: TSciter; var params: GESTURE_PARAMS);
+    constructor Create(const Sciter: TSciter; const ASelf: IElement; var params: GESTURE_PARAMS);
   public
     destructor Destroy; override;
     property Cmd: GESTURE_CMD read FCmd;
     property DeltaTime: UINT read FDeltaTime;
     property DeltaV: Double read FDeltaV;
     property DeltaXY: TSize read FDeltaXY;
+    property Element: IElement read FElement;
     property Flags: Integer read FFlags;
     property Handled: Boolean read FHandled write FHandled;
     property Pos: TPoint read FPos;
@@ -219,22 +231,22 @@ type
   TElementOnDataArrivedEventArgs = class
   private
     FDataType: Integer;
+    FElement: IElement;
     FHandled: Boolean;
     FInitiator: IElement;
     FStatus: Integer;
     FStream: TStream;
-    FTarget: IElement;
     FUri: WideString;
   protected
     constructor Create(const Sciter: TSciter; const ASelf: IElement; var params: DATA_ARRIVED_PARAMS);
   public
     destructor Destroy; override;
     property DataType: Integer read FDataType;
+    property Element: IElement read FElement;
     property Handled: Boolean read FHandled write FHandled;
     property Initiator: IElement read FInitiator;
     property Status: Integer read FStatus;
     property Stream: TStream read FStream;
-    property Target: IElement read FTarget;
     property Uri: WideString read FUri;
   end;
 
@@ -302,6 +314,20 @@ type
     property OnScroll: TElementOnScroll read GetOnScroll write SetOnScroll;
     property OnSize: TElementOnSize read GetOnSize write SetOnSize;
     property OnTimer: TElementOnTimer read GetOnTimer write SetOnTimer;
+  end;
+  
+  { For internal use }
+  IElementEventsFilter = interface
+  ['{136A3D8C-2D4E-4902-8252-2373D8E61DEE}']
+    function GetControlEventsFilter: BEHAVIOR_EVENTS;
+    function GetKeyFilter: KEY_EVENTS;
+    function GetMouseFilter: MOUSE_EVENTS;
+    procedure SetControlEventsFilter(Evts: BEHAVIOR_EVENTS);
+    procedure SetKeyFilter(Evts: KEY_EVENTS);
+    procedure SetMouseFilter(Evts: MOUSE_EVENTS);
+    property ControlEventsFilter: BEHAVIOR_EVENTS read GetControlEventsFilter write SetControlEventsFilter;
+    property KeyFilter: KEY_EVENTS read GetKeyFilter write SetKeyFilter;
+    property MouseFilter: MOUSE_EVENTS read GetMouseFilter write SetMouseFilter;
   end;
 
   IElement = interface
@@ -387,12 +413,15 @@ type
 
   IElements = type IElementCollection;
 
-  TElement = class(TInterfacedObject, IElement, IElementEvents)
+  TElement = class(TInterfacedObject, IElement, IElementEvents, IElementEventsFilter)
   private
     FAttrAnsiName: AnsiString;
     FAttrName: WideString;
     FAttrValue: WideString;
     FELEMENT: HELEMENT;
+    FFilterControlEvents: BEHAVIOR_EVENTS;
+    FFilterKey: KEY_EVENTS;
+    FFilterMouse: MOUSE_EVENTS;
     FHChild: HELEMENT;
     FHtml: WideString;
     FOnBehaviorEvent: TElementOnBehaviorEvent;
@@ -414,11 +443,14 @@ type
     function GetAttr(const AttrName: WideString): WideString;
     function GetAttrCount: Integer;
     function GetChildrenCount: Integer;
+    function GetControlEventsFilter: BEHAVIOR_EVENTS;
     function GetEnabled: boolean;
     function GetHandle: HELEMENT;
     function GetID: WideString;
     function GetIndex: Integer;
     function GetInnerHtml: WideString;
+    function GetKeyFilter: KEY_EVENTS;
+    function GetMouseFilter: MOUSE_EVENTS;
     function GetOnControlEvent: TElementOnControlEvent;
     function GetOnDataArrived: TElementOnDataArrived;
     function GetOnFocus: TElementOnFocus;
@@ -450,8 +482,11 @@ type
     function HandleSize: BOOL;
     function HandleTimer(var params: TIMER_PARAMS): BOOL;
     procedure SetAttr(const AttrName: WideString; const Value: WideString);
+    procedure SetControlEventsFilter(Evts: BEHAVIOR_EVENTS);
     procedure SetID(const Value: WideString);
     procedure SetInnerHtml(const Value: WideString);
+    procedure SetKeyFilter(Evts: KEY_EVENTS);
+    procedure SetMouseFilter(Evts: MOUSE_EVENTS);
     procedure SetOnControlEvent(const Value: TElementOnControlEvent);
     procedure SetOnDataArrived(const Value: TElementOnDataArrived);
     procedure SetOnFocus(const Value: TElementOnFocus);
@@ -580,6 +615,7 @@ type
   TSciter = class(TCustomControl)
   private
     FBaseUrl: WideString;
+    FEventList: TInterfaceList;
     FHomeURL: WideString;
     FHtml: WideString;
     FManagedElements: TElementList;
@@ -596,6 +632,7 @@ type
     function GetHVM: HVM;
     function GetRoot: IElement;
     function GetVersion: WideString;
+    function MainWindowHook(var Message: TMessage): Boolean;
     procedure SetOnMessage(const Value: TSciterOnMessage);
   protected
     procedure CreateParams(var Params: TCreateParams); override;
@@ -648,10 +685,20 @@ type
     procedure SetObject(const Name: WideString; const Json: WideString);
     procedure SetOption(const Key: SCITER_RT_OPTIONS; const Value: UINT_PTR);
     procedure ShowInspector(const Element: IElement = nil);
+    function Subscribe(const Selector: WideString; const Event: BEHAVIOR_EVENTS; const Handler: TElementOnControlEvent): TSciter; overload;
+    function Subscribe(const Selector: WideString; const Event: KEY_EVENTS;      const Handler: TElementOnKey): TSciter; overload;
+    function Subscribe(const Selector: WideString; const Event: MOUSE_EVENTS;    const Handler: TElementOnMouse): TSciter; overload;
+    function Subscribe(const Selector: WideString; const Handler: TElementOnDataArrived): TSciter; overload;
+    function Subscribe(const Selector: WideString; const Handler: TElementOnGesture): TSciter; overload;
+    function Subscribe(const Selector: WideString; const Handler: TElementOnScriptingCall): TSciter; overload;
+    function Subscribe(const Selector: WideString; const Handler: TElementOnScroll): TSciter; overload;
+    function Subscribe(const Selector: WideString; const Handler: TElementOnSize): TSciter; overload;
+    function Subscribe(const Selector: WideString; const Handler: TElementOnTimer): TSciter; overload;
     function TiScriptCall(const ObjName: WideString; const Method: WideString; const Args: array of OleVariant): OleVariant;
     function TiScriptValueToJson(Obj: tiscript_value): WideString;
     function TryCall(const FunctionName: WideString; const Args: array of OleVariant): boolean; overload;
     function TryCall(const FunctionName: WideString; const Args: array of OleVariant; out RetVal: OleVariant): boolean; overload;
+    procedure UnsubscribeAll;
     procedure UpdateWindow;
     property Html: WideString read GetHtml;
     property Root: IElement read GetRoot;
@@ -1101,7 +1148,9 @@ end;
 constructor TSciter.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FTimer := 1;
+  Application.HookMainWindow(MainWindowHook);
+  FEventList := TInterfaceList.Create;
+  FTimer := $F;
   FManagedElements := TElementList.Create(False);
   Width := 300;
   Height := 300;
@@ -1110,7 +1159,10 @@ end;
 
 destructor TSciter.Destroy;
 begin
+  FEventList.Clear;
+  FEventList.Free;
   FManagedElements.Free;
+  Application.UnhookMainWindow(MainWindowHook);
   inherited;
 end;
 
@@ -1355,6 +1407,7 @@ var
   bHandled: Integer;
 begin
   Result := False;
+  UnsubscribeAll;
   if Assigned(FOnDocumentComplete) then
     FOnDocumentComplete(Self, Url);
 
@@ -1502,6 +1555,13 @@ begin
     Result := API.SciterLoadFile(Handle, PWideChar(URL));
   end
   // else URL will be loaded in CreateWnd
+end;
+
+function TSciter.MainWindowHook(var Message: TMessage): Boolean;
+begin
+  Result := False;
+  if Message.Msg = WM_ENABLE then
+    Result := True;
 end;
 
 { Tweaking TWinControl focus behavior }
@@ -1755,6 +1815,169 @@ begin
   }
 end;
 
+function TSciter.Subscribe(const Selector: WideString;
+  const Event: BEHAVIOR_EVENTS;
+  const Handler: TElementOnControlEvent): TSciter;
+var
+  pCol: IElementCollection;
+  pEvents: IElementEvents;
+  pFilter: IElementEventsFilter;
+  i: Integer;
+begin
+  pCol := SelectAll(Selector);
+  for i := 0 to pCol.Count - 1 do
+  begin
+    pEvents := pCol[i] as IElementEvents;
+    pFilter := pCol[i] as IElementEventsFilter;
+    pFilter.ControlEventsFilter := Event;
+    pEvents.OnControlEvent := Handler;
+    FEventList.Add(pEvents);
+  end;
+  Result := Self;
+end;
+
+function TSciter.Subscribe(const Selector: WideString;
+  const Event: KEY_EVENTS; const Handler: TElementOnKey): TSciter;
+var
+  pCol: IElementCollection;
+  pEvents: IElementEvents;
+  pFilter: IElementEventsFilter;
+  i: Integer;
+begin
+  pCol := SelectAll(Selector);
+  for i := 0 to pCol.Count - 1 do
+  begin
+    pEvents := pCol[i] as IElementEvents;
+    pFilter := pCol[i] as IElementEventsFilter;
+    pFilter.KeyFilter := Event;
+    pEvents.OnKey := Handler;
+    FEventList.Add(pEvents);
+  end;
+  Result := Self;
+end;
+
+function TSciter.Subscribe(const Selector: WideString;
+  const Event: MOUSE_EVENTS; const Handler: TElementOnMouse): TSciter;
+var
+  pCol: IElementCollection;
+  pEvents: IElementEvents;
+  pFilter: IElementEventsFilter;
+  i: Integer;
+begin
+  pCol := SelectAll(Selector);
+  for i := 0 to pCol.Count - 1 do
+  begin
+    pEvents := pCol[i] as IElementEvents;
+    pFilter := pCol[i] as IElementEventsFilter;
+    pFilter.MouseFilter := Event;
+    pEvents.OnMouse := Handler;
+    FEventList.Add(pEvents);
+  end;
+  Result := Self;
+end;
+
+function TSciter.Subscribe(const Selector: WideString;
+  const Handler: TElementOnDataArrived): TSciter;
+var
+  pCol: IElementCollection;
+  pEvents: IElementEvents;
+  i: Integer;
+begin
+  pCol := SelectAll(Selector);
+  for i := 0 to pCol.Count - 1 do
+  begin
+    pEvents := pCol[i] as IElementEvents;
+    pEvents.OnDataArrived := Handler;
+    FEventList.Add(pEvents);
+  end;
+  Result := Self;
+end;
+
+function TSciter.Subscribe(const Selector: WideString;
+  const Handler: TElementOnGesture): TSciter;
+var
+  pCol: IElementCollection;
+  pEvents: IElementEvents;
+  i: Integer;
+begin
+  pCol := SelectAll(Selector);
+  for i := 0 to pCol.Count - 1 do
+  begin
+    pEvents := pCol[i] as IElementEvents;
+    pEvents.OnGesture := Handler;
+    FEventList.Add(pEvents);
+  end;
+  Result := Self;
+end;
+
+function TSciter.Subscribe(const Selector: WideString;
+  const Handler: TElementOnScriptingCall): TSciter;
+var
+  pCol: IElementCollection;
+  pEvents: IElementEvents;
+  i: Integer;
+begin
+  pCol := SelectAll(Selector);
+  for i := 0 to pCol.Count - 1 do
+  begin
+    pEvents := pCol[i] as IElementEvents;
+    pEvents.OnScriptingCall := Handler;
+    FEventList.Add(pEvents);
+  end;
+  Result := Self;
+end;
+
+function TSciter.Subscribe(const Selector: WideString;
+  const Handler: TElementOnScroll): TSciter;
+var
+  pCol: IElementCollection;
+  pEvents: IElementEvents;
+  i: Integer;
+begin
+  pCol := SelectAll(Selector);
+  for i := 0 to pCol.Count - 1 do
+  begin
+    pEvents := pCol[i] as IElementEvents;
+    pEvents.OnScroll := Handler;
+    FEventList.Add(pEvents);
+  end;
+  Result := Self;
+end;
+
+function TSciter.Subscribe(const Selector: WideString;
+  const Handler: TElementOnSize): TSciter;
+var
+  pCol: IElementCollection;
+  pEvents: IElementEvents;
+  i: Integer;
+begin
+  pCol := SelectAll(Selector);
+  for i := 0 to pCol.Count - 1 do
+  begin
+    pEvents := pCol[i] as IElementEvents;
+    pEvents.OnSize := Handler;
+    FEventList.Add(pEvents);
+  end;
+  Result := Self;
+end;
+
+function TSciter.Subscribe(const Selector: WideString;
+  const Handler: TElementOnTimer): TSciter;
+var
+  pCol: IElementCollection;
+  pEvents: IElementEvents;
+  i: Integer;
+begin
+  pCol := SelectAll(Selector);
+  for i := 0 to pCol.Count - 1 do
+  begin
+    pEvents := pCol[i] as IElementEvents;
+    pEvents.OnTimer := Handler;
+    FEventList.Add(pEvents);
+  end;
+  Result := Self;
+end;
+
 function TSciter.TiScriptCall(const ObjName, Method: WideString;
   const Args: Array of OleVariant): OleVariant;
 var
@@ -1860,6 +2083,11 @@ begin
   end;
 end;
 
+procedure TSciter.UnsubscribeAll;
+begin
+  FEventList.Clear;
+end;
+
 procedure TSciter.UpdateWindow;
 begin
   API.SciterUpdateWindow(Self.Handle);
@@ -1901,15 +2129,16 @@ begin
     if HandleAllocated then
     begin
       case Message.Msg of
-        WM_TIMER:
+         //WM_TIMER:
           // Tweaking Sciter modals VCL-related problem
           // Displaying a modal, Sciter calls EnableWindow(FALSE) for all the parent windows
           // including application top-level form.
           // Main form disables all child controls including both Sciter window
           // and the modal, so user is unable to close the modal with a mouse.
           // When sciter modal is active, only painting and timer messages can be processed here.
-          TweakSciterModals;
-          
+          //TweakSciterModals;
+          //EnableWindow(Application.Handle, true);
+
         WM_GETDLGCODE:
           // Tweaking arrow keys and TAB handling (VCL-specific)
           begin
@@ -1957,6 +2186,9 @@ begin
     ThrowException('Invalid element handle.', []);
   FSciter := ASciter;
   Self.FELEMENT := h;
+  FFilterMouse := MOUSE_EVENTS_ALL;
+  FFilterKey := KEY_EVENTS_ALL;
+  FFilterControlEvents := BEHAVIOR_EVENTS_ALL;
   API.Sciter_UseElement(FElement);
   API.SciterAttachEventHandler(Self.FElement, LPELEMENT_EVENT_PROC(@ElementEventProc), Self);
   FSciter.ManagedElements.Add(Self);
@@ -2263,6 +2495,11 @@ begin
   Result := Integer(cnt);
 end;
 
+function TElement.GetControlEventsFilter: BEHAVIOR_EVENTS;
+begin
+  Result := BEHAVIOR_EVENTS(FFilterControlEvents);
+end;
+
 function TElement.GetEnabled: boolean;
 var
   pResult: LongBool;
@@ -2309,6 +2546,16 @@ begin
   );
   
   Result := Self.FHtml;
+end;
+
+function TElement.GetKeyFilter: KEY_EVENTS;
+begin
+  Result := KEY_EVENTS(FFilterKey);
+end;
+
+function TElement.GetMouseFilter: MOUSE_EVENTS;
+begin
+  Result := MOUSE_EVENTS(FFilterMouse);
 end;
 
 function TElement.GetOnControlEvent: TElementOnControlEvent;
@@ -2477,7 +2724,11 @@ function TElement.HandleControlEvent(
 var
   pArgs: TElementOnControlEventArgs;
 begin
-  pArgs := TElementOnControlEventArgs.Create(Sciter, params);
+  Result := False;
+  if (FFilterControlEvents <> BEHAVIOR_EVENTS_ALL) and (FFilterControlEvents <> params.cmd) then
+    Exit;
+    
+  pArgs := TElementOnControlEventArgs.Create(Sciter, Self, params);
   try
     DoControlEvents(pArgs);
     Result := pArgs.Handled;
@@ -2509,7 +2760,7 @@ function TElement.HandleFocus(var params: FOCUS_PARAMS): BOOL;
 var
   pArgs: TElementOnFocusEventArgs;
 begin
-  pArgs := TElementOnFocusEventArgs.Create(Sciter, params);
+  pArgs := TElementOnFocusEventArgs.Create(Sciter, Self, params);
   DoFocus(pArgs);
   Result := pArgs.Handled;
   pArgs.Free;
@@ -2519,7 +2770,7 @@ function TElement.HandleGesture(var params: GESTURE_PARAMS): BOOL;
 var
   pArgs: TElementOnGestureEventArgs;
 begin
-  pArgs := TElementOnGestureEventArgs.Create(Sciter, params);
+  pArgs := TElementOnGestureEventArgs.Create(Sciter, Self, params);
   try
     DoGesture(pArgs);
     Result := pArgs.Handled;
@@ -2545,7 +2796,11 @@ function TElement.HandleKey(var params: KEY_PARAMS): BOOL;
 var
   pArgs: TElementOnKeyEventArgs;
 begin
-  pArgs := TElementOnKeyEventArgs.Create(Sciter, params);
+  Result := False;
+  if (FFilterKey <> KEY_EVENTS_ALL) and (FFilterKey <> params.cmd) then
+    Exit;
+
+  pArgs := TElementOnKeyEventArgs.Create(Sciter, Self, params);
   DoKey(pArgs);
   Result := pArgs.Handled;
   pArgs.Free;
@@ -2611,7 +2866,11 @@ function TElement.HandleMouse(var params: MOUSE_PARAMS): BOOL;
 var
   pArgs: TElementOnMouseEventArgs;
 begin
-  pArgs := TElementOnMouseEventArgs.Create(Sciter, params);
+  Result := False;
+  if (FFilterMouse <> MOUSE_EVENTS_ALL) and (FFilterMouse <> params.cmd) then
+    Exit;
+    
+  pArgs := TElementOnMouseEventArgs.Create(Sciter, Self, params);
   DoMouse(pArgs);
   Result := pArgs.Handled;
   pArgs.Free;
@@ -2634,7 +2893,7 @@ function TElement.HandleScrollEvents(var params: SCROLL_PARAMS): BOOL;
 var
   pArgs: TElementOnScrollEventArgs;
 begin
-  pArgs := TElementOnScrollEventArgs.Create(Sciter, params);
+  pArgs := TElementOnScrollEventArgs.Create(Sciter, Self, params);
   try
     DoScroll(pArgs);
     Result := pArgs.Handled;
@@ -2786,6 +3045,11 @@ begin
   );
 end;
 
+procedure TElement.SetControlEventsFilter(Evts: BEHAVIOR_EVENTS);
+begin
+  FFilterControlEvents := Evts;
+end;
+
 procedure TElement.SetID(const Value: WideString);
 begin
   Attr['id'] := Value;
@@ -2805,6 +3069,16 @@ begin
     API.SciterSetElementHtml(FElement, PByte(pStr), iLen, SIH_REPLACE_CONTENT),
     'Failed to set the inner html property on element'
   );
+end;
+
+procedure TElement.SetKeyFilter(Evts: KEY_EVENTS);
+begin
+  FFilterKey := Evts;
+end;
+
+procedure TElement.SetMouseFilter(Evts: MOUSE_EVENTS);
+begin
+  FFilterMouse := Evts;
 end;
 
 procedure TElement.SetOnControlEvent(const Value: TElementOnControlEvent);
@@ -3063,11 +3337,12 @@ end;
 
 { TElementOnKeyEventArgs }
 
-constructor TElementOnKeyEventArgs.Create(const Sciter: TSciter; var params: KEY_PARAMS);
+constructor TElementOnKeyEventArgs.Create(const Sciter: TSciter; const ASelf: IElement; var params: KEY_PARAMS);
 begin
   FHandled := False;
   if params.target <> nil then
     FTarget := ElementFactory(Sciter, params.target);
+  FElement := ASelf;
   FKeyCode := params.key_code;
   FEventType := params.cmd;
   FKeys := params.alt_state;
@@ -3076,23 +3351,26 @@ end;
 destructor TElementOnKeyEventArgs.Destroy;
 begin
   FTarget := nil;
+  FElement := nil;
   inherited;
 end;
 
 { TElementOnFocusEventArgs }
 
 constructor TElementOnFocusEventArgs.Create(const Sciter: TSciter;
-  var params: FOCUS_PARAMS);
+  const ASelf: IElement; var params: FOCUS_PARAMS);
 begin
   FHandled := False;
   FEventType := params.cmd;
   if params.target <> nil then
     FTarget := ElementFactory(Sciter, params.target);
+  FElement := ASelf;
 end;
 
 destructor TElementOnFocusEventArgs.Destroy;
 begin
   FTarget := nil;
+  FElement := nil;
   inherited;
 end;
 
@@ -3102,19 +3380,20 @@ constructor TElementOnTimerEventArgs.Create(const AThis: IElement;
   var params: TIMER_PARAMS);
 begin
   FContinue := False;
-  FTarget := AThis;
+  FElement := AThis;
   FTimerId := params.timerId;
 end;
 
 destructor TElementOnTimerEventArgs.Destroy;
 begin
-  FTarget := nil;
+  FElement := nil;
   inherited;
 end;
 
 { TElementOnMouseEventArgs }
 
 constructor TElementOnMouseEventArgs.Create(const Sciter: TSciter;
+  const ASelf: IElement;
   var params: MOUSE_PARAMS);
 begin
   FButtons := params.button_state;
@@ -3123,6 +3402,7 @@ begin
   FKeys := params.alt_state;
   if params.target <> nil then
     FTarget := ElementFactory(Sciter, params.target);
+  FElement := ASelf;
   FX := params.pos.X;
   FY := params.pos.Y;
   FViewX := params.pos_view.X;
@@ -3132,13 +3412,14 @@ end;
 destructor TElementOnMouseEventArgs.Destroy;
 begin
   FTarget := nil;
+  FElement := nil;
   inherited;
 end;
 
 { TElementOnControlEventArgs }
 
 constructor TElementOnControlEventArgs.Create(const Sciter: TSciter;
-  var params: BEHAVIOR_EVENT_PARAMS);
+  const ASelf: IElement; var params: BEHAVIOR_EVENT_PARAMS);
 begin
   FEventType := params.cmd;
   FHandled := False;
@@ -3146,11 +3427,13 @@ begin
     FTarget := ElementFactory(Sciter, params.heTarget);
   if params.he <> nil then
     FSource := ElementFactory(Sciter, params.he);
+  FElement := ASelf;
   FReason := params.reason;
 end;
 
 destructor TElementOnControlEventArgs.Destroy;
 begin
+  FElement := nil;
   FTarget := nil;
   FSource := nil;
   inherited;
@@ -3164,7 +3447,7 @@ var
   pMemStream: TMemoryStream;
 begin
   FHandled := False;
-  FTarget := ASelf;
+  FElement := ASelf;
   if params.initiator <> nil then
     FInitiator := ElementFactory(Sciter, params.initiator);
   FDataType := params.dataType;
@@ -3180,20 +3463,21 @@ destructor TElementOnDataArrivedEventArgs.Destroy;
 begin
   FStream.Free;
   FInitiator := nil;
-  FTarget := nil;
+  FElement := nil;
   inherited;
 end;
 
 { TElementOnGestureEventArgs }
 
 constructor TElementOnGestureEventArgs.Create(const Sciter: TSciter;
-  var params: GESTURE_PARAMS);
+  const ASelf: IElement; var params: GESTURE_PARAMS);
 begin
   FHandled := False;
   FDeltaV := params.delta_v;
   FCmd := params.cmd;
   if params.target <> nil then
     FTarget := ElementFactory(Sciter, params.target);
+  FElement := ASelf;
   FFlags := params.flags;
   FPosView := params.pos_view;
   FPos := params.pos;
@@ -3204,16 +3488,18 @@ end;
 destructor TElementOnGestureEventArgs.Destroy;
 begin
   FTarget := nil;
+  FElement := nil;
   inherited;
 end;
 
 { TElementOnScrollEventArgs }
 
 constructor TElementOnScrollEventArgs.Create(const Sciter: TSciter;
-  var params: SCROLL_PARAMS);
+  const ASelf: IElement; var params: SCROLL_PARAMS);
 begin
   FEventType := params.cmd;
   FHandled := False;
+  FElement := ASelf;
   FIsVertical := params.vertical;
   if params.target <> nil then
     FTarget := ElementFactory(Sciter, params.target);
@@ -3221,6 +3507,7 @@ end;
 
 destructor TElementOnScrollEventArgs.Destroy;
 begin
+  FElement := nil;
   FTarget := nil;
   inherited;
 end;
@@ -3230,12 +3517,12 @@ end;
 constructor TElementOnSizeEventArgs.Create(const ASelf: IElement);
 begin
   FHandled := False;
-  FTarget := ASelf;
+  FElement := ASelf;
 end;
 
 destructor TElementOnSizeEventArgs.Destroy;
 begin
-  FTarget := nil;
+  FElement := nil;
   inherited;
 end;
 
@@ -3250,7 +3537,7 @@ begin
   FReturnValue := Unassigned;
   FHandled := False;
   FParams := @params;
-  FTarget := ASelf;
+  FElement := ASelf;
   FArgumentsCount := Integer(params.argc);
 
   API.ValueInit(@(params.rv));
@@ -3271,7 +3558,7 @@ end;
 
 destructor TElementOnScriptingCallArgs.Destroy;
 begin
-  FTarget := nil;
+  FElement := nil;
   SetLength(FArgs, 0);
   FReturnValue := Unassigned;
   inherited;
