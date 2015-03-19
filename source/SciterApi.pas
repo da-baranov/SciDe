@@ -391,6 +391,8 @@ type
 
   BEHAVIOR_EVENTS =
   (
+    BEHAVIOR_EVENTS_ALL = -1, // doesn't exist in sciter api
+
     BUTTON_CLICK = 0,
     BUTTON_PRESS = 1,
     BUTTON_STATE_CHANGED = 2,
@@ -432,7 +434,7 @@ type
     VIDEO_STOPPED     = $D3,
     VIDEO_BIND_RQ     = $D4,
     FIRST_APPLICATION_EVENT_CODE = $100,
-    BEHAVIOR_EVENTS_DUMMY = MAXINT
+    BEHAVIOR_EVENTS_DUMMY = MAXINT // doesn't exist in sciter api, used for sizeof(uint) alignment
   );
 
   EVENT_REASON =
@@ -775,6 +777,7 @@ type
 
   MOUSE_EVENTS =
   (
+    MOUSE_EVENTS_ALL = -1,          // doesn't exist in sciter api, used to define null event
     MOUSE_ENTER  = 0,
     MOUSE_LEAVE  = 1,
     MOUSE_MOVE   = 2,
@@ -790,7 +793,7 @@ type
     DRAG_REQUEST = 12,
     MOUSE_CLICK  = $FF,
     DRAGGING     = $100,
-    MOUSE_EVENTS_DUMMY = MAXINT
+    MOUSE_EVENTS_DUMMY = MAXINT // doesn't exist in sciter api, used for sizeof(uint) alignment
   );
 
 
@@ -820,10 +823,11 @@ type
 
   KEY_EVENTS =
   (
+    KEY_EVENTS_ALL = -1,      // doesn't exist in sciter api, used to define null event
     KEY_DOWN = 0,
     KEY_UP,
     KEY_CHAR,
-    KEY_EVENTS_DUMMY = MAXINT
+    KEY_EVENTS_DUMMY = MAXINT // doesn't exist in sciter api, used for sizeof(uint) alignment
   );
 
   KEY_PARAMS = packed record

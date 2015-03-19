@@ -13,12 +13,11 @@ type
     Actions1: TMenuItem;
     Button1: TButton;
     cmdCallNative: TButton;
+    cmdCallTiScript: TButton;
     cmdEval: TButton;
-    cmdGetCaseHistory: TButton;
     cmdReload: TButton;
     ctxSciter: TPopupMenu;
     DumpHTML1: TMenuItem;
-    GC: TButton;
     Label1: TLabel;
     mm1: TMainMenu;
     mnuElementAtCursor: TMenuItem;
@@ -29,25 +28,24 @@ type
     ofd: TOpenDialog;
     pnlCommands: TPanel;
     pnlContainer: TPanel;
+    sbr: TStatusBar;
     Sciter1: TSciter;
     sfd: TSaveDialog;
     spl1: TSplitter;
     txt1: TEdit;
     txt2: TEdit;
     txtLog: TMemo;
-    cmdCallTiScript: TButton;
+    ApplicationEvents1: TApplicationEvents;
+    procedure ApplicationEvents1Message(var Msg: tagMSG; var Handled: Boolean);
     procedure Button1Click(Sender: TObject);
     procedure cmdCallNativeClick(Sender: TObject);
     procedure cmdCallTiScriptClick(Sender: TObject);
     procedure cmdEvalClick(Sender: TObject);
-    procedure cmdGetCaseHistoryClick(Sender: TObject);
     procedure cmdReloadClick(Sender: TObject);
     procedure cmdSaveToFileClick(Sender: TObject);
-    procedure cmdShowInspectorClick(Sender: TObject);
     procedure DumpHTML1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
-    procedure GCClick(Sender: TObject);
     procedure mnuElementAtCursorClick(Sender: TObject);
     procedure mnuOpenFileClick(Sender: TObject);
     procedure NavigatetoSciterwebsite1Click(Sender: TObject);
@@ -59,19 +57,18 @@ type
     procedure Sciter1ScriptingCall(ASender: TObject; const Args:
         TElementOnScriptingCallArgs);
   private
-    FBodyEvents: IElementEvents;
     FButton: TButton;
-    FDivRequestEvents: IElementEvents;
     FExamplesBase: WideString;
     FHomeUrl: WideString;
-    FTimerDivEvents: IElementEvents;
     FTxtEvents: IElementEvents;
     procedure OnBodyMethodCall(ASender: TObject; const Args: TElementOnScriptingCallArgs);
     procedure OnDivRequestDataArrived(ASender: TObject; const Args: TElementOnDataArrivedEventArgs);
     procedure OnDivTimer(ASender: TObject; const Args: TElementOnTimerEventArgs);
     procedure OnElementControlEvent(ASender: TObject; const Args: TElementOnControlEventArgs);
     procedure OnElementMouse(ASender: TObject; const Args: TElementOnMouseEventArgs);
-    procedure OnElementSize(ASender: TObject; const Args: TElementOnSizeEventArgs);
+    procedure OnEsClick(Sender: TObject; const Args: TElementOnControlEventArgs);
+    procedure OnEsKey(Sender: TObject; const Args: TElementOnKeyEventArgs);
+    procedure OnEsMouse(Sender: TObject; const Args: TElementOnMouseEventArgs);
     procedure OnNativeButtonClick(Sender: TObject);
     procedure OnSciterControlEvent(ASender: TObject; const Args: TElementOnControlEventArgs);
   end;
@@ -97,7 +94,17 @@ uses SciterOle, SciterNative, NativeForm, Math;
 
 {$R *.dfm}
 {$R ..\resources\Richtext.res}
-{$R ..\resources\Mvc.res}
+
+procedure TMainForm.ApplicationEvents1Message(var Msg: tagMSG; var Handled:
+    Boolean);
+begin
+  if Msg.message = WM_ENABLE then
+  begin
+    Msg.lParam := 1;
+  end;
+end;
+
+//{$R ..\resources\Mvc.res}
 
 procedure TMainForm.Button1Click(Sender: TObject);
 var
@@ -126,14 +133,6 @@ begin
   end;
 end;
 
-procedure TMainForm.cmdGetCaseHistoryClick(Sender: TObject);
-var
-  s: OleVariant;
-begin
-  s := Sciter1.Eval('caseHistory');
-  ShowMessage(s);
-end;
-
 procedure TMainForm.cmdReloadClick(Sender: TObject);
 begin
   Sciter1.LoadURL(FHomeUrl);
@@ -143,11 +142,6 @@ procedure TMainForm.cmdSaveToFileClick(Sender: TObject);
 begin
   if sfd.Execute then
     Sciter1.SaveToFile(sfd.FileName);  
-end;
-
-procedure TMainForm.cmdShowInspectorClick(Sender: TObject);
-begin
-  Sciter1.ShowInspector;
 end;
 
 procedure TMainForm.DumpHTML1Click(Sender: TObject);
@@ -161,11 +155,17 @@ var
   nf: TNativeForm;
   pTest: ITest;
   pXml: OleVariant;
+  i: Integer;
 begin
   Caption := Caption + ' :: Sciter version ' + Sciter1.Version;
   FExamplesBase := ExtractFileDir(Application.ExeName);
   FExamplesBase := Sciter1.FilePathToURL(FExamplesBase) + '/';
-  FHomeURL := FExamplesBase + 'scide.htm';
+  for i := 1 to ParamCount do
+  begin
+    FHomeUrl := Sciter1.FilePathToURL(ParamStr(1));
+  end;
+  if FHomeUrl = '' then
+    FHomeURL := {FExamplesBase + }'scide.htm';
   Sciter1.LoadUrl(FHomeURL);
 
   // Registering native functions
@@ -191,11 +191,6 @@ end;
 procedure TMainForm.FormShow(Sender: TObject);
 begin
   Sciter1.SetFocus;
-end;
-
-procedure TMainForm.GCClick(Sender: TObject);
-begin
-  Sciter1.GC;
 end;
 
 procedure TMainForm.mnuElementAtCursorClick(Sender: TObject);
@@ -233,13 +228,18 @@ end;
 
 procedure TMainForm.OnDivRequestDataArrived(ASender: TObject; const Args: TElementOnDataArrivedEventArgs);
 begin
-  Args.Target.Text := Format('Got %d bytes of data from %s. HTTP status: %d', [Args.Stream.Size, Args.Uri, Args.Status]);
-  Args.Handled := True; 
+  try
+    Args.Element.Text := Format('Got %d bytes of data from %s. HTTP status: %d', [Args.Stream.Size, Args.Uri, Args.Status]);
+    Args.Handled := True;
+  except
+    on E:Exception do
+      MessageDlg(E.Message, mtError, [mbOK], 0);
+  end;
 end;
 
 procedure TMainForm.OnDivTimer(ASender: TObject; const Args: TElementOnTimerEventArgs);
 begin
-  Args.Target.Text := 'Timer event at ' + DateTimeToStr(Now);
+  Args.Element.Text := 'Timer event at ' + DateTimeToStr(Now);
   Args.Continue := False;
 end;
 
@@ -250,13 +250,28 @@ end;
 
 procedure TMainForm.OnElementMouse(ASender: TObject; const Args: TElementOnMouseEventArgs);
 begin
-  txtLog.Lines.Add(Format('MouseEvent of type %d at %d:%d', [Integer(Args.EventType), Args.X, Args.Y]));
+  sbr.SimpleText := (Format('MouseEvent of type %d at %d:%d', [Integer(Args.EventType), Args.X, Args.Y]));
 end;
 
-procedure TMainForm.OnElementSize(ASender: TObject;
-  const Args: TElementOnSizeEventArgs);
+procedure TMainForm.OnEsClick(Sender: TObject;
+  const Args: TElementOnControlEventArgs);
 begin
-  txtLog.Lines.Add(Format('SizeEvent', []));
+  sbr.SimpleText := 'Click: ' + Args.Element.Tag;
+end;
+
+procedure TMainForm.OnEsKey(Sender: TObject;
+  const Args: TElementOnKeyEventArgs);
+begin
+  sbr.SimpleText := 'Key down: ' + IntToStr(Args.KeyCode);
+end;
+
+procedure TMainForm.OnEsMouse(Sender: TObject;
+  const Args: TElementOnMouseEventArgs);
+begin
+  if Args.EventType = MOUSE_ENTER then
+    sbr.SimpleText := 'Mouse enter: ' + Args.Element.Tag;
+  if Args.EventType = MOUSE_LEAVE then
+    sbr.SimpleText := 'Mouse leave: ' + Args.Element.Tag;
 end;
 
 procedure TMainForm.OnNativeButtonClick(Sender: TObject);
@@ -375,18 +390,15 @@ end;
 procedure TMainForm.Sciter1DocumentComplete(ASender: TObject; const url:
     WideString);
 var
-  pBody: IElement;
   pDivContainer: IElement;
-  pDivTimer: IElement;
   pTxt: IElement;
 begin
   if FButton <> nil then
     FreeAndNil(FButton);
   txtLog.Lines.Add('OnDocumentComplete: ' + url);
-  pBody := Sciter1.Root.Select('body');
-  FBodyEvents := pBody as IElementEvents;
-  FBodyEvents.OnControlEvent := OnSciterControlEvent;
-  FBodyEvents.OnScriptingCall := OnBodyMethodCall;
+
+  Sciter1.Subscribe('body', BUTTON_CLICK, OnSciterControlEvent);
+  Sciter1.Subscribe('body', OnBodyMethodCall);
 
   pDivContainer := Sciter1.Root.Select('#divContainer');
   if pDivContainer <> nil then
@@ -405,18 +417,16 @@ begin
     FTxtEvents := pTxt as IElementEvents;
     FTxtEvents.OnControlEvent := OnElementControlEvent;
     FTxtEvents.OnMouse := OnElementMouse;
-    FTxtEvents.OnSize := OnElementSize;
   end;
 
-  pDivTimer := Sciter1.Root.Select('#divTimer');
-  if pDivTimer <> nil then
-  begin
-    FTimerDivEvents := pDivTimer as IElementEvents;
-    FTimerDivEvents.OnTimer := OnDivTimer;
-  end;
+  Sciter1.Subscribe('#divTimer', OnDivTimer);
+  Sciter1.Subscribe('#divRequest', OnDivRequestDataArrived);
 
-  FDivRequestEvents := Sciter1.Root.Select('#divRequest') as IElementEvents;
-  FDivRequestEvents.OnDataArrived := OnDivRequestDataArrived;
+  Sciter1
+    .Subscribe('.es', MOUSE_ENTER, OnEsMouse)
+    .Subscribe('.es', MOUSE_LEAVE, OnEsMouse)
+    .Subscribe('button.es1', BUTTON_CLICK, OnEsClick)
+    .Subscribe('.es2', KEY_DOWN, OnEsKey);
 end;
 
 procedure TMainForm.Sciter1LoadData(ASender: TObject; const url: WideString;
@@ -425,15 +435,20 @@ var
   sFileName: AnsiString;
   pMemStm: TMemoryStream;
 begin
-  if Pos(WideString('scide://'), Url) = 1 then
-  begin
-    sFileName := StringReplace(Url, 'scide://', '', []);
-    pMemStm := TMemoryStream.Create;
-    pMemStm.LoadFromFile(sFileName);
-    pMemStm.Position := 0;
-    Sciter1.DataReady(url, pMemStm.Memory, pMemStm.Size);
-    pMemStm.Free;
-    Discard := True;
+  try
+    if Pos(WideString('scide://'), Url) = 1 then
+    begin
+      sFileName := StringReplace(Url, 'scide://', '', []);
+      pMemStm := TMemoryStream.Create;
+      pMemStm.LoadFromFile(sFileName);
+      pMemStm.Position := 0;
+      Sciter1.DataReady(url, pMemStm.Memory, pMemStm.Size);
+      pMemStm.Free;
+      Discard := True;
+    end;
+  except
+    on E:Exception do
+      MessageDlg(E.Message, mtError, [mbOK], 0);
   end;
 end;
 
