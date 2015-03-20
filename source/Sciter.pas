@@ -26,6 +26,8 @@ type
   IElement = interface;
   IElementCollection = interface;
 
+  TElementHandlerCallback  = function(Sender: Pointer; const Element: IElement): Boolean; { false - continue, true - stop }
+
   { Element events }
   TElementOnMouseEventArgs = class
   private
@@ -341,6 +343,7 @@ type
     procedure Detach;
     function EqualsTo(const Element: IElement): WordBool;
     function FindNearestParent(const Selector: WideString): IElement;
+    function ForAll(const Selector: WideString; Handler: TElementHandlerCallback): IElement;
     function GetAttr(const AttrName: WideString): WideString;
     function GetAttrCount: Integer;
     function GetAttributeName(Index: Integer): WideString;
@@ -381,6 +384,15 @@ type
     function SetTimer(const Milliseconds: UINT): UINT;
     procedure SetValue(Value: OleVariant);
     procedure StopTimer;
+    function SubscribeControlEvents(const Selector: WideString; const Event: BEHAVIOR_EVENTS; const Handler: TElementOnControlEvent): IElement;
+    function SubscribeDataArrived(const Selector: WideString; const Handler: TElementOnDataArrived): IElement;
+    function SubscribeGesture(const Selector: WideString; const Handler: TElementOnGesture): IElement;
+    function SubscribeKey(const Selector: WideString; const Event: KEY_EVENTS;      const Handler: TElementOnKey): IElement;
+    function SubscribeMouse(const Selector: WideString; const Event: MOUSE_EVENTS;    const Handler: TElementOnMouse): IElement;
+    function SubscribeScriptingCall(const Selector: WideString; const Handler: TElementOnScriptingCall): IElement;
+    function SubscribeScroll(const Selector: WideString; const Handler: TElementOnScroll): IElement;
+    function SubscribeSize(const Selector: WideString; const Handler: TElementOnSize): IElement;
+    function SubscribeTimer(const Selector: WideString; const Handler: TElementOnTimer): IElement;
     procedure Swap(const Element: IElement);
     function TryCall(const Method: WideString; const Args: array of OleVariant; out RetVal: OleVariant): Boolean;
     procedure Update;
@@ -399,7 +411,7 @@ type
     property Tag: WideString read GetTag;
     property Text: WideString read GetText write SetText;
     property Value: OleVariant read GetValue write SetValue;
-    property Visible: boolean read GetVisible;
+    property Visible: Boolean read GetVisible;
   end;
 
   IElementCollection = interface
@@ -534,6 +546,7 @@ type
     procedure Detach;
     function EqualsTo(const Element: IElement): WordBool;
     function FindNearestParent(const Selector: WideString): IElement;
+    function ForAll(const Selector: WideString; Handler: TElementHandlerCallback): IElement;
     function GetAttributeName(Index: Integer): WideString;
     function GetAttributeValue(Index: Integer): WideString; overload;
     function GetAttributeValue(const Name: WideString): WideString; overload;
@@ -552,6 +565,15 @@ type
     function SendEvent(EventCode: BEHAVIOR_EVENTS): Boolean;
     function SetTimer(const Milliseconds: UINT): UINT;
     procedure StopTimer;
+    function SubscribeControlEvents(const Selector: WideString; const Event: BEHAVIOR_EVENTS; const Handler: TElementOnControlEvent): IElement;
+    function SubscribeDataArrived(const Selector: WideString; const Handler: TElementOnDataArrived): IElement;
+    function SubscribeGesture(const Selector: WideString; const Handler: TElementOnGesture): IElement;
+    function SubscribeKey(const Selector: WideString; const Event: KEY_EVENTS;      const Handler: TElementOnKey): IElement;
+    function SubscribeMouse(const Selector: WideString; const Event: MOUSE_EVENTS;    const Handler: TElementOnMouse): IElement;
+    function SubscribeScriptingCall(const Selector: WideString; const Handler: TElementOnScriptingCall): IElement;
+    function SubscribeScroll(const Selector: WideString; const Handler: TElementOnScroll): IElement;
+    function SubscribeSize(const Selector: WideString; const Handler: TElementOnSize): IElement;
+    function SubscribeTimer(const Selector: WideString; const Handler: TElementOnTimer): IElement;
     procedure Swap(const Element: IElement);
     function TryCall(const Method: WideString; const Args: array of OleVariant; out RetVal: OleVariant): Boolean;
     procedure Update;
@@ -612,7 +634,7 @@ type
     property Item[const Index: Integer]: IElement read GetItem; default;
   end;
 
-  TSciter = class(TCustomControl)
+  TSciter = class(TCustomControl, IElement)
   private
     FBaseUrl: WideString;
     FEventList: TInterfaceList;
@@ -684,15 +706,6 @@ type
     procedure SetObject(const Name: WideString; const Json: WideString);
     procedure SetOption(const Key: SCITER_RT_OPTIONS; const Value: UINT_PTR);
     procedure ShowInspector(const Element: IElement = nil);
-    function Subscribe(const Selector: WideString; const Event: BEHAVIOR_EVENTS; const Handler: TElementOnControlEvent): TSciter; overload;
-    function Subscribe(const Selector: WideString; const Event: KEY_EVENTS;      const Handler: TElementOnKey): TSciter; overload;
-    function Subscribe(const Selector: WideString; const Event: MOUSE_EVENTS;    const Handler: TElementOnMouse): TSciter; overload;
-    function Subscribe(const Selector: WideString; const Handler: TElementOnDataArrived): TSciter; overload;
-    function Subscribe(const Selector: WideString; const Handler: TElementOnGesture): TSciter; overload;
-    function Subscribe(const Selector: WideString; const Handler: TElementOnScriptingCall): TSciter; overload;
-    function Subscribe(const Selector: WideString; const Handler: TElementOnScroll): TSciter; overload;
-    function Subscribe(const Selector: WideString; const Handler: TElementOnSize): TSciter; overload;
-    function Subscribe(const Selector: WideString; const Handler: TElementOnTimer): TSciter; overload;
     function TiScriptCall(const ObjName: WideString; const Method: WideString; const Args: array of OleVariant): OleVariant;
     function TiScriptValueToJson(Obj: tiscript_value): WideString;
     function TryCall(const FunctionName: WideString; const Args: array of OleVariant): boolean; overload;
@@ -700,7 +713,7 @@ type
     procedure UnsubscribeAll;
     procedure UpdateWindow;
     property Html: WideString read GetHtml;
-    property Root: IElement read GetRoot;
+    property Root: IElement read GetRoot implements IElement;
     property Version: WideString read GetVersion;
     property VM: HVM read GetHVM;
   published
@@ -1809,169 +1822,6 @@ begin
   }
 end;
 
-function TSciter.Subscribe(const Selector: WideString;
-  const Event: BEHAVIOR_EVENTS;
-  const Handler: TElementOnControlEvent): TSciter;
-var
-  pCol: IElementCollection;
-  pEvents: IElementEvents;
-  pFilter: IElementEventsFilter;
-  i: Integer;
-begin
-  pCol := SelectAll(Selector);
-  for i := 0 to pCol.Count - 1 do
-  begin
-    pEvents := pCol[i] as IElementEvents;
-    pFilter := pCol[i] as IElementEventsFilter;
-    pFilter.ControlEventsFilter := Event;
-    pEvents.OnControlEvent := Handler;
-    FEventList.Add(pEvents);
-  end;
-  Result := Self;
-end;
-
-function TSciter.Subscribe(const Selector: WideString;
-  const Event: KEY_EVENTS; const Handler: TElementOnKey): TSciter;
-var
-  pCol: IElementCollection;
-  pEvents: IElementEvents;
-  pFilter: IElementEventsFilter;
-  i: Integer;
-begin
-  pCol := SelectAll(Selector);
-  for i := 0 to pCol.Count - 1 do
-  begin
-    pEvents := pCol[i] as IElementEvents;
-    pFilter := pCol[i] as IElementEventsFilter;
-    pFilter.KeyFilter := Event;
-    pEvents.OnKey := Handler;
-    FEventList.Add(pEvents);
-  end;
-  Result := Self;
-end;
-
-function TSciter.Subscribe(const Selector: WideString;
-  const Event: MOUSE_EVENTS; const Handler: TElementOnMouse): TSciter;
-var
-  pCol: IElementCollection;
-  pEvents: IElementEvents;
-  pFilter: IElementEventsFilter;
-  i: Integer;
-begin
-  pCol := SelectAll(Selector);
-  for i := 0 to pCol.Count - 1 do
-  begin
-    pEvents := pCol[i] as IElementEvents;
-    pFilter := pCol[i] as IElementEventsFilter;
-    pFilter.MouseFilter := Event;
-    pEvents.OnMouse := Handler;
-    FEventList.Add(pEvents);
-  end;
-  Result := Self;
-end;
-
-function TSciter.Subscribe(const Selector: WideString;
-  const Handler: TElementOnDataArrived): TSciter;
-var
-  pCol: IElementCollection;
-  pEvents: IElementEvents;
-  i: Integer;
-begin
-  pCol := SelectAll(Selector);
-  for i := 0 to pCol.Count - 1 do
-  begin
-    pEvents := pCol[i] as IElementEvents;
-    pEvents.OnDataArrived := Handler;
-    FEventList.Add(pEvents);
-  end;
-  Result := Self;
-end;
-
-function TSciter.Subscribe(const Selector: WideString;
-  const Handler: TElementOnGesture): TSciter;
-var
-  pCol: IElementCollection;
-  pEvents: IElementEvents;
-  i: Integer;
-begin
-  pCol := SelectAll(Selector);
-  for i := 0 to pCol.Count - 1 do
-  begin
-    pEvents := pCol[i] as IElementEvents;
-    pEvents.OnGesture := Handler;
-    FEventList.Add(pEvents);
-  end;
-  Result := Self;
-end;
-
-function TSciter.Subscribe(const Selector: WideString;
-  const Handler: TElementOnScriptingCall): TSciter;
-var
-  pCol: IElementCollection;
-  pEvents: IElementEvents;
-  i: Integer;
-begin
-  pCol := SelectAll(Selector);
-  for i := 0 to pCol.Count - 1 do
-  begin
-    pEvents := pCol[i] as IElementEvents;
-    pEvents.OnScriptingCall := Handler;
-    FEventList.Add(pEvents);
-  end;
-  Result := Self;
-end;
-
-function TSciter.Subscribe(const Selector: WideString;
-  const Handler: TElementOnScroll): TSciter;
-var
-  pCol: IElementCollection;
-  pEvents: IElementEvents;
-  i: Integer;
-begin
-  pCol := SelectAll(Selector);
-  for i := 0 to pCol.Count - 1 do
-  begin
-    pEvents := pCol[i] as IElementEvents;
-    pEvents.OnScroll := Handler;
-    FEventList.Add(pEvents);
-  end;
-  Result := Self;
-end;
-
-function TSciter.Subscribe(const Selector: WideString;
-  const Handler: TElementOnSize): TSciter;
-var
-  pCol: IElementCollection;
-  pEvents: IElementEvents;
-  i: Integer;
-begin
-  pCol := SelectAll(Selector);
-  for i := 0 to pCol.Count - 1 do
-  begin
-    pEvents := pCol[i] as IElementEvents;
-    pEvents.OnSize := Handler;
-    FEventList.Add(pEvents);
-  end;
-  Result := Self;
-end;
-
-function TSciter.Subscribe(const Selector: WideString;
-  const Handler: TElementOnTimer): TSciter;
-var
-  pCol: IElementCollection;
-  pEvents: IElementEvents;
-  i: Integer;
-begin
-  pCol := SelectAll(Selector);
-  for i := 0 to pCol.Count - 1 do
-  begin
-    pEvents := pCol[i] as IElementEvents;
-    pEvents.OnTimer := Handler;
-    FEventList.Add(pEvents);
-  end;
-  Result := Self;
-end;
-
 function TSciter.TiScriptCall(const ObjName, Method: WideString;
   const Args: Array of OleVariant): OleVariant;
 var
@@ -2327,6 +2177,26 @@ begin
     []
   );
   Result := ElementFactory(Sciter, pHE);
+end;
+
+function TElement.ForAll(const Selector: WideString;
+  Handler: TElementHandlerCallback): IElement;
+var
+  i: Integer;
+  pCol: IElementCollection;
+  bResult: Boolean;
+begin
+  pCol := SelectAll(Selector);
+  for i := 0 to Pred(pCol.Count) do
+  begin
+    if Assigned(Handler) then
+    begin
+      bResult := Handler(Self, pCol[i]);
+      if bResult then
+        Break;
+    end;
+  end;
+  Result := Self;
 end;
 
 function TElement.GetAttr(const AttrName: WideString): WideString;
@@ -3159,6 +3029,169 @@ begin
     API.SciterSetTimer(FElement, 0, tid),
     'Failed to stop timer.',
     True);
+end;
+
+function TElement.SubscribeControlEvents(const Selector: WideString;
+  const Event: BEHAVIOR_EVENTS;
+  const Handler: TElementOnControlEvent): IElement;
+var
+  pCol: IElementCollection;
+  pEvents: IElementEvents;
+  pFilter: IElementEventsFilter;
+  i: Integer;
+begin
+  pCol := SelectAll(Selector);
+  for i := 0 to pCol.Count - 1 do
+  begin
+    pEvents := pCol[i] as IElementEvents;
+    pFilter := pCol[i] as IElementEventsFilter;
+    pFilter.ControlEventsFilter := Event;
+    pEvents.OnControlEvent := Handler;
+    FSciter.FEventList.Add(pEvents);
+  end;
+  Result := Self;
+end;
+
+function TElement.SubscribeDataArrived(const Selector: WideString;
+  const Handler: TElementOnDataArrived): IElement;
+var
+  pCol: IElementCollection;
+  pEvents: IElementEvents;
+  i: Integer;
+begin
+  pCol := SelectAll(Selector);
+  for i := 0 to pCol.Count - 1 do
+  begin
+    pEvents := pCol[i] as IElementEvents;
+    pEvents.OnDataArrived := Handler;
+    FSciter.FEventList.Add(pEvents);
+  end;
+  Result := Self;
+end;
+
+function TElement.SubscribeGesture(const Selector: WideString;
+  const Handler: TElementOnGesture): IElement;
+var
+  pCol: IElementCollection;
+  pEvents: IElementEvents;
+  i: Integer;
+begin
+  pCol := SelectAll(Selector);
+  for i := 0 to pCol.Count - 1 do
+  begin
+    pEvents := pCol[i] as IElementEvents;
+    pEvents.OnGesture := Handler;
+    FSciter.FEventList.Add(pEvents);
+  end;
+  Result := Self;
+end;
+
+function TElement.SubscribeKey(const Selector: WideString;
+  const Event: KEY_EVENTS; const Handler: TElementOnKey): IElement;
+var
+  pCol: IElementCollection;
+  pEvents: IElementEvents;
+  pFilter: IElementEventsFilter;
+  i: Integer;
+begin
+  pCol := SelectAll(Selector);
+  for i := 0 to pCol.Count - 1 do
+  begin
+    pEvents := pCol[i] as IElementEvents;
+    pFilter := pCol[i] as IElementEventsFilter;
+    pFilter.KeyFilter := Event;
+    pEvents.OnKey := Handler;
+    FSciter.FEventList.Add(pEvents);
+  end;
+  Result := Self;
+end;
+
+function TElement.SubscribeMouse(const Selector: WideString;
+  const Event: MOUSE_EVENTS; const Handler: TElementOnMouse): IElement;
+var
+  pCol: IElementCollection;
+  pEvents: IElementEvents;
+  pFilter: IElementEventsFilter;
+  i: Integer;
+begin
+  pCol := SelectAll(Selector);
+  for i := 0 to pCol.Count - 1 do
+  begin
+    pEvents := pCol[i] as IElementEvents;
+    pFilter := pCol[i] as IElementEventsFilter;
+    pFilter.MouseFilter := Event;
+    pEvents.OnMouse := Handler;
+    FSciter.FEventList.Add(pEvents);
+  end;
+  Result := Self;
+end;
+
+function TElement.SubscribeScriptingCall(const Selector: WideString;
+  const Handler: TElementOnScriptingCall): IElement;
+var
+  pCol: IElementCollection;
+  pEvents: IElementEvents;
+  i: Integer;
+begin
+  pCol := SelectAll(Selector);
+  for i := 0 to pCol.Count - 1 do
+  begin
+    pEvents := pCol[i] as IElementEvents;
+    pEvents.OnScriptingCall := Handler;
+    FSciter.FEventList.Add(pEvents);
+  end;
+  Result := Self;
+end;
+
+function TElement.SubscribeScroll(const Selector: WideString;
+  const Handler: TElementOnScroll): IElement;
+var
+  pCol: IElementCollection;
+  pEvents: IElementEvents;
+  i: Integer;
+begin
+  pCol := SelectAll(Selector);
+  for i := 0 to pCol.Count - 1 do
+  begin
+    pEvents := pCol[i] as IElementEvents;
+    pEvents.OnScroll := Handler;
+    FSciter.FEventList.Add(pEvents);
+  end;
+  Result := Self;
+end;
+
+function TElement.SubscribeSize(const Selector: WideString;
+  const Handler: TElementOnSize): IElement;
+var
+  pCol: IElementCollection;
+  pEvents: IElementEvents;
+  i: Integer;
+begin
+  pCol := SelectAll(Selector);
+  for i := 0 to pCol.Count - 1 do
+  begin
+    pEvents := pCol[i] as IElementEvents;
+    pEvents.OnSize := Handler;
+    FSciter.FEventList.Add(pEvents);
+  end;
+  Result := Self;
+end;
+
+function TElement.SubscribeTimer(const Selector: WideString;
+  const Handler: TElementOnTimer): IElement;
+var
+  pCol: IElementCollection;
+  pEvents: IElementEvents;
+  i: Integer;
+begin
+  pCol := SelectAll(Selector);
+  for i := 0 to pCol.Count - 1 do
+  begin
+    pEvents := pCol[i] as IElementEvents;
+    pEvents.OnTimer := Handler;
+    FSciter.FEventList.Add(pEvents);
+  end;
+  Result := Self;
 end;
 
 procedure TElement.Swap(const Element: IElement);

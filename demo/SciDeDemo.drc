@@ -8,69 +8,71 @@
   resources were bound to the produced executable.
 */
 
-#define ExtCtrls_clNameWindow 65264
-#define ExtCtrls_clNameWindowFrame 65265
-#define ExtCtrls_clNameWindowText 65266
-#define WinHelpViewer_hNoKeyword 65267
-#define ComConst_SOleError 65268
-#define ComConst_SNoMethod 65269
-#define ComConst_SVarNotObject 65270
-#define ComConst_STooManyParams 65271
-#define ComConst_SAutomationWarning 65272
-#define ComConst_SNoCloseActiveServer1 65273
-#define ComConst_SNoCloseActiveServer2 65274
-#define OleConst_SCannotActivate 65275
-#define OleConst_SNoWindowHandle 65276
-#define OleConst_SInvalidLicense 65277
-#define OleConst_SNotLicensed 65278
-#define ExtCtrls_clNameCaptionText 65280
-#define ExtCtrls_clNameDefault 65281
-#define ExtCtrls_clNameGrayText 65282
-#define ExtCtrls_clNameHighlight 65283
-#define ExtCtrls_clNameHighlightText 65284
-#define ExtCtrls_clNameInactiveBorder 65285
-#define ExtCtrls_clNameInactiveCaption 65286
-#define ExtCtrls_clNameInactiveCaptionText 65287
-#define ExtCtrls_clNameInfoBk 65288
-#define ExtCtrls_clNameInfoText 65289
-#define ExtCtrls_clNameMenu 65290
-#define ExtCtrls_clNameMenuText 65291
-#define ExtCtrls_clNameNone 65292
-#define ExtCtrls_clNameScrollBar 65293
-#define ExtCtrls_clName3DDkShadow 65294
-#define ExtCtrls_clName3DLight 65295
-#define ExtCtrls_clNameBlue 65296
-#define ExtCtrls_clNameFuchsia 65297
-#define ExtCtrls_clNameAqua 65298
-#define ExtCtrls_clNameWhite 65299
-#define ExtCtrls_clNameMoneyGreen 65300
-#define ExtCtrls_clNameSkyBlue 65301
-#define ExtCtrls_clNameCream 65302
-#define ExtCtrls_clNameMedGray 65303
-#define ExtCtrls_clNameActiveBorder 65304
-#define ExtCtrls_clNameActiveCaption 65305
-#define ExtCtrls_clNameAppWorkSpace 65306
-#define ExtCtrls_clNameBackground 65307
-#define ExtCtrls_clNameBtnFace 65308
-#define ExtCtrls_clNameBtnHighlight 65309
-#define ExtCtrls_clNameBtnShadow 65310
-#define ExtCtrls_clNameBtnText 65311
-#define HelpIntfs_hNoTableOfContents 65312
-#define HelpIntfs_hNothingFound 65313
-#define HelpIntfs_hNoContext 65314
-#define HelpIntfs_hNoTopics 65315
-#define ExtCtrls_clNameBlack 65316
-#define ExtCtrls_clNameMaroon 65317
-#define ExtCtrls_clNameGreen 65318
-#define ExtCtrls_clNameOlive 65319
-#define ExtCtrls_clNameNavy 65320
-#define ExtCtrls_clNamePurple 65321
-#define ExtCtrls_clNameTeal 65322
-#define ExtCtrls_clNameGray 65323
-#define ExtCtrls_clNameSilver 65324
-#define ExtCtrls_clNameRed 65325
-#define ExtCtrls_clNameLime 65326
-#define ExtCtrls_clNameYellow 65327
+#define OleConst_SNotLicensed 65248
+#define ExtCtrls_clName3DLight 65264
+#define ExtCtrls_clNameWindow 65265
+#define ExtCtrls_clNameWindowFrame 65266
+#define ExtCtrls_clNameWindowText 65267
+#define ComStrs_sInvalidComCtl32 65268
+#define WinHelpViewer_hNoKeyword 65269
+#define ComConst_SOleError 65270
+#define ComConst_SNoMethod 65271
+#define ComConst_SVarNotObject 65272
+#define ComConst_STooManyParams 65273
+#define ComConst_SAutomationWarning 65274
+#define ComConst_SNoCloseActiveServer1 65275
+#define ComConst_SNoCloseActiveServer2 65276
+#define OleConst_SCannotActivate 65277
+#define OleConst_SNoWindowHandle 65278
+#define OleConst_SInvalidLicense 65279
+#define ExtCtrls_clNameBtnText 65280
+#define ExtCtrls_clNameCaptionText 65281
+#define ExtCtrls_clNameDefault 65282
+#define ExtCtrls_clNameGrayText 65283
+#define ExtCtrls_clNameHighlight 65284
+#define ExtCtrls_clNameHighlightText 65285
+#define ExtCtrls_clNameInactiveBorder 65286
+#define ExtCtrls_clNameInactiveCaption 65287
+#define ExtCtrls_clNameInactiveCaptionText 65288
+#define ExtCtrls_clNameInfoBk 65289
+#define ExtCtrls_clNameInfoText 65290
+#define ExtCtrls_clNameMenu 65291
+#define ExtCtrls_clNameMenuText 65292
+#define ExtCtrls_clNameNone 65293
+#define ExtCtrls_clNameScrollBar 65294
+#define ExtCtrls_clName3DDkShadow 65295
+#define ExtCtrls_clNameYellow 65296
+#define ExtCtrls_clNameBlue 65297
+#define ExtCtrls_clNameFuchsia 65298
+#define ExtCtrls_clNameAqua 65299
+#define ExtCtrls_clNameWhite 65300
+#define ExtCtrls_clNameMoneyGreen 65301
+#define ExtCtrls_clNameSkyBlue 65302
+#define ExtCtrls_clNameCream 65303
+#define ExtCtrls_clNameMedGray 65304
+#define ExtCtrls_clNameActiveBorder 65305
+#define ExtCtrls_clNameActiveCaption 65306
+#define ExtCtrls_clNameAppWorkSpace 65307
+#define ExtCtrls_clNameBackground 65308
+#define ExtCtrls_clNameBtnFace 65309
+#define ExtCtrls_clNameBtnHighlight 65310
+#define ExtCtrls_clNameBtnShadow 65311
+#define Consts_SSeparator 65312
+#define HelpIntfs_hNoTableOfContents 65313
+#define HelpIntfs_hNothingFound 65314
+#define HelpIntfs_hNoContext 65315
+#define HelpIntfs_hNoTopics 65316
+#define ExtCtrls_clNameBlack 65317
+#define ExtCtrls_clNameMaroon 65318
+#define ExtCtrls_clNameGreen 65319
+#define ExtCtrls_clNameOlive 65320
+#define ExtCtrls_clNameNavy 65321
+#define ExtCtrls_clNamePurple 65322
+#define ExtCtrls_clNameTeal 65323
+#define ExtCtrls_clNameGray 65324
+#define ExtCtrls_clNameSilver 65325
+#define ExtCtrls_clNameRed 65326
+#define ExtCtrls_clNameLime 65327
 #define Consts_SmkcUp 65328
 #define Consts_SmkcRight 65329
 #define Consts_SmkcDown 65330
@@ -281,9 +283,12 @@
 #define SysConst_SInvalidOp 65535
 STRINGTABLE
 BEGIN
+	OleConst_SNotLicensed,	"License information for %s not found. You cannot use this control in design mode"
+	ExtCtrls_clName3DLight,	"3D Light"
 	ExtCtrls_clNameWindow,	"Window Background"
 	ExtCtrls_clNameWindowFrame,	"Window Frame"
 	ExtCtrls_clNameWindowText,	"Window Text"
+	ComStrs_sInvalidComCtl32,	"This control requires version 4.70 or greater of COMCTL32.DLL"
 	WinHelpViewer_hNoKeyword,	"No help keyword specified."
 	ComConst_SOleError,	"OLE error %.8x"
 	ComConst_SNoMethod,	"Method '%s' not supported by automation object"
@@ -295,7 +300,7 @@ BEGIN
 	OleConst_SCannotActivate,	"OLE control activation failed"
 	OleConst_SNoWindowHandle,	"Could not obtain OLE control window handle"
 	OleConst_SInvalidLicense,	"License information for %s is invalid"
-	OleConst_SNotLicensed,	"License information for %s not found. You cannot use this control in design mode"
+	ExtCtrls_clNameBtnText,	"Button Text"
 	ExtCtrls_clNameCaptionText,	"Caption Text"
 	ExtCtrls_clNameDefault,	"Default"
 	ExtCtrls_clNameGrayText,	"Gray Text"
@@ -311,7 +316,7 @@ BEGIN
 	ExtCtrls_clNameNone,	"None"
 	ExtCtrls_clNameScrollBar,	"Scroll Bar"
 	ExtCtrls_clName3DDkShadow,	"3D Dark Shadow"
-	ExtCtrls_clName3DLight,	"3D Light"
+	ExtCtrls_clNameYellow,	"Yellow"
 	ExtCtrls_clNameBlue,	"Blue"
 	ExtCtrls_clNameFuchsia,	"Fuchsia"
 	ExtCtrls_clNameAqua,	"Aqua"
@@ -327,7 +332,7 @@ BEGIN
 	ExtCtrls_clNameBtnFace,	"Button Face"
 	ExtCtrls_clNameBtnHighlight,	"Button Highlight"
 	ExtCtrls_clNameBtnShadow,	"Button Shadow"
-	ExtCtrls_clNameBtnText,	"Button Text"
+	Consts_SSeparator,	"Separator"
 	HelpIntfs_hNoTableOfContents,	"Unable to find a Table of Contents"
 	HelpIntfs_hNothingFound,	"No help found for %s"
 	HelpIntfs_hNoContext,	"No context-sensitive help installed"
@@ -343,7 +348,6 @@ BEGIN
 	ExtCtrls_clNameSilver,	"Silver"
 	ExtCtrls_clNameRed,	"Red"
 	ExtCtrls_clNameLime,	"Lime"
-	ExtCtrls_clNameYellow,	"Yellow"
 	Consts_SmkcUp,	"Up"
 	Consts_SmkcRight,	"Right"
 	Consts_SmkcDown,	"Down"

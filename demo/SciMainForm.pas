@@ -6,19 +6,13 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, SciterApi, TiScriptApi, Sciter, StdCtrls, OleCtrls,
   ExtCtrls, ComCtrls, Menus, ComObj, ActiveX, SciDeDemo_TLB,
-  ComServ, AppEvnts;
+  ComServ, AppEvnts, ToolWin, ImgList, ActnList, ShellAPI;
 
 type
   TMainForm = class(TForm)
     Actions1: TMenuItem;
-    Button1: TButton;
-    cmdCallNative: TButton;
-    cmdCallTiScript: TButton;
-    cmdEval: TButton;
-    cmdReload: TButton;
     ctxSciter: TPopupMenu;
     DumpHTML1: TMenuItem;
-    Label1: TLabel;
     mm1: TMainMenu;
     mnuElementAtCursor: TMenuItem;
     mnuOpenFile: TMenuItem;
@@ -26,28 +20,40 @@ type
     N1: TMenuItem;
     NavigatetoSciterwebsite1: TMenuItem;
     ofd: TOpenDialog;
-    pnlCommands: TPanel;
     pnlContainer: TPanel;
     sbr: TStatusBar;
     Sciter1: TSciter;
     sfd: TSaveDialog;
     spl1: TSplitter;
-    txt1: TEdit;
-    txt2: TEdit;
     txtLog: TMemo;
-    ApplicationEvents1: TApplicationEvents;
-    procedure ApplicationEvents1Message(var Msg: tagMSG; var Handled: Boolean);
-    procedure Button1Click(Sender: TObject);
+    cbr: TCoolBar;
+    tbr: TToolBar;
+    ests1: TMenuItem;
+    mnuCallNativeMethod: TMenuItem;
+    mnuTestJsonSerializer: TMenuItem;
+    iml: TImageList;
+    al: TActionList;
+    acFileOpen: TAction;
+    acFileSave: TAction;
+    ToolButton1: TToolButton;
+    ToolButton2: TToolButton;
+    acRefresh: TAction;
+    ToolButton3: TToolButton;
+    acClearLog: TAction;
+    ToolButton4: TToolButton;
+    acDumpHTML: TAction;
+    ToolButton5: TToolButton;
+    procedure acClearLogExecute(Sender: TObject);
+    procedure acDumpHTMLExecute(Sender: TObject);
     procedure cmdCallNativeClick(Sender: TObject);
     procedure cmdCallTiScriptClick(Sender: TObject);
-    procedure cmdEvalClick(Sender: TObject);
     procedure cmdReloadClick(Sender: TObject);
     procedure cmdSaveToFileClick(Sender: TObject);
-    procedure DumpHTML1Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure mnuElementAtCursorClick(Sender: TObject);
     procedure mnuOpenFileClick(Sender: TObject);
+    procedure mnuTestJsonSerializerClick(Sender: TObject);
     procedure NavigatetoSciterwebsite1Click(Sender: TObject);
     procedure OnSciterOut(ASender: TObject; const msg: WideString);
     procedure Sciter1DocumentComplete(ASender: TObject; const url: WideString);
@@ -57,10 +63,11 @@ type
     procedure Sciter1ScriptingCall(ASender: TObject; const Args:
         TElementOnScriptingCallArgs);
   private
+    FUrl: WideString;
     FButton: TButton;
-    FExamplesBase: WideString;
-    FHomeUrl: WideString;
     FTxtEvents: IElementEvents;
+    procedure WMDropFiles(var Msg: TWMDropFiles); message WM_DROPFILES;
+    procedure Open(const FileName: WideString);
     procedure OnBodyMethodCall(ASender: TObject; const Args: TElementOnScriptingCallArgs);
     procedure OnDivRequestDataArrived(ASender: TObject; const Args: TElementOnDataArrivedEventArgs);
     procedure OnDivTimer(ASender: TObject; const Args: TElementOnTimerEventArgs);
@@ -95,24 +102,19 @@ uses SciterOle, SciterNative, NativeForm, Math;
 {$R *.dfm}
 {$R ..\resources\Richtext.res}
 
-procedure TMainForm.ApplicationEvents1Message(var Msg: tagMSG; var Handled:
-    Boolean);
+procedure TMainForm.acClearLogExecute(Sender: TObject);
 begin
-  if Msg.message = WM_ENABLE then
-  begin
-    Msg.lParam := 1;
-  end;
+  txtLog.Lines.Clear;
 end;
+
+procedure TMainForm.acDumpHTMLExecute(Sender: TObject);
+begin
+  txtLog.Lines.Clear;
+  txtLog.Text := Sciter1.Root.OuterHtml;
+end;
+
 
 //{$R ..\resources\Mvc.res}
-
-procedure TMainForm.Button1Click(Sender: TObject);
-var
-  sv: TSciterValue;
-begin
-  sv := Sciter1.JsonToSciterValue(' { firstName: "Lars", lastName: "Carlsson", age: 70, address: { country: "Sweden", city: "Stockholm" }}');
-  ShowMessage(Sciter1.SciterValueToJson(sv));
-end;
 
 procedure TMainForm.cmdCallNativeClick(Sender: TObject);
 begin
@@ -124,18 +126,10 @@ begin
   ShowMessage(Sciter1.TiScriptCall('', 'Echo', ['Echo "Hello World" OK']));
 end;
 
-procedure TMainForm.cmdEvalClick(Sender: TObject);
-begin
-  try
-    ShowMessage(Sciter1.Call('sciter_sum', [StrToInt(txt1.Text), StrToInt(txt2.Text)]));
-  except
-    on E:Exception do ShowMessage(E.Message);
-  end;
-end;
-
 procedure TMainForm.cmdReloadClick(Sender: TObject);
 begin
-  Sciter1.LoadURL(FHomeUrl);
+  if FUrl <> '' then
+    Sciter1.LoadURL(FUrl);
 end;
 
 procedure TMainForm.cmdSaveToFileClick(Sender: TObject);
@@ -144,29 +138,24 @@ begin
     Sciter1.SaveToFile(sfd.FileName);  
 end;
 
-procedure TMainForm.DumpHTML1Click(Sender: TObject);
-begin
-  txtLog.Lines.Clear;
-  txtLog.Text := Sciter1.Root.OuterHtml;
-end;
-
 procedure TMainForm.FormCreate(Sender: TObject);
 var
   nf: TNativeForm;
   pTest: ITest;
   pXml: OleVariant;
   i: Integer;
+  sUrl: WideString;
 begin
+  DragAcceptFiles(Handle, True);
+  
   Caption := Caption + ' :: Sciter version ' + Sciter1.Version;
-  FExamplesBase := ExtractFileDir(Application.ExeName);
-  FExamplesBase := Sciter1.FilePathToURL(FExamplesBase) + '/';
   for i := 1 to ParamCount do
   begin
-    FHomeUrl := Sciter1.FilePathToURL(ParamStr(1));
+    sUrl := Sciter1.FilePathToURL(ParamStr(1));
   end;
-  if FHomeUrl = '' then
-    FHomeURL := {FExamplesBase + }'scide.htm';
-  Sciter1.LoadUrl(FHomeURL);
+  if sUrl = '' then
+    sUrl := 'scide.htm';
+  Open(sUrl);
 
   // Registering native functions
   Sciter1.RegisterNativeFunction('CreateObject', ptiscript_method(@CreateObjectNative));
@@ -209,6 +198,14 @@ procedure TMainForm.mnuOpenFileClick(Sender: TObject);
 begin
   if ofd.Execute then
     Sciter1.LoadURL(Sciter1.FilePathToURL(ofd.FileName));
+end;
+
+procedure TMainForm.mnuTestJsonSerializerClick(Sender: TObject);
+var
+  sv: TSciterValue;
+begin
+  sv := Sciter1.JsonToSciterValue(' { firstName: "Lars", lastName: "Carlsson", age: 70, address: { country: "Sweden", city: "Stockholm" }}');
+  ShowMessage(Sciter1.SciterValueToJson(sv));
 end;
 
 procedure TMainForm.NavigatetoSciterwebsite1Click(Sender: TObject);
@@ -288,6 +285,12 @@ var
   pPre: IElement;
   sText: WideString;
 
+  function H4ColorCallback(Sender: Pointer; const Element: IElement): Boolean;
+  begin
+    Result := False;
+    Element.StyleAttr['color'] := 'red';
+  end;
+
   procedure Dump(const El: IElement; var Text: WideString);
   var
     i: Integer;
@@ -336,6 +339,11 @@ begin
         for i := 0 to pCol.Count - 1 do
           pCol[i].Text := 'Heading (text changed at ' + DateTimeToStr(Now) + ')';
       end;
+    end;
+
+    if Args.Target.ID = 'cmdSetHeadingsColor' then
+    begin
+      Sciter1.Root.ForAll('#divHeadings h4', TElementHandlerCallback(@H4ColorCallback));
     end;
 
     if Args.Target.ID = 'cmdRemoveHeadings' then
@@ -387,6 +395,20 @@ begin
   txtLog.Lines.Add(msg);
 end;
 
+procedure TMainForm.Open(const FileName: WideString);
+var
+  sUrl: WideString;
+begin
+  try
+    sUrl := Sciter1.FilePathToURL(FileName);
+    Sciter1.LoadUrl(sUrl);
+    FUrl := sUrl;
+  except
+    on E:Exception do
+      ShowMessage('Failed to load file ' + FileName);
+  end;
+end;
+
 procedure TMainForm.Sciter1DocumentComplete(ASender: TObject; const url:
     WideString);
 var
@@ -395,10 +417,11 @@ var
 begin
   if FButton <> nil then
     FreeAndNil(FButton);
-  txtLog.Lines.Add('OnDocumentComplete: ' + url);
+  txtLog.Lines.Clear;
+  txtLog.Lines.Add('OnDocumentComplete ' + url + ' at ' + DateTimeToStr(Now));
 
-  Sciter1.Subscribe('body', BUTTON_CLICK, OnSciterControlEvent);
-  Sciter1.Subscribe('body', OnBodyMethodCall);
+  Sciter1.Root.SubscribeControlEvents('body', BUTTON_CLICK, OnSciterControlEvent);
+  Sciter1.Root.SubscribeScriptingCall('body', OnBodyMethodCall);
 
   pDivContainer := Sciter1.Root.Select('#divContainer');
   if pDivContainer <> nil then
@@ -411,6 +434,16 @@ begin
     pDivContainer.AttachHwndToElement(FButton.Handle);
   end;
 
+  // Subscribing to events using "fluent" subscribe* methods
+  Sciter1.Root
+    .SubscribeMouse('.es', MOUSE_ENTER, OnEsMouse)
+    .SubscribeMouse('.es', MOUSE_LEAVE, OnEsMouse)
+    .SubscribeControlEvents('button.es1', BUTTON_CLICK, OnEsClick)
+    .SubscribeKey('.es2', KEY_DOWN, OnEsKey)
+    .SubscribeTimer('#divTimer', OnDivTimer)
+    .SubscribeDataArrived('#divRequest', OnDivRequestDataArrived);
+
+  // Subscribing to events using IElementEvents interface
   pTxt := Sciter1.Root.Select('#txtEvents');
   if pTxt <> nil then
   begin
@@ -418,15 +451,6 @@ begin
     FTxtEvents.OnControlEvent := OnElementControlEvent;
     FTxtEvents.OnMouse := OnElementMouse;
   end;
-
-  Sciter1.Subscribe('#divTimer', OnDivTimer);
-  Sciter1.Subscribe('#divRequest', OnDivRequestDataArrived);
-
-  Sciter1
-    .Subscribe('.es', MOUSE_ENTER, OnEsMouse)
-    .Subscribe('.es', MOUSE_LEAVE, OnEsMouse)
-    .Subscribe('button.es1', BUTTON_CLICK, OnEsClick)
-    .Subscribe('.es2', KEY_DOWN, OnEsKey);
 end;
 
 procedure TMainForm.Sciter1LoadData(ASender: TObject; const url: WideString;
@@ -520,6 +544,34 @@ end;
 procedure TTest.SayHello;
 begin
   ShowMessage('TTest: Hello!');
+end;
+
+procedure TMainForm.WMDropFiles(var Msg: TWMDropFiles);
+var
+  DropH: HDROP;               // drop handle
+  DroppedFileCount: Integer;  // number of files dropped
+  FileNameLength: Integer;    // length of a dropped file name
+  FileName: string;           // a dropped file name
+  I: Integer;                 // loops thru all dropped files
+  DropPoint: TPoint;          // point where files dropped
+begin
+  inherited;
+  DropH := Msg.Drop;
+  try
+    DroppedFileCount := DragQueryFile(DropH, $FFFFFFFF, nil, 0);
+    for I := 0 to Pred(DroppedFileCount) do
+    begin
+      FileNameLength := DragQueryFile(DropH, I, nil, 0);
+      SetLength(FileName, FileNameLength);
+      DragQueryFile(DropH, I, PChar(FileName), FileNameLength + 1);
+    end;
+    DragQueryPoint(DropH, DropPoint);
+  finally
+    DragFinish(DropH);
+  end;
+  if FileName <> '' then
+    Open(FileName);
+  Msg.Result := 0;
 end;
 
 initialization
