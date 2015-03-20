@@ -135,7 +135,7 @@ end;
 procedure TMainForm.cmdSaveToFileClick(Sender: TObject);
 begin
   if sfd.Execute then
-    Sciter1.SaveToFile(sfd.FileName);  
+    Sciter1.SaveToFile(sfd.FileName, 'UTF-8');  
 end;
 
 procedure TMainForm.FormCreate(Sender: TObject);
@@ -151,7 +151,7 @@ begin
   Caption := Caption + ' :: Sciter version ' + Sciter1.Version;
   for i := 1 to ParamCount do
   begin
-    sUrl := Sciter1.FilePathToURL(ParamStr(1));
+    sUrl := ParamStr(1);
   end;
   if sUrl = '' then
     sUrl := 'scide.htm';
@@ -197,7 +197,7 @@ end;
 procedure TMainForm.mnuOpenFileClick(Sender: TObject);
 begin
   if ofd.Execute then
-    Sciter1.LoadURL(Sciter1.FilePathToURL(ofd.FileName));
+    Open(ofd.FileName);
 end;
 
 procedure TMainForm.mnuTestJsonSerializerClick(Sender: TObject);
@@ -417,7 +417,6 @@ var
 begin
   if FButton <> nil then
     FreeAndNil(FButton);
-  txtLog.Lines.Clear;
   txtLog.Lines.Add('OnDocumentComplete ' + url + ' at ' + DateTimeToStr(Now));
 
   Sciter1.Root.SubscribeControlEvents('body', BUTTON_CLICK, OnSciterControlEvent);

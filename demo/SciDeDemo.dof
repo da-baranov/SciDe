@@ -100,7 +100,7 @@ Conditionals=WINDOWS
 DebugSourceDirs=
 UsePackages=0
 [Parameters]
-RunParams=
+RunParams=hello.htm
 HostApplication=
 Launcher=
 UseLauncher=0

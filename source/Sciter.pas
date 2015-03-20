@@ -779,7 +779,7 @@ procedure Register;
 implementation
 
 uses
-  SciterOle;
+  SciterOle, MLang;
 
 var
   Behaviors: TList;
@@ -1709,19 +1709,53 @@ begin
   SciterAPI.RegisterNativeFunction(VM, Name, Handler);
 end;
 
-{ Exprerimental, need to leverage WideCharToMultiByte  }
+{ Exprerimental }
 procedure TSciter.SaveToFile(const FileName, Encoding: WideString);
 var
-  sUTF8: UTF8String;
-  F: TextFile;
+  pLang: IMultiLanguage;
+  pInfo: tagMIMECSETINFO;
+  pInfo1: tagMIMECPINFO;
+  pdwMode: Cardinal;
+  psrcSize: Cardinal;
+  pcDstSize: Cardinal;
+  pRet: PAnsiChar;
+  sHtml: WideString;
+  enc: Cardinal;
+  pStm: TFileStream;
 begin
-  sUTF8 := UTF8Encode(Html);
+  sHtml := Self.Html;
+  
+  pdwMode := 0;
+  pLang := CoCMultiLanguage.Create;
+  pRet := nil;
   try
-    AssignFile(F, AnsiString(FileName));
-    Rewrite(F);
-    Write(F, sUTF8);
+    OleCheck(pLang.GetCharsetInfo(Encoding, pInfo));
+    OleCheck(pLang.GetCodePageInfo(pInfo.uiCodePage, pInfo1));
+
+    // encoding
+    if pInfo.uiInternetEncoding = 0 then
+      enc := pInfo.uiCodePage
+    else
+      enc := pInfo.uiInternetEncoding;
+      
+    // input string is null-terminated
+    psrcSize := Cardinal(-1);
+    // Get buffer size
+    OleCheck(pLang.ConvertStringFromUnicode(pdwMode, enc, PWideChar(Html), psrcSize, nil, pcDstSize));
+    // Performing conversion
+    GetMem(pRet, pcDstSize + 2);
+    OleCheck(pLang.ConvertStringFromUnicode(pdwMode, enc, PWideChar(Html), psrcSize, pRet, pcDstSize));
+
+    pStm := TFileStream.Create(FileName, fmOpenWrite, fmShareDenyNone);
+    try
+      pStm.Write(pRet^, pcDstSize);
+    finally
+      pStm.Free;
+    end;
   finally
-    CloseFile(F);
+    pLang := nil;
+    if pRet <> nil then
+      FreeMem(pRet, pcDstSize + 2);
   end;
 end;
 

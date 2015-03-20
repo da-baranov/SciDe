@@ -38,6 +38,7 @@ contains
   SciterApi in '..\..\source\SciterApi.pas',
   SciterNative in '..\..\source\SciterNative.pas',
   SciterOle in '..\..\source\SciterOle.pas',
-  TiScriptApi in '..\..\source\TiScriptApi.pas';
+  TiScriptApi in '..\..\source\TiScriptApi.pas',
+  MLang in '..\..\source\MLang.pas';
 
 end.
