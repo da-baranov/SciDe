@@ -356,6 +356,7 @@ type
     function GetID: WideString;
     function GetIndex: Integer;
     function GetInnerHtml: WideString;
+    function GetLocation(area: ELEMENT_AREAS = ROOT_RELATIVE): TRect;
     function GetOuterHtml: WideString;
     function GetParent: IElement;
     function GetState: Integer;
@@ -367,7 +368,10 @@ type
     procedure InsertAfter(const Html: WideString);
     procedure InsertBefore(const Html: WideString);
     procedure InsertElement(const Child: IElement; const Index: Integer);
+    function IsValid: Boolean;
+    function NextSibling: IElement;
     function PostEvent(EventCode: BEHAVIOR_EVENTS): Boolean;
+    function PrevSibling: IElement;
     procedure RemoveChildren;
     procedure Request(const Url: WideString; const RequestType: REQUEST_TYPE);
     procedure ScrollToView;
@@ -552,11 +556,14 @@ type
     function GetAttributeValue(const Name: WideString): WideString; overload;
     function GetChild(Index: Integer): IElement;
     function GetHWND: HWND;
+    function GetLocation(area: ELEMENT_AREAS = ROOT_RELATIVE): TRect;
     procedure InsertAfter(const Html: WideString);
     procedure InsertBefore(const Html: WideString);
     procedure InsertElement(const Child: IElement; const AIndex: Integer);
     function IsValid: Boolean;
+    function NextSibling: IElement;
     function PostEvent(EventCode: BEHAVIOR_EVENTS): Boolean;
+    function PrevSibling: IElement;
     procedure RemoveChildren;
     procedure Request(const Url: WideString; const RequestType: REQUEST_TYPE);
     procedure ScrollToView;
@@ -1716,8 +1723,8 @@ var
   pInfo: tagMIMECSETINFO;
   pInfo1: tagMIMECPINFO;
   pdwMode: Cardinal;
-  psrcSize: Cardinal;
-  pcDstSize: Cardinal;
+  pcSrcSize: ActiveX.SYSUINT;
+  pcDstSize: ActiveX.SYSUINT;
   pRet: PAnsiChar;
   sHtml: WideString;
   enc: Cardinal;
@@ -1739,12 +1746,12 @@ begin
       enc := pInfo.uiInternetEncoding;
       
     // input string is null-terminated
-    psrcSize := Cardinal(-1);
+    pcsrcSize := SYSUINT(-1);
     // Get buffer size
-    OleCheck(pLang.ConvertStringFromUnicode(pdwMode, enc, PWideChar(Html), psrcSize, nil, pcDstSize));
+    OleCheck(pLang.ConvertStringFromUnicode(pdwMode, enc, PWideChar(sHtml), pcSrcSize, nil, pcDstSize));
     // Performing conversion
     GetMem(pRet, pcDstSize + 2);
-    OleCheck(pLang.ConvertStringFromUnicode(pdwMode, enc, PWideChar(Html), psrcSize, pRet, pcDstSize));
+    OleCheck(pLang.ConvertStringFromUnicode(pdwMode, enc, PWideChar(sHtml), pcSrcSize, pRet, pcDstSize));
 
     pStm := TFileStream.Create(FileName, fmOpenWrite, fmShareDenyNone);
     try
@@ -2416,6 +2423,18 @@ begin
   Result := KEY_EVENTS(FFilterKey);
 end;
 
+function TElement.GetLocation(area: ELEMENT_AREAS): TRect;
+var
+  pRet: TRect;
+begin
+  SciterCheck(
+    API.SciterGetElementLocation(FElement, pRet, area),
+    'Failed to get element location.',
+    []
+  );
+  Result := pRet;
+end;
+
 function TElement.GetMouseFilter: MOUSE_EVENTS;
 begin
   Result := MOUSE_EVENTS(FFilterMouse);
@@ -2828,13 +2847,52 @@ begin
 end;
 
 function TElement.IsValid: Boolean;
+var
+  h: HWINDOW;
 begin
-  Result := FElement <> nil;
+  Result := True;
+  if FELEMENT = nil then Result := False;
+  if API.SciterGetElementHwnd(FElement, h, true) <> SCDOM_OK then Result := False;
+  if h = 0 then Result := False;
+end;
+
+function TElement.NextSibling: IElement;
+var
+  pParent: IElement;
+  iIndex: Integer;
+begin
+  Result := nil;
+  if not Self.IsValid then
+    Exit;
+    
+  iIndex := Self.Index;
+  pParent := Self.Parent;
+  if not pParent.IsValid then
+    Exit;
+    
+  if (iIndex + 1) >= Parent.ChildrenCount then
+    Exit;
+    
+  Result := pParent.GetChild(iIndex + 1);
 end;
 
 function TElement.PostEvent(EventCode: BEHAVIOR_EVENTS): Boolean;
 begin
   Result := API.SciterPostEvent(FELEMENT, UINT(EventCode), nil, nil) = SCDOM_OK;
+end;
+
+function TElement.PrevSibling: IElement;
+var
+  pParent: IElement;
+  iIndex: Integer;
+begin
+  Result := nil;
+  if not Self.IsValid then
+    Exit;
+  pParent := Self.Parent;
+  if not pParent.IsValid then
+    Exit;
+  Result := pParent.GetChild(Self.Index - 1);
 end;
 
 procedure TElement.RemoveChildren;

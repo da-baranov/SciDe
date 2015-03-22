@@ -273,11 +273,11 @@ type
 
   ELEMENT_AREAS =
   (
-    ROOT_RELATIVE      = 1,
-    SELF_RELATIVE      = 2,
-    CONTAINER_RELATIVE = 3,
-    VIEW_RELATIVE      = 4,
-    CONTENT_BOX        = 0,
+    ROOT_RELATIVE      = $1,
+    SELF_RELATIVE      = $2,
+    CONTAINER_RELATIVE = $3,
+    VIEW_RELATIVE      = $4,
+    CONTENT_BOX        = $0,
     PADDING_BOX        = $10,
     BORDER_BOX         = $20,
     MARGIN_BOX         = $30,
