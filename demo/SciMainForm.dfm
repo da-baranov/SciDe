@@ -1,6 +1,6 @@
 object MainForm: TMainForm
-  Left = 496
-  Top = 125
+  Left = 433
+  Top = 231
   Width = 1191
   Height = 775
   Caption = 'SciDe - test form'
@@ -56,6 +56,11 @@ object MainForm: TMainForm
       Width = 1175
       Height = 480
       Align = alClient
+      EventMap = <
+        item
+          Selector = '#cmdEventHandler, .cmd-event-handler'
+          OnControlEvent = Sciter1EventHandlers0ControlEvent
+        end>
       PopupMenu = ctxSciter
       TabOrder = 1
       OnDocumentComplete = Sciter1DocumentComplete

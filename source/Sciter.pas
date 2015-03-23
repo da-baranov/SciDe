@@ -402,6 +402,7 @@ type
     procedure StopTimer;
     function SubscribeControlEvents(const Selector: WideString; const Event: BEHAVIOR_EVENTS; const Handler: TElementOnControlEvent): IElement;
     function SubscribeDataArrived(const Selector: WideString; const Handler: TElementOnDataArrived): IElement;
+    function SubscribeFocus(const Selector: WideString; const Handler: TElementOnFocus): IElement;
     function SubscribeGesture(const Selector: WideString; const Handler: TElementOnGesture): IElement;
     function SubscribeKey(const Selector: WideString; const Event: KEY_EVENTS;      const Handler: TElementOnKey): IElement;
     function SubscribeMouse(const Selector: WideString; const Event: MOUSE_EVENTS;    const Handler: TElementOnMouse): IElement;
@@ -608,6 +609,7 @@ type
     procedure StopTimer;
     function SubscribeControlEvents(const Selector: WideString; const Event: BEHAVIOR_EVENTS; const Handler: TElementOnControlEvent): IElement;
     function SubscribeDataArrived(const Selector: WideString; const Handler: TElementOnDataArrived): IElement;
+    function SubscribeFocus(const Selector: WideString; const Handler: TElementOnFocus): IElement;
     function SubscribeGesture(const Selector: WideString; const Handler: TElementOnGesture): IElement;
     function SubscribeKey(const Selector: WideString; const Event: KEY_EVENTS;      const Handler: TElementOnKey): IElement;
     function SubscribeMouse(const Selector: WideString; const Event: MOUSE_EVENTS;    const Handler: TElementOnMouse): IElement;
@@ -675,10 +677,80 @@ type
     property Item[const Index: Integer]: IElement read GetItem; default;
   end;
 
+  TSciterEventMapRule = class;
+
+  TSciterEventMap = class(TOwnedCollection)
+  private
+    function GetItem(AIndex: integer): TSciterEventMapRule;
+    procedure SetItem(AIndex: integer;
+      const Value: TSciterEventMapRule);
+  public
+    procedure Assign(Source: TPersistent); override;
+    property Items[AIndex: integer] : TSciterEventMapRule read GetItem write SetItem; default;
+  end;
+
+  TSciterEventMapRule = class(TCollectionItem, IElementEvents)
+  private
+    FOnControlEvent: TElementOnControlEvent;
+    FOnDataArrived: TElementOnDataArrived;
+    FOnFocus: TElementOnFocus;
+    FOnGesture: TElementOnGesture;
+    FOnKey: TElementOnKey;
+    FOnMouse: TElementOnMouse;
+    FOnScriptingCall: TElementOnScriptingCall;
+    FOnScroll: TElementOnScroll;
+    FOnSize: TElementOnSize;
+    FOnTimer: TElementOnTimer;
+    FSelector: WideString;
+    function GetOnControlEvent: TElementOnControlEvent;
+    function GetOnDataArrived: TElementOnDataArrived;
+    function GetOnFocus: TElementOnFocus;
+    function GetOnGesture: TElementOnGesture;
+    function GetOnKey: TElementOnKey;
+    function GetOnMouse: TElementOnMouse;
+    function GetOnScriptingCall: TElementOnScriptingCall;
+    function GetOnScroll: TElementOnScroll;
+    function GetOnSize: TElementOnSize;
+    function GetOnTimer: TElementOnTimer;
+    function QueryInterface(const IID: TGUID; out Obj): HResult; stdcall;
+    procedure SetOnControlEvent(const Value: TElementOnControlEvent);
+    procedure SetOnDataArrived(const Value: TElementOnDataArrived);
+    procedure SetOnFocus(const Value: TElementOnFocus);
+    procedure SetOnGesture(const Value: TElementOnGesture);
+    procedure SetOnKey(const Value: TElementOnKey);
+    procedure SetOnMouse(const Value: TElementOnMouse);
+    procedure SetOnScriptingCall(const Value: TElementOnScriptingCall);
+    procedure SetOnScroll(const Value: TElementOnScroll);
+    procedure SetOnSize(const Value: TElementOnSize);
+    procedure SetOnTimer(const Value: TElementOnTimer);
+    procedure SetSelector(const Value: WideString);
+    procedure Setup(const Element: IElement);
+    function _AddRef: Integer; stdcall;
+    function _Release: Integer; stdcall;
+  protected
+    function GetDisplayName: string; override;
+  public
+    procedure Assign(Source: TPersistent); override;
+  published
+    property Selector: WideString read FSelector write SetSelector;
+    property OnControlEvent: TElementOnControlEvent read GetOnControlEvent write SetOnControlEvent;
+    property OnDataArrived: TElementOnDataArrived read GetOnDataArrived write SetOnDataArrived;
+    property OnFocus: TElementOnFocus read GetOnFocus write SetOnFocus;
+    property OnGesture: TElementOnGesture read GetOnGesture write SetOnGesture;
+    property OnKey: TElementOnKey read GetOnKey write SetOnKey;
+    property OnMouse: TElementOnMouse read GetOnMouse write SetOnMouse;
+    property OnScriptingCall: TElementOnScriptingCall read GetOnScriptingCall write SetOnScriptingCall;
+    property OnScroll: TElementOnScroll read GetOnScroll write SetOnScroll;
+    property OnSize: TElementOnSize read GetOnSize write SetOnSize;
+    property OnTimer: TElementOnTimer read GetOnTimer write SetOnTimer;
+  end;
+
+
   TSciter = class(TCustomControl, _ISciterEventHandler)
   private
     FBaseUrl: WideString;
     FEventList: TInterfaceList;
+    FEventMap: TSciterEventMap;
     FHomeURL: WideString;
     FHtml: WideString;
     FManagedElements: TElementList;
@@ -697,6 +769,7 @@ type
     FOnViewScroll: TElementOnScroll;
     FOnViewSize: TElementOnSize;
     FUrl: WideString;
+    procedure BindStoredEventHandlers;
     function GetHtml: WideString;
     function GetHVM: HVM;
     function GetRoot: IElement;
@@ -802,6 +875,7 @@ type
     property DragKind;
     property DragMode;
     property Enabled;
+    property EventMap: TSciterEventMap read FEventMap write FEventMap;
     property Font;
     property OnClick;
     property OnContextPopup;
@@ -1227,7 +1301,6 @@ var
   pBehaviorEventParams: PBEHAVIOR_EVENT_PARAMS;
   sUri: WideString;
 begin
-  Result := False;
   pSciter := TObject(tag) as TSciter;
 
   case evtg of
@@ -1252,6 +1325,7 @@ constructor TSciter.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   Application.HookMainWindow(MainWindowHook);
+  FEventMap := TSciterEventMap.Create(Self, TSciterEventMapRule);
   FEventList := TInterfaceList.Create;
   FManagedElements := TElementList.Create(False);
   Width := 300;
@@ -1264,8 +1338,23 @@ begin
   FEventList.Clear;
   FEventList.Free;
   FManagedElements.Free;
+  if FEventMap <> nil then
+    FEventMap.Free;
   Application.UnhookMainWindow(MainWindowHook);
   inherited;
+end;
+
+procedure TSciter.BindStoredEventHandlers;
+var
+  i: Integer;
+  pItem: TSciterEventMapRule;
+begin
+  if FEventMap = nil then Exit;
+  for i := 0 to Pred(FEventMap.Count) do
+  begin
+    pItem := FEventMap.Items[i];
+    pItem.Setup(Root);
+  end;
 end;
 
 function TSciter.Call(const FunctionName: WideString;
@@ -1588,6 +1677,9 @@ var
 begin
   Result := False;
   UnsubscribeAll;
+
+  BindStoredEventHandlers;
+
   if Assigned(FOnDocumentComplete) then
   begin
     pArgs := TSciterOnDocumentCompleteEventArgs.Create;
@@ -2876,12 +2968,10 @@ function TElement.HandleBehaviorAttach: BOOL;
 var
   pArgs: TElementOnBehaviorEventArgs;
 begin
-  Result := False;
-  
   pArgs := TElementOnBehaviorEventArgs.Create(Self.Sciter, Self);
   try
     DoBehaviorAttach(pArgs);
-    Result := true;
+    Result := pArgs.Handled;
   finally
     pArgs.Free;
   end;
@@ -2891,12 +2981,10 @@ function TElement.HandleBehaviorDetach: BOOL;
 var
   pArgs: TElementOnBehaviorEventArgs;
 begin
-  Result := False;
-  
   pArgs := TElementOnBehaviorEventArgs.Create(Self.Sciter, Self);
   try
     DoBehaviorDetach(pArgs);
-    Result := true;
+    Result := pArgs.Handled;
   finally
     pArgs.Free;
   end;
@@ -2925,8 +3013,6 @@ function TElement.HandleDataArrived(var params: DATA_ARRIVED_PARAMS): BOOL;
 var
   pArgs: TElementOnDataArrivedEventArgs;
 begin
-  Result := False;
-  
   if (params.data = nil) or (params.dataSize = 0) then
   begin
     Result := False;
@@ -2946,8 +3032,6 @@ function TElement.HandleFocus(var params: FOCUS_PARAMS): BOOL;
 var
   pArgs: TElementOnFocusEventArgs;
 begin
-  Result := False;
-  
   pArgs := TElementOnFocusEventArgs.Create(Sciter, Self, params);
   try
     DoFocus(pArgs);
@@ -2961,8 +3045,6 @@ function TElement.HandleGesture(var params: GESTURE_PARAMS): BOOL;
 var
   pArgs: TElementOnGestureEventArgs;
 begin
-  Result := False;
-  
   pArgs := TElementOnGestureEventArgs.Create(Sciter, Self, params);
   try
     DoGesture(pArgs);
@@ -3489,6 +3571,23 @@ begin
   Result := Self;
 end;
 
+function TElement.SubscribeFocus(const Selector: WideString;
+  const Handler: TElementOnFocus): IElement;
+var
+  pCol: IElementCollection;
+  pEvents: IElementEvents;
+  i: Integer;
+begin
+  pCol := SelectAll(Selector);
+  for i := 0 to pCol.Count - 1 do
+  begin
+    pEvents := pCol[i] as IElementEvents;
+    pEvents.OnFocus := Handler;
+    FSciter.FEventList.Add(pEvents);
+  end;
+  Result := Self;
+end;
+
 function TElement.SubscribeGesture(const Selector: WideString;
   const Handler: TElementOnGesture): IElement;
 var
@@ -3726,6 +3825,8 @@ end;
 
 procedure Register;
 begin
+  RegisterClass(TSciterEventMapRule);
+  RegisterClass(TSciterEventMap);
   RegisterComponents('Samples', [TSciter]);
 end;
 
@@ -4000,6 +4101,213 @@ destructor TElementOnBehaviorEventArgs.Destroy;
 begin
   FElement := nil;
   inherited;
+end;
+
+{ TSciterEventMapRule }
+
+procedure TSciterEventMapRule.Assign(Source: TPersistent);
+var
+  pSrc: TSciterEventMapRule;
+begin
+  if Source is TSciterEventMapRule then
+  begin
+    pSrc := Source as TSciterEventMapRule;
+    Self.FOnControlEvent := pSrc.FOnControlEvent;
+    Self.FOnDataArrived := pSrc.FOnDataArrived;
+    Self.FOnFocus := pSrc.FOnFocus;
+    Self.FOnGesture := pSrc.FOnGesture;
+    Self.FOnKey := pSrc.FOnKey;
+    Self.FOnMouse := pSrc.FOnMouse;
+    Self.FOnScriptingCall := pSrc.FOnScriptingCall;
+    Self.FOnScroll := pSrc.FOnScroll;
+    Self.FOnSize := pSrc.FOnSize;
+    Self.FOnTimer := pSrc.FOnTimer;
+    Self.FSelector := pSrc.FSelector;
+  end
+    else
+  inherited;
+
+end;
+
+function TSciterEventMapRule.GetDisplayName: string;
+begin
+  Result := String(FSelector);
+end;
+
+function TSciterEventMapRule.GetOnControlEvent: TElementOnControlEvent;
+begin
+  Result := FOnControlEvent;
+end;
+
+function TSciterEventMapRule.GetOnDataArrived: TElementOnDataArrived;
+begin
+  Result := FOnDataArrived;
+end;
+
+function TSciterEventMapRule.GetOnFocus: TElementOnFocus;
+begin
+  Result := FOnFocus;
+end;
+
+function TSciterEventMapRule.GetOnGesture: TElementOnGesture;
+begin
+  Result := FOnGesture;
+end;
+
+function TSciterEventMapRule.GetOnKey: TElementOnKey;
+begin
+  Result := FOnKey;
+end;
+
+function TSciterEventMapRule.GetOnMouse: TElementOnMouse;
+begin
+  Result := FOnMouse;
+end;
+
+function TSciterEventMapRule.GetOnScriptingCall: TElementOnScriptingCall;
+begin
+  Result := FOnScriptingCall;
+end;
+
+function TSciterEventMapRule.GetOnScroll: TElementOnScroll;
+begin
+  Result := FOnScroll;
+end;
+
+function TSciterEventMapRule.GetOnSize: TElementOnSize;
+begin
+  Result := FOnSize;
+end;
+
+function TSciterEventMapRule.GetOnTimer: TElementOnTimer;
+begin
+  Result := FOnTimer;
+end;
+
+function TSciterEventMapRule.QueryInterface(const IID: TGUID;
+  out Obj): HResult;
+begin
+  Result := S_OK;
+end;
+
+procedure TSciterEventMapRule.SetOnControlEvent(
+  const Value: TElementOnControlEvent);
+begin
+  FOnControlEvent := Value;
+end;
+
+procedure TSciterEventMapRule.SetOnDataArrived(
+  const Value: TElementOnDataArrived);
+begin
+  FOnDataArrived := Value;
+end;
+
+procedure TSciterEventMapRule.SetOnFocus(
+  const Value: TElementOnFocus);
+begin
+  FOnFocus := Value;
+end;
+
+procedure TSciterEventMapRule.SetOnGesture(
+  const Value: TElementOnGesture);
+begin
+  FOnGesture := Value;
+end;
+
+procedure TSciterEventMapRule.SetOnKey(
+  const Value: TElementOnKey);
+begin
+  FOnKey := Value;
+end;
+
+procedure TSciterEventMapRule.SetOnMouse(
+  const Value: TElementOnMouse);
+begin
+  FOnMouse := Value;
+end;
+
+procedure TSciterEventMapRule.SetOnScriptingCall(
+  const Value: TElementOnScriptingCall);
+begin
+  FOnScriptingCall := Value;
+end;
+
+procedure TSciterEventMapRule.SetOnScroll(
+  const Value: TElementOnScroll);
+begin
+  FOnScroll := Value;
+end;
+
+procedure TSciterEventMapRule.SetOnSize(
+  const Value: TElementOnSize);
+begin
+  FOnSize := Value;
+end;
+
+procedure TSciterEventMapRule.SetOnTimer(
+  const Value: TElementOnTimer);
+begin
+  FOnTimer := Value;
+end;
+
+procedure TSciterEventMapRule.SetSelector(
+  const Value: WideString);
+begin
+  FSelector := Value;
+end;
+
+procedure TSciterEventMapRule.Setup(const Element: IElement);
+begin
+  if Selector = '' then Exit;
+  if Assigned(FOnControlEvent) then
+    Element.SubscribeControlEvents(Selector, BEHAVIOR_EVENTS_ALL, FOnControlEvent);
+  if Assigned(FOnDataArrived) then
+    Element.SubscribeDataArrived(Selector, FOnDataArrived);
+  if Assigned(FOnFocus) then
+    Element.SubscribeFocus(Selector, FOnFocus);
+  if Assigned(FOnGesture) then
+    Element.SubscribeGesture(Selector, FOnGesture);
+  if Assigned(FOnKey) then
+    Element.SubscribeKey(Selector, KEY_EVENTS_ALL, FOnKey);
+  if Assigned(FOnMouse) then
+    Element.SubscribeMouse(Selector, MOUSE_EVENTS_ALL, FOnMouse);
+  if Assigned(FOnScriptingCall) then
+    Element.SubscribeScriptingCall(Selector, FOnScriptingCall);
+  if Assigned(FOnScroll) then
+    Element.SubscribeScroll(Selector, FOnScroll);
+  if Assigned(FOnSize) then
+    Element.SubscribeSize(Selector, FOnSize);
+  if Assigned(FOnTimer) then
+    Element.SubscribeTimer(Selector, FOnTimer);
+end;
+
+function TSciterEventMapRule._AddRef: Integer;
+begin
+  Result := S_OK;
+end;
+
+function TSciterEventMapRule._Release: Integer;
+begin
+  Result := S_OK;
+end;
+
+{ TSciterEventMap }
+
+procedure TSciterEventMap.Assign(Source: TPersistent);
+begin
+  inherited;
+end;
+
+function TSciterEventMap.GetItem(
+  AIndex: integer): TSciterEventMapRule;
+begin
+  Result := inherited GetItem(AIndex) as TSciterEventMapRule;
+end;
+
+procedure TSciterEventMap.SetItem(AIndex: integer;
+  const Value: TSciterEventMapRule);
+begin
+  inherited SetItem(AIndex, Value);
 end;
 
 initialization

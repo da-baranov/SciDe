@@ -10,13 +10,24 @@ uses
 
 type
   TMainForm = class(TForm)
+    acClearLog: TAction;
+    acDumpHTML: TAction;
+    acFileOpen: TAction;
+    acFileSave: TAction;
+    acRefresh: TAction;
     Actions1: TMenuItem;
+    al: TActionList;
+    cbr: TCoolBar;
     ctxSciter: TPopupMenu;
     DumpHTML1: TMenuItem;
+    ests1: TMenuItem;
+    iml: TImageList;
     mm1: TMainMenu;
+    mnuCallNativeMethod: TMenuItem;
     mnuElementAtCursor: TMenuItem;
     mnuOpenFile: TMenuItem;
     mnuSaveFile: TMenuItem;
+    mnuTestJsonSerializer: TMenuItem;
     N1: TMenuItem;
     NavigatetoSciterwebsite1: TMenuItem;
     ofd: TOpenDialog;
@@ -25,24 +36,13 @@ type
     Sciter1: TSciter;
     sfd: TSaveDialog;
     spl1: TSplitter;
-    txtLog: TMemo;
-    cbr: TCoolBar;
     tbr: TToolBar;
-    ests1: TMenuItem;
-    mnuCallNativeMethod: TMenuItem;
-    mnuTestJsonSerializer: TMenuItem;
-    iml: TImageList;
-    al: TActionList;
-    acFileOpen: TAction;
-    acFileSave: TAction;
     ToolButton1: TToolButton;
     ToolButton2: TToolButton;
-    acRefresh: TAction;
     ToolButton3: TToolButton;
-    acClearLog: TAction;
     ToolButton4: TToolButton;
-    acDumpHTML: TAction;
     ToolButton5: TToolButton;
+    txtLog: TMemo;
     procedure acClearLogExecute(Sender: TObject);
     procedure acDumpHTMLExecute(Sender: TObject);
     procedure cmdCallNativeClick(Sender: TObject);
@@ -58,17 +58,19 @@ type
     procedure OnSciterOut(ASender: TObject; const msg: WideString);
     procedure Sciter1DocumentComplete(ASender: TObject; const Args:
         TSciterOnDocumentCompleteEventArgs);
+    procedure Sciter1EventHandlers0ControlEvent(ASender: TObject; const Args:
+        TElementOnControlEventArgs);
+    procedure Sciter1EventHandlers0Mouse(ASender: TObject; const Args:
+        TElementOnMouseEventArgs);
     procedure Sciter1LoadData(ASender: TObject; const url: WideString; resType:
         SciterResourceType; requestId: Integer; out discard: Boolean);
     procedure Sciter1Message(ASender: TObject; const Args: TSciterOnMessageEventArgs);
     procedure Sciter1ScriptingCall(ASender: TObject; const Args:
         TElementOnScriptingCallArgs);
   private
-    FUrl: WideString;
     FButton: TButton;
     FTxtEvents: IElementEvents;
-    procedure WMDropFiles(var Msg: TWMDropFiles); message WM_DROPFILES;
-    procedure Open(const FileName: WideString);
+    FUrl: WideString;
     procedure OnBodyMethodCall(ASender: TObject; const Args: TElementOnScriptingCallArgs);
     procedure OnDivRequestDataArrived(ASender: TObject; const Args: TElementOnDataArrivedEventArgs);
     procedure OnDivTimer(ASender: TObject; const Args: TElementOnTimerEventArgs);
@@ -79,6 +81,8 @@ type
     procedure OnEsMouse(Sender: TObject; const Args: TElementOnMouseEventArgs);
     procedure OnNativeButtonClick(Sender: TObject);
     procedure OnSciterControlEvent(ASender: TObject; const Args: TElementOnControlEventArgs);
+    procedure Open(const FileName: WideString);
+    procedure WMDropFiles(var Msg: TWMDropFiles); message WM_DROPFILES;
   end;
 
   { For testing purposes }
@@ -113,7 +117,6 @@ begin
   txtLog.Lines.Clear;
   txtLog.Text := Sciter1.Root.OuterHtml;
 end;
-
 
 //{$R ..\resources\Mvc.res}
 
@@ -410,6 +413,61 @@ begin
   end;
 end;
 
+procedure TMainForm.Sciter1DocumentComplete(ASender: TObject; const Args:
+    TSciterOnDocumentCompleteEventArgs);
+var
+  pDivContainer: IElement;
+  pTxt: IElement;
+begin
+  if FButton <> nil then
+    FreeAndNil(FButton);
+  txtLog.Lines.Add('OnDocumentComplete ' + Args.Url + ' at ' + DateTimeToStr(Now));
+
+  Sciter1.Root.SubscribeControlEvents('body', BUTTON_CLICK, OnSciterControlEvent);
+  Sciter1.Root.SubscribeScriptingCall('body', OnBodyMethodCall);
+
+  pDivContainer := Sciter1.Root.Select('#divContainer');
+  if pDivContainer <> nil then
+  begin
+    FButton := TButton.Create(Self);
+    FButton.Parent := Sciter1;
+    FButton.Caption := 'Native button';
+    FButton.OnClick := OnNativeButtonClick;
+    FButton.Font.Color := clGreen;
+    pDivContainer.AttachHwndToElement(FButton.Handle);
+  end;
+
+  // Subscribing to events using "fluent" subscribe* methods
+  Sciter1.Root
+    .SubscribeMouse('.es', MOUSE_ENTER, OnEsMouse)
+    .SubscribeMouse('.es', MOUSE_LEAVE, OnEsMouse)
+    .SubscribeControlEvents('button.es1', BUTTON_CLICK, OnEsClick)
+    .SubscribeKey('.es2', KEY_DOWN, OnEsKey)
+    .SubscribeTimer('#divTimer', OnDivTimer)
+    .SubscribeDataArrived('#divRequest', OnDivRequestDataArrived);
+
+  // Subscribing to events using IElementEvents interface
+  pTxt := Sciter1.Root.Select('#txtEvents');
+  if pTxt <> nil then
+  begin
+    FTxtEvents := pTxt as IElementEvents;
+    FTxtEvents.OnControlEvent := OnElementControlEvent;
+    FTxtEvents.OnMouse := OnElementMouse;
+  end;
+end;
+
+procedure TMainForm.Sciter1EventHandlers0ControlEvent(ASender: TObject; const
+    Args: TElementOnControlEventArgs);
+begin
+  if Args.EventType = BUTTON_CLICK then
+    ShowMessage('Button click');
+end;
+
+procedure TMainForm.Sciter1EventHandlers0Mouse(ASender: TObject; const Args:
+    TElementOnMouseEventArgs);
+begin
+  sbr.SimpleText := Format('Mouse event at %d:%d', [Args.X, Args.Y]);
+end;
 
 procedure TMainForm.Sciter1LoadData(ASender: TObject; const url: WideString;
     resType: SciterResourceType; requestId: Integer; out discard: Boolean);
@@ -454,6 +512,35 @@ begin
   end;
   // else Handled = False and Sciter will emit a warning message
 end;
+
+procedure TMainForm.WMDropFiles(var Msg: TWMDropFiles);
+var
+  DropH: HDROP;               // drop handle
+  DroppedFileCount: Integer;  // number of files dropped
+  FileNameLength: Integer;    // length of a dropped file name
+  FileName: string;           // a dropped file name
+  I: Integer;                 // loops thru all dropped files
+  DropPoint: TPoint;          // point where files dropped
+begin
+  inherited;
+  DropH := Msg.Drop;
+  try
+    DroppedFileCount := DragQueryFile(DropH, $FFFFFFFF, nil, 0);
+    for I := 0 to Pred(DroppedFileCount) do
+    begin
+      FileNameLength := DragQueryFile(DropH, I, nil, 0);
+      SetLength(FileName, FileNameLength);
+      DragQueryFile(DropH, I, PChar(FileName), FileNameLength + 1);
+    end;
+    DragQueryPoint(DropH, DropPoint);
+  finally
+    DragFinish(DropH);
+  end;
+  if FileName <> '' then
+    Open(FileName);
+  Msg.Result := 0;
+end;
+
 
 { Intercepting non-existing function call }
 function SayHelloNative(c: HVM): tiscript_value; cdecl;
@@ -502,77 +589,6 @@ end;
 procedure TTest.SayHello;
 begin
   ShowMessage('TTest: Hello!');
-end;
-
-procedure TMainForm.Sciter1DocumentComplete(ASender: TObject; const Args:
-    TSciterOnDocumentCompleteEventArgs);
-var
-  pDivContainer: IElement;
-  pTxt: IElement;
-begin
-  if FButton <> nil then
-    FreeAndNil(FButton);
-  txtLog.Lines.Add('OnDocumentComplete ' + Args.Url + ' at ' + DateTimeToStr(Now));
-
-  Sciter1.Root.SubscribeControlEvents('body', BUTTON_CLICK, OnSciterControlEvent);
-  Sciter1.Root.SubscribeScriptingCall('body', OnBodyMethodCall);
-
-  pDivContainer := Sciter1.Root.Select('#divContainer');
-  if pDivContainer <> nil then
-  begin
-    FButton := TButton.Create(Self);
-    FButton.Parent := Sciter1;
-    FButton.Caption := 'Native button';
-    FButton.OnClick := OnNativeButtonClick;
-    FButton.Font.Color := clGreen;
-    pDivContainer.AttachHwndToElement(FButton.Handle);
-  end;
-
-  // Subscribing to events using "fluent" subscribe* methods
-  Sciter1.Root
-    .SubscribeMouse('.es', MOUSE_ENTER, OnEsMouse)
-    .SubscribeMouse('.es', MOUSE_LEAVE, OnEsMouse)
-    .SubscribeControlEvents('button.es1', BUTTON_CLICK, OnEsClick)
-    .SubscribeKey('.es2', KEY_DOWN, OnEsKey)
-    .SubscribeTimer('#divTimer', OnDivTimer)
-    .SubscribeDataArrived('#divRequest', OnDivRequestDataArrived);
-
-  // Subscribing to events using IElementEvents interface
-  pTxt := Sciter1.Root.Select('#txtEvents');
-  if pTxt <> nil then
-  begin
-    FTxtEvents := pTxt as IElementEvents;
-    FTxtEvents.OnControlEvent := OnElementControlEvent;
-    FTxtEvents.OnMouse := OnElementMouse;
-  end;
-end;
-
-procedure TMainForm.WMDropFiles(var Msg: TWMDropFiles);
-var
-  DropH: HDROP;               // drop handle
-  DroppedFileCount: Integer;  // number of files dropped
-  FileNameLength: Integer;    // length of a dropped file name
-  FileName: string;           // a dropped file name
-  I: Integer;                 // loops thru all dropped files
-  DropPoint: TPoint;          // point where files dropped
-begin
-  inherited;
-  DropH := Msg.Drop;
-  try
-    DroppedFileCount := DragQueryFile(DropH, $FFFFFFFF, nil, 0);
-    for I := 0 to Pred(DroppedFileCount) do
-    begin
-      FileNameLength := DragQueryFile(DropH, I, nil, 0);
-      SetLength(FileName, FileNameLength);
-      DragQueryFile(DropH, I, PChar(FileName), FileNameLength + 1);
-    end;
-    DragQueryPoint(DropH, DropPoint);
-  finally
-    DragFinish(DropH);
-  end;
-  if FileName <> '' then
-    Open(FileName);
-  Msg.Result := 0;
 end;
 
 
