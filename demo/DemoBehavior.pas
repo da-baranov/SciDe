@@ -27,6 +27,16 @@ type
     class function BehaviorName: AnsiString; override;
   end;
 
+  TEventFilterBehavior = class(TElement)
+  protected
+    procedure DoBehaviorAttach(const Args: TElementOnBehaviorEventArgs); override;
+    function QuerySubscriptionEvents: EVENT_GROUPS; override;
+    procedure DoFocus(const Args: TElementOnFocusEventArgs); override;
+    procedure DoMouse(const Args: TElementOnMouseEventArgs); override;
+  public
+    class function BehaviorName: AnsiString; override;
+  end;
+
 implementation
 
 uses
@@ -117,8 +127,43 @@ procedure TDemoBehavior.SetValue(Value: OleVariant);
 begin
 end;
 
+{ TEventFilterBehavior }
+
+class function TEventFilterBehavior.BehaviorName: AnsiString;
+begin
+  Result := 'EventFilter';
+end;
+
+procedure TEventFilterBehavior.DoBehaviorAttach(
+  const Args: TElementOnBehaviorEventArgs);
+begin
+  inherited;
+  Args.Element.Text := 'This behavior handles focus events and ignores mouse events';
+end;
+
+procedure TEventFilterBehavior.DoFocus(
+  const Args: TElementOnFocusEventArgs);
+begin
+  inherited;
+  if Args.EventType = GOT_FOCUS then
+    Args.Element.Text := 'GOT FOCUS'
+  else
+    Args.Element.Text := 'LOST_FOCUS';
+end;
+
+procedure TEventFilterBehavior.DoMouse(const Args: TElementOnMouseEventArgs);
+begin
+  Args.Element.Text := Format('OnMouseEvent %d:%d', [Args.X, Args.Y]);
+end;
+
+function TEventFilterBehavior.QuerySubscriptionEvents: EVENT_GROUPS;
+begin
+  Result := HANDLE_FOCUS;
+end;
+
 initialization
   
   SciterRegisterBehavior(TDemoBehavior);
+  SciterRegisterBehavior(TEventFilterBehavior);
 
 end.

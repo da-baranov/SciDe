@@ -128,7 +128,7 @@ type
   public
     destructor Destroy; override;
     property Element: IElement read FElement;
-    property EventType: BEHAVIOR_EVENTS read FEventType;
+    property EventType: BEHAVIOR_EVENTS read FEventType write FEventType;
     property Handled: Boolean read FHandled write FHandled;
     property Reason: Integer read FReason;
     property Source: IElement read FSource;
@@ -266,8 +266,14 @@ type
 
   TElementOnBehaviorEventArgs = class
   private
+    FElement: IElement;
     FHandled: Boolean;
+    FSciter: TSciter;
+  protected
+    constructor Create(ASciter: TSciter; const ASelf: IElement);
   public
+    destructor Destroy; override;
+    property Element: IElement read FElement;
     property Handled: Boolean read FHandled write FHandled;
   end;
 
@@ -441,6 +447,7 @@ type
     function HandleScrollEvents(var params: SCROLL_PARAMS): BOOL;
     function HandleSize: BOOL;
     function HandleTimer(var params: TIMER_PARAMS): BOOL;
+    function QuerySubscriptionEvents: EVENT_GROUPS;
   end;
 
   IElementCollection = interface
@@ -460,6 +467,7 @@ type
     FAttrName: WideString;
     FAttrValue: WideString;
     FELEMENT: HELEMENT;
+    FEventGroups: EVENT_GROUPS;
     FFilterControlEvents: BEHAVIOR_EVENTS;
     FFilterKey: KEY_EVENTS;
     FFilterMouse: MOUSE_EVENTS;
@@ -557,6 +565,7 @@ type
     procedure DoTimer(const Args: TElementOnTimerEventArgs); virtual;
     function GetText: WideString; virtual;
     function GetValue: OleVariant; virtual;
+    function QuerySubscriptionEvents: EVENT_GROUPS; virtual;
     procedure SetText(const Value: WideString); virtual;
     procedure SetValue(Value: OleVariant); virtual;
     procedure ThrowException(const Message: String); overload;
@@ -666,7 +675,7 @@ type
     property Item[const Index: Integer]: IElement read GetItem; default;
   end;
 
-  TSciter = class(TCustomControl, IElement, _ISciterEventHandler)
+  TSciter = class(TCustomControl, _ISciterEventHandler)
   private
     FBaseUrl: WideString;
     FEventList: TInterfaceList;
@@ -708,6 +717,7 @@ type
     function HandleSize: BOOL;
     function HandleTimer(var params: TIMER_PARAMS): BOOL;
     function MainWindowHook(var Message: TMessage): Boolean;
+    function QuerySubscriptionEvents: EVENT_GROUPS;
     procedure SetOnMessage(const Value: TSciterOnMessage);
   protected
     procedure CreateParams(var Params: TCreateParams); override;
@@ -773,7 +783,7 @@ type
     procedure UnsubscribeAll;
     procedure UpdateWindow;
     property Html: WideString read GetHtml;
-    property Root: IElement read GetRoot implements IElement;
+    property Root: IElement read GetRoot;
     property Version: WideString read GetVersion;
     property VM: HVM read GetHVM;
   published
@@ -1096,10 +1106,22 @@ var
   pScriptingMethodParams: PSCRIPTING_METHOD_PARAMS;
   pScrollParams: PSCROLL_PARAMS;
   pTimerParams: PTIMER_PARAMS;
+  pEventGroups: EVENT_GROUPS;
 begin
   Result := False;
-  
+
+
   case EVENT_GROUPS(evtg) of
+    SUBSCRIPTIONS_REQUEST:
+    begin
+      pEventGroups := Sender.QuerySubscriptionEvents;
+      if pEventGroups <> HANDLE_ALL then
+      begin
+        PUINT(prms)^ := UINT(pEventGroups);
+        Result := true;
+      end;
+    end;
+    
     HANDLE_INITIALIZATION:
     begin
       pInitParams := prms;
@@ -1917,6 +1939,11 @@ begin
   TiScriptCall('stdout', 'println', [sMsg]);
 end;
 
+function TSciter.QuerySubscriptionEvents: EVENT_GROUPS;
+begin
+  Result := HANDLE_ALL;
+end;
+
 procedure TSciter.RegisterComObject(const Name: WideString;
   const Obj: OleVariant);
 begin
@@ -2299,6 +2326,7 @@ begin
     ThrowException('Invalid element handle.', []);
   FSciter := ASciter;
   Self.FELEMENT := h;
+  FEventGroups := HANDLE_ALL;
   FFilterMouse := MOUSE_EVENTS_ALL;
   FFilterKey := KEY_EVENTS_ALL;
   FFilterControlEvents := BEHAVIOR_EVENTS_ALL;
@@ -2849,12 +2877,11 @@ var
   pArgs: TElementOnBehaviorEventArgs;
 begin
   Result := False;
-  if not Assigned(FOnBehaviorEvent) then Exit;
   
-  pArgs := TElementOnBehaviorEventArgs.Create;
+  pArgs := TElementOnBehaviorEventArgs.Create(Self.Sciter, Self);
   try
     DoBehaviorAttach(pArgs);
-    Result := pArgs.Handled;
+    Result := true;
   finally
     pArgs.Free;
   end;
@@ -2865,12 +2892,11 @@ var
   pArgs: TElementOnBehaviorEventArgs;
 begin
   Result := False;
-  if not Assigned(FOnBehaviorEvent) then Exit;
   
-  pArgs := TElementOnBehaviorEventArgs.Create;
+  pArgs := TElementOnBehaviorEventArgs.Create(Self.Sciter, Self);
   try
     DoBehaviorDetach(pArgs);
-    Result := pArgs.Handled;
+    Result := true;
   finally
     pArgs.Free;
   end;
@@ -2882,7 +2908,6 @@ var
   pArgs: TElementOnControlEventArgs;
 begin
   Result := False;
-  if not Assigned(FOnControlEvent) then Exit;
 
   if (FFilterControlEvents <> BEHAVIOR_EVENTS_ALL) and (FFilterControlEvents <> params.cmd) then
     Exit;
@@ -2901,7 +2926,6 @@ var
   pArgs: TElementOnDataArrivedEventArgs;
 begin
   Result := False;
-  if not Assigned(FOnDataArrived) then Exit;
   
   if (params.data = nil) or (params.dataSize = 0) then
   begin
@@ -2923,7 +2947,6 @@ var
   pArgs: TElementOnFocusEventArgs;
 begin
   Result := False;
-  if not Assigned(FOnFocus) then Exit;
   
   pArgs := TElementOnFocusEventArgs.Create(Sciter, Self, params);
   try
@@ -2939,7 +2962,6 @@ var
   pArgs: TElementOnGestureEventArgs;
 begin
   Result := False;
-  if not Assigned(FOnGesture) then Exit;
   
   pArgs := TElementOnGestureEventArgs.Create(Sciter, Self, params);
   try
@@ -2968,8 +2990,6 @@ var
   pArgs: TElementOnKeyEventArgs;
 begin
   Result := False;
-
-  if not Assigned(FOnKey) then Exit;
 
   if (FFilterKey <> KEY_EVENTS_ALL) and (FFilterKey <> params.cmd) then
     Exit;
@@ -3196,6 +3216,11 @@ begin
   if not pParent.IsValid then
     Exit;
   Result := pParent.GetChild(Self.Index - 1);
+end;
+
+function TElement.QuerySubscriptionEvents: EVENT_GROUPS;
+begin
+  Result := HANDLE_ALL;
 end;
 
 procedure TElement.RemoveChildren;
@@ -3931,7 +3956,7 @@ begin
 
   SetLength(FArgs, FArgumentsCount);
   FMethod := WideString(AnsiString(params.name));
-  
+
   if FArgumentsCount > 0 then
   begin
     pVal := params.argv;
@@ -3960,6 +3985,21 @@ end;
 procedure TElementOnScriptingCallArgs.WriteRetVal;
 begin
   V2S(FReturnValue, @(FParams^.rv));
+end;
+
+{ TElementOnBehaviorEventArgs }
+
+constructor TElementOnBehaviorEventArgs.Create(ASciter: TSciter;
+  const ASelf: IElement);
+begin
+  FSciter := ASciter;
+  FElement := ASelf;  
+end;
+
+destructor TElementOnBehaviorEventArgs.Destroy;
+begin
+  FElement := nil;
+  inherited;
 end;
 
 initialization
