@@ -56,7 +56,8 @@ type
     procedure mnuTestJsonSerializerClick(Sender: TObject);
     procedure NavigatetoSciterwebsite1Click(Sender: TObject);
     procedure OnSciterOut(ASender: TObject; const msg: WideString);
-    procedure Sciter1DocumentComplete(ASender: TObject; const url: WideString);
+    procedure Sciter1DocumentComplete(ASender: TObject; const Args:
+        TSciterOnDocumentCompleteEventArgs);
     procedure Sciter1LoadData(ASender: TObject; const url: WideString; resType:
         SciterResourceType; requestId: Integer; out discard: Boolean);
     procedure Sciter1Message(ASender: TObject; const Args: TSciterOnMessageEventArgs);
@@ -409,48 +410,6 @@ begin
   end;
 end;
 
-procedure TMainForm.Sciter1DocumentComplete(ASender: TObject; const url:
-    WideString);
-var
-  pDivContainer: IElement;
-  pTxt: IElement;
-begin
-  if FButton <> nil then
-    FreeAndNil(FButton);
-  txtLog.Lines.Add('OnDocumentComplete ' + url + ' at ' + DateTimeToStr(Now));
-
-  Sciter1.Root.SubscribeControlEvents('body', BUTTON_CLICK, OnSciterControlEvent);
-  Sciter1.Root.SubscribeScriptingCall('body', OnBodyMethodCall);
-
-  pDivContainer := Sciter1.Root.Select('#divContainer');
-  if pDivContainer <> nil then
-  begin
-    FButton := TButton.Create(Self);
-    FButton.Parent := Sciter1;
-    FButton.Caption := 'Native button';
-    FButton.OnClick := OnNativeButtonClick;
-    FButton.Font.Color := clGreen;
-    pDivContainer.AttachHwndToElement(FButton.Handle);
-  end;
-
-  // Subscribing to events using "fluent" subscribe* methods
-  Sciter1.Root
-    .SubscribeMouse('.es', MOUSE_ENTER, OnEsMouse)
-    .SubscribeMouse('.es', MOUSE_LEAVE, OnEsMouse)
-    .SubscribeControlEvents('button.es1', BUTTON_CLICK, OnEsClick)
-    .SubscribeKey('.es2', KEY_DOWN, OnEsKey)
-    .SubscribeTimer('#divTimer', OnDivTimer)
-    .SubscribeDataArrived('#divRequest', OnDivRequestDataArrived);
-
-  // Subscribing to events using IElementEvents interface
-  pTxt := Sciter1.Root.Select('#txtEvents');
-  if pTxt <> nil then
-  begin
-    FTxtEvents := pTxt as IElementEvents;
-    FTxtEvents.OnControlEvent := OnElementControlEvent;
-    FTxtEvents.OnMouse := OnElementMouse;
-  end;
-end;
 
 procedure TMainForm.Sciter1LoadData(ASender: TObject; const url: WideString;
     resType: SciterResourceType; requestId: Integer; out discard: Boolean);
@@ -543,6 +502,49 @@ end;
 procedure TTest.SayHello;
 begin
   ShowMessage('TTest: Hello!');
+end;
+
+procedure TMainForm.Sciter1DocumentComplete(ASender: TObject; const Args:
+    TSciterOnDocumentCompleteEventArgs);
+var
+  pDivContainer: IElement;
+  pTxt: IElement;
+begin
+  if FButton <> nil then
+    FreeAndNil(FButton);
+  txtLog.Lines.Add('OnDocumentComplete ' + Args.Url + ' at ' + DateTimeToStr(Now));
+
+  Sciter1.Root.SubscribeControlEvents('body', BUTTON_CLICK, OnSciterControlEvent);
+  Sciter1.Root.SubscribeScriptingCall('body', OnBodyMethodCall);
+
+  pDivContainer := Sciter1.Root.Select('#divContainer');
+  if pDivContainer <> nil then
+  begin
+    FButton := TButton.Create(Self);
+    FButton.Parent := Sciter1;
+    FButton.Caption := 'Native button';
+    FButton.OnClick := OnNativeButtonClick;
+    FButton.Font.Color := clGreen;
+    pDivContainer.AttachHwndToElement(FButton.Handle);
+  end;
+
+  // Subscribing to events using "fluent" subscribe* methods
+  Sciter1.Root
+    .SubscribeMouse('.es', MOUSE_ENTER, OnEsMouse)
+    .SubscribeMouse('.es', MOUSE_LEAVE, OnEsMouse)
+    .SubscribeControlEvents('button.es1', BUTTON_CLICK, OnEsClick)
+    .SubscribeKey('.es2', KEY_DOWN, OnEsKey)
+    .SubscribeTimer('#divTimer', OnDivTimer)
+    .SubscribeDataArrived('#divRequest', OnDivRequestDataArrived);
+
+  // Subscribing to events using IElementEvents interface
+  pTxt := Sciter1.Root.Select('#txtEvents');
+  if pTxt <> nil then
+  begin
+    FTxtEvents := pTxt as IElementEvents;
+    FTxtEvents.OnControlEvent := OnElementControlEvent;
+    FTxtEvents.OnMouse := OnElementMouse;
+  end;
 end;
 
 procedure TMainForm.WMDropFiles(var Msg: TWMDropFiles);

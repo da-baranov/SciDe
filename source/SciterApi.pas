@@ -343,13 +343,13 @@ type
     methodID: BEHAVIOR_METHOD_IDENTIFIERS;
     text: PWideChar;
     length: UINT;
-  end deprecated;
+  end;
   PTEXT_VALUE_PARAMS = ^TEXT_VALUE_PARAMS;
 
   VALUE_PARAMS = packed record
     methodID: BEHAVIOR_METHOD_IDENTIFIERS;
     val: TSciterValue;
-  end deprecated;
+  end;
   PVALUE_PARAMS = ^VALUE_PARAMS;
 
   TEXT_EDIT_SELECTION_PARAMS = record

@@ -280,8 +280,14 @@ type
   TSciterOnDataLoaded = procedure(ASender: TObject; const url: WideString; resType: SciterResourceType;
                                                     data: PByte; dataLength: Integer; status: Integer;
                                                     requestId: Integer) of object;
-  TSciterOnDocumentComplete = procedure(ASender: TObject; const url: WideString) of object;
-  TSciterOnScriptingCall = procedure(ASender: TObject; const Args: TElementOnScriptingCallArgs) of object;
+
+  TSciterOnDocumentCompleteEventArgs = class
+  private
+    FUrl: WideString;
+  public
+    property Url: WideString read FUrl;
+  end;
+  TSciterOnDocumentComplete = procedure(ASender: TObject; const Args: TSciterOnDocumentCompleteEventArgs) of object;
 
 
   IElementEvents = interface
@@ -418,6 +424,25 @@ type
     property Visible: Boolean read GetVisible;
   end;
 
+  { for internal use to emulate C++ multiple inheritance }
+  _ISciterEventHandler = interface
+  ['{327EC89D-6ECB-4FFE-8F69-06589EBF8594}']
+    function HandleBehaviorAttach: BOOL;
+    function HandleBehaviorDetach: BOOL;
+    function HandleControlEvent(var params: BEHAVIOR_EVENT_PARAMS): BOOL;
+    function HandleDataArrived(var params: DATA_ARRIVED_PARAMS): BOOL;
+    function HandleFocus(var params: FOCUS_PARAMS): BOOL;
+    function HandleGesture(var params: GESTURE_PARAMS): BOOL;
+    function HandleInitialization(var params: INITIALIZATION_PARAMS): BOOL;
+    function HandleKey(var params: KEY_PARAMS): BOOL;
+    function HandleMethodCallEvents(var params: METHOD_PARAMS): BOOL;
+    function HandleMouse(var params: MOUSE_PARAMS): BOOL;
+    function HandleScriptingCall(var params: SCRIPTING_METHOD_PARAMS): BOOL;
+    function HandleScrollEvents(var params: SCROLL_PARAMS): BOOL;
+    function HandleSize: BOOL;
+    function HandleTimer(var params: TIMER_PARAMS): BOOL;
+  end;
+
   IElementCollection = interface
     ['{2E262CE3-43DE-4266-9424-EBA0241F77F8}']
     function GetCount: Integer;
@@ -429,7 +454,7 @@ type
 
   IElements = type IElementCollection;
 
-  TElement = class(TInterfacedObject, IElement, IElementEvents, IElementEventsFilter)
+  TElement = class(TInterfacedObject, IElement, IElementEvents, IElementEventsFilter, _ISciterEventHandler)
   private
     FAttrAnsiName: AnsiString;
     FAttrName: WideString;
@@ -641,7 +666,7 @@ type
     property Item[const Index: Integer]: IElement read GetItem; default;
   end;
 
-  TSciter = class(TCustomControl, IElement)
+  TSciter = class(TCustomControl, IElement, _ISciterEventHandler)
   private
     FBaseUrl: WideString;
     FEventList: TInterfaceList;
@@ -654,12 +679,34 @@ type
     FOnHandleCreated: TNotifyEvent;
     FOnLoadData: TSciterOnLoadData;
     FOnMessage: TSciterOnMessage;
-    FOnScriptingCall: TSciterOnScriptingCall;
+    FOnScriptingCall: TElementOnScriptingCall;
+    FOnViewControlEvent: TElementOnControlEvent;
+    FOnViewFocus: TElementOnFocus;
+    FOnViewGesture: TElementOnGesture;
+    FOnViewKey: TElementOnKey;
+    FOnViewMouse: TElementOnMouse;
+    FOnViewScroll: TElementOnScroll;
+    FOnViewSize: TElementOnSize;
     FUrl: WideString;
     function GetHtml: WideString;
     function GetHVM: HVM;
     function GetRoot: IElement;
     function GetVersion: WideString;
+    function HandleBehaviorAttach: BOOL;
+    function HandleBehaviorDetach: BOOL;
+    function HandleControlEvent(var params: BEHAVIOR_EVENT_PARAMS): BOOL;
+    function HandleDataArrived(var params: DATA_ARRIVED_PARAMS): BOOL;
+    function HandleDocumentComplete(const Url: WideString): BOOL; virtual;
+    function HandleFocus(var params: FOCUS_PARAMS): BOOL;
+    function HandleGesture(var params: GESTURE_PARAMS): BOOL;
+    function HandleInitialization(var params: INITIALIZATION_PARAMS): BOOL;
+    function HandleKey(var params: KEY_PARAMS): BOOL;
+    function HandleMethodCallEvents(var params: METHOD_PARAMS): BOOL;
+    function HandleMouse(var params: MOUSE_PARAMS): BOOL;
+    function HandleScriptingCall(var params: SCRIPTING_METHOD_PARAMS): BOOL;
+    function HandleScrollEvents(var params: SCROLL_PARAMS): BOOL;
+    function HandleSize: BOOL;
+    function HandleTimer(var params: TIMER_PARAMS): BOOL;
     function MainWindowHook(var Message: TMessage): Boolean;
     procedure SetOnMessage(const Value: TSciterOnMessage);
   protected
@@ -668,13 +715,19 @@ type
     procedure CreateWnd; override;
     function DesignMode: boolean;
     procedure DestroyWnd; override;
+    procedure DoDocumentComplete(const Args: TSciterOnDocumentCompleteEventArgs); virtual;
+    procedure DoViewControlEvent(const Args: TElementOnControlEventArgs); virtual;
+    procedure DoViewFocus(const Args: TElementOnFocusEventArgs); virtual;
+    procedure DoViewGesture(const Args: TElementOnGestureEventArgs); virtual;
+    procedure DoViewKey(const Args: TElementOnKeyEventArgs); virtual;
+    procedure DoViewMouse(const Args: TElementOnMouseEventArgs); virtual;
+    procedure DoViewScroll(const Args: TElementOnScrollEventArgs); virtual;
+    procedure DoViewSize(const Args: TElementOnSizeEventArgs); virtual;
     function HandleAttachBehavior(var data: SCN_ATTACH_BEHAVIOR): UINT; virtual;
     function HandleDataLoaded(var data: SCN_DATA_LOADED): UINT; virtual;
-    function HandleDocumentComplete(const Url: WideString): BOOL; virtual;
     function HandleEngineDestroyed(var data: SCN_ENGINE_DESTROYED): UINT; virtual;
     function HandleLoadData(var data: SCN_LOAD_DATA): UINT; virtual;
     function HandlePostedNotification(var data: SCN_POSTED_NOTIFICATION): UINT; virtual;
-    function HandleScriptingCall(var params: SCRIPTING_METHOD_PARAMS): BOOL; virtual;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure Paint; override;
     procedure SetName(const NewName: TComponentName); override;
@@ -770,7 +823,14 @@ type
     property OnHandleCreated: TNotifyEvent read FOnHandleCreated write FOnHandleCreated;
     property OnLoadData: TSciterOnLoadData read FOnLoadData write FOnLoadData;
     property OnMessage: TSciterOnMessage read FOnMessage write SetOnMessage;
-    property OnScriptingCall: TSciterOnScriptingCall read FOnScriptingCall write FOnScriptingCall;
+    property OnScriptingCall: TElementOnScriptingCall read FOnScriptingCall write FOnScriptingCall;
+    property OnViewControlEvent: TElementOnControlEvent read FOnViewControlEvent write FOnViewControlEvent;
+    property OnViewFocus: TElementOnFocus read FOnViewFocus write FOnViewFocus;
+    property OnViewGesture: TElementOnGesture read FOnViewGesture write FOnViewGesture;
+    property OnViewKey: TElementOnKey read FOnViewKey write FOnViewKey;
+    property OnViewMouse: TElementOnMouse read FOnViewMouse write FOnViewMouse;
+    property OnViewScroll: TElementOnScroll read FOnViewScroll write FOnViewScroll;
+    property OnViewSize: TElementOnSize read FOnViewSize write FOnViewSize;
   end;
 
 procedure SciterRegisterBehavior(Cls: TElementClass);
@@ -1023,44 +1083,10 @@ begin
   Result := True; // Stop at first element
 end;
 
-function WindowElementEventProc(tag: Pointer; he: HELEMENT; evtg: EVENT_GROUPS; prms: Pointer): BOOL; stdcall;
-const
-  MAX_URL_LENGTH = 2048;
-var
-  pSciter: TSciter;
-  pBehaviorEventParams:   PBEHAVIOR_EVENT_PARAMS;
-  pScriptingMethodParams: PSCRIPTING_METHOD_PARAMS;
-  sUri: WideString;
-begin
-  Result := False;
-  pSciter := TObject(tag) as TSciter;
-
-  case evtg of
-    HANDLE_BEHAVIOR_EVENT:
-      begin
-        pBehaviorEventParams := prms;
-        if pBehaviorEventParams.cmd = DOCUMENT_COMPLETE then
-        begin
-          sUri := '';
-          if SciterVarType(@pBehaviorEventParams.data) = T_STRING then
-            sUri := SciterVarToString(@pBehaviorEventParams.data);
-          Result := pSciter.HandleDocumentComplete(sUri);
-        end;
-      end;
-
-    HANDLE_SCRIPTING_METHOD_CALL:
-      begin
-        pScriptingMethodParams := PSCRIPTING_METHOD_PARAMS(prms);
-        Result := pSciter.HandleScriptingCall(pScriptingMethodParams^);
-      end;
-  end;
-end;
-
-function ElementEventProc(tag: Pointer; he: HELEMENT; evtg: UINT; prms: Pointer): BOOL; stdcall;
+function _SciterGenericEventProc(const Sender: _ISciterEventHandler; evtg: EVENT_GROUPS; prms: Pointer): BOOL; stdcall;
 var
   pBehaviorEventParams: PBEHAVIOR_EVENT_PARAMS;
   pDataArrivedParams: PDATA_ARRIVED_PARAMS;
-  pElement: TElement;
   pFocusParams: PFOCUS_PARAMS;
   pGestureParams: PGESTURE_PARAMS;
   pInitParams: PINITIALIZATION_PARAMS;
@@ -1070,6 +1096,91 @@ var
   pScriptingMethodParams: PSCRIPTING_METHOD_PARAMS;
   pScrollParams: PSCROLL_PARAMS;
   pTimerParams: PTIMER_PARAMS;
+begin
+  Result := False;
+  
+  case EVENT_GROUPS(evtg) of
+    HANDLE_INITIALIZATION:
+    begin
+      pInitParams := prms;
+      Result := Sender.HandleInitialization(pInitParams^);
+    end;
+
+    HANDLE_MOUSE:
+    begin
+      pMouseParams := prms;
+      Result := Sender.HandleMouse(pMouseParams^);
+    end;
+
+    HANDLE_KEY:
+    begin
+      pKeyParams := prms;
+      Result := Sender.HandleKey(pKeyParams^);
+    end;
+
+    HANDLE_FOCUS:
+    begin
+      pFocusParams := prms;
+      Result := Sender.HandleFocus(pFocusParams^);
+    end;
+
+    HANDLE_TIMER:
+    begin
+      pTimerParams := prms;
+      Result := Sender.HandleTimer(pTimerParams^);
+    end;
+
+    HANDLE_BEHAVIOR_EVENT:
+    begin
+      pBehaviorEventParams := prms;
+      Result := Sender.HandleControlEvent(pBehaviorEventParams^);
+    end;
+
+    HANDLE_METHOD_CALL:
+    begin
+      pMethodCallParams := prms;
+      Result := Sender.HandleMethodCallEvents(pMethodCallParams^);
+    end;
+
+    HANDLE_DATA_ARRIVED:
+    begin
+      pDataArrivedParams := prms;
+      Result := Sender.HandleDataArrived(pDataArrivedParams^);
+    end;
+
+    HANDLE_SCROLL:
+    begin
+      pScrollParams := prms;
+      Result := Sender.HandleScrollEvents(pScrollParams^);
+    end;
+
+    HANDLE_SIZE:
+    begin
+      Result := Sender.HandleSize;
+    end;
+
+    HANDLE_SCRIPTING_METHOD_CALL:
+    begin
+      pScriptingMethodParams := prms;
+      Result := Sender.HandleScriptingCall(pScriptingMethodParams^);
+    end;
+
+    HANDLE_TISCRIPT_METHOD_CALL:
+    begin
+      Result := False; // --> routes to HANDLE_SCRIPTING_METHOD_CALL
+    end;
+
+    HANDLE_GESTURE:
+    begin
+      pGestureParams := prms;
+      Result := Sender.HandleGesture(pGestureParams^);
+    end;
+  end;
+end;
+
+function _SciterElementEventProc(tag: Pointer; he: HELEMENT; evtg: EVENT_GROUPS; prms: Pointer): BOOL; stdcall;
+var
+  pElement: TElement;
 begin
   Result := False;
 
@@ -1085,83 +1196,34 @@ begin
 
   if pElement = nil then Exit;
 
-  case EVENT_GROUPS(evtg) of
-    HANDLE_INITIALIZATION:
-    begin
-      pInitParams := prms;
-      Result := pElement.HandleInitialization(pInitParams^);
-    end;
+  Result := _SciterGenericEventProc(pElement, evtg, prms);
+end;
 
-    HANDLE_MOUSE:
-    begin
-      pMouseParams := prms;
-      Result := pElement.HandleMouse(pMouseParams^);
-    end;
+function _SciterViewEventProc(tag: Pointer; he: HELEMENT; evtg: EVENT_GROUPS; prms: Pointer): BOOL; stdcall;
+var
+  pSciter: TSciter;
+  pBehaviorEventParams: PBEHAVIOR_EVENT_PARAMS;
+  sUri: WideString;
+begin
+  Result := False;
+  pSciter := TObject(tag) as TSciter;
 
-    HANDLE_KEY:
-    begin
-      pKeyParams := prms;
-      Result := pElement.HandleKey(pKeyParams^);
-    end;
-
-    HANDLE_FOCUS:
-    begin
-      pFocusParams := prms;
-      Result := pElement.HandleFocus(pFocusParams^);
-    end;
-
-    HANDLE_TIMER:
-    begin
-      pTimerParams := prms;
-      Result := pElement.HandleTimer(pTimerParams^);
-    end;
-
+  case evtg of
     HANDLE_BEHAVIOR_EVENT:
-    begin
-      pBehaviorEventParams := prms;
-      Result := pElement.HandleControlEvent(pBehaviorEventParams^);
-    end;
-
-    HANDLE_METHOD_CALL:
-    begin
-      pMethodCallParams := prms;
-      Result := pElement.HandleMethodCallEvents(pMethodCallParams^);
-    end;
-
-    HANDLE_DATA_ARRIVED:
-    begin
-      pDataArrivedParams := prms;
-      Result := pElement.HandleDataArrived(pDataArrivedParams^);
-    end;
-
-    HANDLE_SCROLL:
-    begin
-      pScrollParams := prms;
-      Result := pElement.HandleScrollEvents(pScrollParams^);
-    end;
-
-    HANDLE_SIZE:
-    begin
-      Result := pElement.HandleSize;
-    end;
-
-    HANDLE_SCRIPTING_METHOD_CALL:
-    begin
-      pScriptingMethodParams := prms;
-      Result := pElement.HandleScriptingCall(pScriptingMethodParams^);
-    end;
-
-    HANDLE_TISCRIPT_METHOD_CALL:
-    begin
-      Result := False; // --> routes to HANDLE_SCRIPTING_METHOD_CALL
-    end;
-
-    HANDLE_GESTURE:
-    begin
-      pGestureParams := prms;
-      Result := pElement.HandleGesture(pGestureParams^);
-    end;
+      begin
+        pBehaviorEventParams := prms;
+        if pBehaviorEventParams.cmd = DOCUMENT_COMPLETE then
+        begin
+          sUri := '';
+          if SciterVarType(@pBehaviorEventParams.data) = T_STRING then
+            sUri := SciterVarToString(@pBehaviorEventParams.data);
+          Result := pSciter.HandleDocumentComplete(sUri);
+          Exit;
+        end;
+      end;
   end;
+
+  Result := _SciterGenericEventProc(pSciter, evtg, prms);
 end;
 
 constructor TSciter.Create(AOwner: TComponent);
@@ -1216,7 +1278,7 @@ begin
   begin
     API.SciterSetCallback(Handle, LPSciterHostCallback(@HostCallback), Self);
 
-    SR := API.SciterWindowAttachEventHandler(Handle, LPELEMENT_EVENT_PROC(@WindowElementEventProc), Self, UINT(HANDLE_ALL));
+    SR := API.SciterWindowAttachEventHandler(Handle, LPELEMENT_EVENT_PROC(@_SciterViewEventProc), Self, UINT(HANDLE_ALL));
     if SR <> SCDOM_OK then
       raise ESciterException.Create('Failed to setup Sciter window element callback function.');
 
@@ -1259,6 +1321,56 @@ begin
   API.SciterSetupDebugOutput(Handle, nil, nil);
   API.SciterProcND(Handle, WM_DESTROY, 0, 0, pbHandled);
   inherited;
+end;
+
+procedure TSciter.DoDocumentComplete(
+  const Args: TSciterOnDocumentCompleteEventArgs);
+begin
+  if Assigned(FOnDocumentComplete) then
+    FOnDocumentComplete(Self, Args);
+end;
+
+procedure TSciter.DoViewControlEvent(
+  const Args: TElementOnControlEventArgs);
+begin
+  if Assigned(FOnViewControlEvent) then
+    Self.FOnViewControlEvent(Self, Args);
+end;
+
+procedure TSciter.DoViewFocus(const Args: TElementOnFocusEventArgs);
+begin
+  if Assigned(FOnViewFocus) then
+    FOnViewFocus(Self, Args); 
+end;
+
+procedure TSciter.DoViewGesture(const Args: TElementOnGestureEventArgs);
+begin
+  if Assigned(FOnViewGesture) then
+    FOnViewGesture(Self, Args);
+end;
+
+procedure TSciter.DoViewKey(const Args: TElementOnKeyEventArgs);
+begin
+  if Assigned(FOnViewKey) then
+    FOnViewKey(Self, Args);
+end;
+
+procedure TSciter.DoViewMouse(const Args: TElementOnMouseEventArgs);
+begin
+  if Assigned(FOnViewMouse) then
+    FOnViewMouse(Self, Args);
+end;
+
+procedure TSciter.DoViewScroll(const Args: TElementOnScrollEventArgs);
+begin
+  if Assigned(FOnViewScroll) then
+    FOnViewScroll(Self, Args);
+end;
+
+procedure TSciter.DoViewSize(const Args: TElementOnSizeEventArgs);
+begin
+  if Assigned(FOnViewSize) then
+    FOnViewSize(Self, Args);
 end;
 
 function TSciter.Eval(const Script: WideString): OleVariant;
@@ -1409,6 +1521,37 @@ begin
   end;
 end;
 
+function TSciter.HandleBehaviorAttach: BOOL;
+begin
+  Result := False; { not implemented }
+end;
+
+function TSciter.HandleBehaviorDetach: BOOL;
+begin
+  Result := False; { not implemented }
+end;
+
+function TSciter.HandleControlEvent(
+  var params: BEHAVIOR_EVENT_PARAMS): BOOL;
+var
+  pArgs: TElementOnControlEventArgs;
+begin
+  Result := False;
+  if not Assigned(FOnViewControlEvent) then Exit;
+
+  pArgs := TElementOnControlEventArgs.Create(Self, nil, params);
+  try
+    DoViewControlEvent(pArgs);
+  finally
+    pArgs.Free;
+  end;
+end;
+
+function TSciter.HandleDataArrived(var params: DATA_ARRIVED_PARAMS): BOOL;
+begin
+  Result := False;
+end;
+
 function TSciter.HandleDataLoaded(var data: SCN_DATA_LOADED): UINT;
 begin
   if Assigned(FOnDataLoaded) then
@@ -1419,11 +1562,20 @@ end;
 function TSciter.HandleDocumentComplete(const Url: WideString): BOOL;
 var
   bHandled: Integer;
+  pArgs: TSciterOnDocumentCompleteEventArgs;
 begin
   Result := False;
   UnsubscribeAll;
   if Assigned(FOnDocumentComplete) then
-    FOnDocumentComplete(Self, Url);
+  begin
+    pArgs := TSciterOnDocumentCompleteEventArgs.Create;
+    pArgs.FUrl := Url;
+    try
+      FOnDocumentComplete(Self, pArgs);
+    finally
+      pArgs.Free;
+    end;
+  end;
 
   // Temporary fix: sometimes bottom part of document stays invisible until parent form gets resized
   API.SciterProcND(Handle, WM_SIZE, 0, MAKELPARAM(ClientRect.Right - ClientRect.Left + 1, ClientRect.Bottom - ClientRect.Top), bHandled);
@@ -1437,6 +1589,60 @@ begin
       FOnEngineDestroyed(Self);
   end;
   Result := 0;
+end;
+
+function TSciter.HandleFocus(var params: FOCUS_PARAMS): BOOL;
+var
+  pArgs: TElementOnFocusEventArgs;
+begin
+  Result := False;
+  if not Assigned(FOnViewFocus) then Exit;
+
+  pArgs := TElementOnFocusEventArgs.Create(Self, nil, params);
+  try
+    DoViewFocus(pArgs);
+    Result := pArgs.Handled;
+  finally
+    pArgs.Free;
+  end;
+end;
+
+function TSciter.HandleGesture(var params: GESTURE_PARAMS): BOOL;
+var
+  pArgs: TElementOnGestureEventArgs;
+begin
+  Result := False;
+  if not Assigned(FOnViewGesture) then Exit;
+
+  pArgs := TElementOnGestureEventArgs.Create(Self, nil, params);
+  try
+    DoViewGesture(pArgs);
+    Result := pArgs.Handled;
+  finally
+    pArgs.Free;
+  end;
+end;
+
+function TSciter.HandleInitialization(
+  var params: INITIALIZATION_PARAMS): BOOL;
+begin
+  Result := False; { not implemented }
+end;
+
+function TSciter.HandleKey(var params: KEY_PARAMS): BOOL;
+var
+  pArgs: TElementOnKeyEventArgs;
+begin
+  Result := False;
+  if not Assigned(FOnViewKey) then Exit;
+
+  pArgs := TElementOnKeyEventArgs.Create(Self, nil, params);
+  try
+    DoViewKey(pArgs);
+    Result := pArgs.Handled;
+  finally
+    pArgs.Free;
+  end;
 end;
 
 function TSciter.HandleLoadData(var data: SCN_LOAD_DATA): UINT;
@@ -1481,6 +1687,27 @@ begin
   end;
 end;
 
+function TSciter.HandleMethodCallEvents(var params: METHOD_PARAMS): BOOL;
+begin
+  Result := False; { not implemented }
+end;
+
+function TSciter.HandleMouse(var params: MOUSE_PARAMS): BOOL;
+var
+  pArgs: TElementOnMouseEventArgs;
+begin
+  Result := False;
+  if not Assigned(FOnViewMouse) then Exit;
+
+  pArgs := TElementOnMouseEventArgs.Create(Self, nil, params);
+  try
+    DoViewMouse(pArgs);
+    Result := pArgs.Handled;
+  finally
+    pArgs.Free;
+  end;
+end;
+
 function TSciter.HandlePostedNotification(
   var data: SCN_POSTED_NOTIFICATION): UINT;
 begin
@@ -1508,6 +1735,43 @@ begin
     if pEventArgs <> nil then
       pEventArgs.Free;
   end;
+end;
+
+function TSciter.HandleScrollEvents(var params: SCROLL_PARAMS): BOOL;
+var
+  pArgs: TElementOnScrollEventArgs;
+begin
+  Result := False;
+  if not Assigned(FOnViewScroll) then Exit;
+
+  pArgs := TElementOnScrollEventArgs.Create(Self, nil, params);
+  try
+    DoViewScroll(pArgs);
+    Result := pArgs.Handled;
+  finally
+    pArgs.Free;
+  end;
+end;
+
+function TSciter.HandleSize: BOOL;
+var
+  pArgs: TElementOnSizeEventArgs;
+begin
+  Result := False;
+  if not Assigned(FOnViewSize) then Exit;
+
+  pArgs := TElementOnSizeEventArgs.Create(nil);
+  try
+    DoViewSize(pArgs);
+    Result := pArgs.Handled;
+  finally
+    pArgs.Free;
+  end;
+end;
+
+function TSciter.HandleTimer(var params: TIMER_PARAMS): BOOL;
+begin
+  Result := False;
 end;
 
 function TSciter.JsonToSciterValue(const Json: WideString): TSciterValue;
@@ -1648,7 +1912,6 @@ procedure TSciter.Println(const Message: WideString;
   const Args: array of const);
 var
   sMsg: WideString;
-  std: tiscript_object;
 begin
   sMsg := WideFormat(Message, Args);
   TiScriptCall('stdout', 'println', [sMsg]);
@@ -2040,13 +2303,13 @@ begin
   FFilterKey := KEY_EVENTS_ALL;
   FFilterControlEvents := BEHAVIOR_EVENTS_ALL;
   API.Sciter_UseElement(FElement);
-  API.SciterAttachEventHandler(Self.FElement, LPELEMENT_EVENT_PROC(@ElementEventProc), Self);
+  API.SciterAttachEventHandler(Self.FElement, LPELEMENT_EVENT_PROC(@_SciterElementEventProc), Self);
   FSciter.ManagedElements.Add(Self);
 end;
 
 destructor TElement.Destroy;
 begin
-  API.SciterDetachEventHandler(Self.FElement, LPELEMENT_EVENT_PROC(@ElementEventProc), Self);
+  API.SciterDetachEventHandler(Self.FElement, LPELEMENT_EVENT_PROC(@_SciterElementEventProc), Self);
   API.Sciter_UnuseElement(FElement);
   if FSciter.ManagedElements.IndexOf(Self) <> - 1 then
     FSciter.ManagedElements.Remove(Self);
@@ -2342,7 +2605,7 @@ begin
     'Failed to get child element with index %d.',
     [Index]
   );
-    
+
   if hResult = nil then
   begin
     Result := nil;
@@ -2585,20 +2848,32 @@ function TElement.HandleBehaviorAttach: BOOL;
 var
   pArgs: TElementOnBehaviorEventArgs;
 begin
+  Result := False;
+  if not Assigned(FOnBehaviorEvent) then Exit;
+  
   pArgs := TElementOnBehaviorEventArgs.Create;
-  DoBehaviorAttach(pArgs);
-  Result := pArgs.Handled;
-  pArgs.Free;
+  try
+    DoBehaviorAttach(pArgs);
+    Result := pArgs.Handled;
+  finally
+    pArgs.Free;
+  end;
 end;
 
 function TElement.HandleBehaviorDetach: BOOL;
 var
   pArgs: TElementOnBehaviorEventArgs;
 begin
+  Result := False;
+  if not Assigned(FOnBehaviorEvent) then Exit;
+  
   pArgs := TElementOnBehaviorEventArgs.Create;
-  DoBehaviorDetach(pArgs);
-  Result := pArgs.Handled;
-  pArgs.Free;
+  try
+    DoBehaviorDetach(pArgs);
+    Result := pArgs.Handled;
+  finally
+    pArgs.Free;
+  end;
 end;
 
 function TElement.HandleControlEvent(
@@ -2607,6 +2882,8 @@ var
   pArgs: TElementOnControlEventArgs;
 begin
   Result := False;
+  if not Assigned(FOnControlEvent) then Exit;
+
   if (FFilterControlEvents <> BEHAVIOR_EVENTS_ALL) and (FFilterControlEvents <> params.cmd) then
     Exit;
     
@@ -2623,6 +2900,9 @@ function TElement.HandleDataArrived(var params: DATA_ARRIVED_PARAMS): BOOL;
 var
   pArgs: TElementOnDataArrivedEventArgs;
 begin
+  Result := False;
+  if not Assigned(FOnDataArrived) then Exit;
+  
   if (params.data = nil) or (params.dataSize = 0) then
   begin
     Result := False;
@@ -2642,16 +2922,25 @@ function TElement.HandleFocus(var params: FOCUS_PARAMS): BOOL;
 var
   pArgs: TElementOnFocusEventArgs;
 begin
+  Result := False;
+  if not Assigned(FOnFocus) then Exit;
+  
   pArgs := TElementOnFocusEventArgs.Create(Sciter, Self, params);
-  DoFocus(pArgs);
-  Result := pArgs.Handled;
-  pArgs.Free;
+  try
+    DoFocus(pArgs);
+    Result := pArgs.Handled;
+  finally
+    pArgs.Free;
+  end;
 end;
 
 function TElement.HandleGesture(var params: GESTURE_PARAMS): BOOL;
 var
   pArgs: TElementOnGestureEventArgs;
 begin
+  Result := False;
+  if not Assigned(FOnGesture) then Exit;
+  
   pArgs := TElementOnGestureEventArgs.Create(Sciter, Self, params);
   try
     DoGesture(pArgs);
@@ -2679,13 +2968,19 @@ var
   pArgs: TElementOnKeyEventArgs;
 begin
   Result := False;
+
+  if not Assigned(FOnKey) then Exit;
+
   if (FFilterKey <> KEY_EVENTS_ALL) and (FFilterKey <> params.cmd) then
     Exit;
 
   pArgs := TElementOnKeyEventArgs.Create(Sciter, Self, params);
-  DoKey(pArgs);
-  Result := pArgs.Handled;
-  pArgs.Free;
+  try
+    DoKey(pArgs);
+    Result := pArgs.Handled;
+  finally
+    pArgs.Free;
+  end;
 end;
 
 { Handling behavior predefined properties (value and text) }
@@ -2751,11 +3046,14 @@ begin
   Result := False;
   if (FFilterMouse <> MOUSE_EVENTS_ALL) and (FFilterMouse <> params.cmd) then
     Exit;
-    
+
   pArgs := TElementOnMouseEventArgs.Create(Sciter, Self, params);
-  DoMouse(pArgs);
-  Result := pArgs.Handled;
-  pArgs.Free;
+  try
+    DoMouse(pArgs);
+    Result := pArgs.Handled;
+  finally
+    pArgs.Free;
+  end;
 end;
 
 function TElement.HandleScriptingCall(
@@ -2764,11 +3062,14 @@ var
   pEventArgs: TElementOnScriptingCallArgs;
 begin
   pEventArgs := TElementOnScriptingCallArgs.Create(Sciter, Self, params);
-  DoScriptingCall(pEventArgs);
-  if pEventArgs.Handled then
-    pEventArgs.WriteRetVal;
-  Result := pEventArgs.Handled;
-  pEventArgs.Free;
+  try
+    DoScriptingCall(pEventArgs);
+    if pEventArgs.Handled then
+      pEventArgs.WriteRetVal;
+    Result := pEventArgs.Handled;
+  finally
+    pEventArgs.Free;
+  end;
 end;
 
 function TElement.HandleScrollEvents(var params: SCROLL_PARAMS): BOOL;
@@ -2802,9 +3103,12 @@ var
   pArgs: TElementOnTimerEventArgs;
 begin
   pArgs := TElementOnTimerEventArgs.Create(Self, params);
-  DoTimer(pArgs);
-  Result := pArgs.Continue;
-  pArgs.Free;
+  try
+    DoTimer(pArgs);
+    Result := pArgs.Continue;
+  finally
+    pArgs.Free;
+  end;
 end;
 
 procedure TElement.InsertAfter(const Html: WideString);
@@ -2884,7 +3188,6 @@ end;
 function TElement.PrevSibling: IElement;
 var
   pParent: IElement;
-  iIndex: Integer;
 begin
   Result := nil;
   if not Self.IsValid then
