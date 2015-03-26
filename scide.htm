@@ -222,11 +222,15 @@
 <body>
   <h1>SCIDE - Sciter for Delphi</h1>
   
+  <section>
+    <div style="background-color: #FFCC66; padding: 10pt; margin: 10pt; font-size: 14pt">You can find more samples in the Sciter SDK (http://sciter.com) </div>
+  </section>
+  
   <strong>Table of Contents</strong>
   <ul id="menu">
   
   </ul>
-
+ 
 <!--************************************************************************-->  
   <section>
     <h2>Basic DOM manipulations</h2>
@@ -249,24 +253,20 @@
 <!--************************************************************************-->
   <section>
     <h2>Event handling using IElement.Subscribe* functions</h2>
-    <div>
-      <div>input|text: <input class="es" /></div>
-      <div>input|checkbox: <input type="checkbox" class="es" /></div>
-      <div>textarea: <textarea class="es"></textarea></div>
-      <div><button class="es1">Click me</button></div>
-      <div>Type something here: <input class="es2" /></div>
-    </div>
+    <table>
+      <tr><td>input|text:</td><td><input class="es" /></td></tr>
+      <tr><td>input|checkbox:</td><td><input type="checkbox" class="es" /></td></tr>
+      <tr><td>textarea:</td><td><textarea class="es"></textarea></td></tr>
+      <tr><td>button</td><td><button class="es1">Click me</button></td></tr>
+      <tr><td>Type something here:</td><td><input class="es2" /></td></tr>
+    </table>
   </section>
   
 <!--************************************************************************-->
   <section>
-    <h2>Event handlers assigned in design-time with TSciter.EventMap property</h2>
+    <h2>Event handlers assigned at design-time (see TSciter.EventMap collection)</h2>
     <div>
       <button id="cmdEventHandler">I'm #cmdEventHandler. Click me</button>
-      <button class="cmd-event-handler">My class is "cmd-event-handler". Click me</button>
-      <button class="cmd-event-handler">My class is "cmd-event-handler". Click me</button>
-      <button class="cmd-event-handler">My class is "cmd-event-handler". Click me</button>
-      <button class="cmd-event-handler">My class is "cmd-event-handler". Click me</button>
       <button class="cmd-event-handler">My class is "cmd-event-handler". Click me</button>
       <button class="cmd-event-handler">My class is "cmd-event-handler". Click me</button>
       <button class="cmd-event-handler">My class is "cmd-event-handler". Click me</button>
@@ -548,6 +548,15 @@ initialization
       
     </textarea>
   </section>
+  
+<!--************************************************************************-->
+  <section>
+    <h2>Embedded Flash player (experimental)</h2>
+    <div id="divFlash" style="behavior: FlashPlayer; width: 600px; height: 400px" src="construction.swf">
+      
+    </div>
+  </section>
+ 
   
 <!--************************************************************************-->  
   <section>

@@ -10,7 +10,8 @@ uses
   SciterOle in '..\source\SciterOle.pas',
   NativeForm in 'NativeForm.pas',
   SciDeDemo_TLB in 'SciDeDemo_TLB.pas',
-  DemoBehavior in 'DemoBehavior.pas';
+  DemoBehavior in 'DemoBehavior.pas',
+  ShockwaveFlashObjects_TLB in 'ShockwaveFlashObjects_TLB.pas';
 
 {$R *.TLB}
 

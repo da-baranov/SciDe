@@ -350,6 +350,7 @@ type
     function AttachHwndToElement(h: HWND): boolean;
     function Call(const Method: WideString; const Args: Array of OleVariant): OleVariant;
     function CloneElement: IElement;
+    function CombineURL(const Url: WideString): WideString;
     function CreateElement(const Tag: WideString; const Text: WideString): IElement;
     procedure Delete;
     procedure Detach;
@@ -580,6 +581,7 @@ type
     function Call(const Method: WideString; const Args: Array of OleVariant): OleVariant;
     procedure ClearAttributes;
     function CloneElement: IElement;
+    function CombineURL(const Url: WideString): WideString;
     function CreateElement(const Tag: WideString; const Text: WideString): IElement;
     procedure Delete;
     procedure Detach;
@@ -2389,6 +2391,11 @@ begin
             end;
             Exit;
           end;
+
+        WM_VSCROLL:
+          begin
+
+          end;
       end;
 
       llResult := API.SciterProcND(Handle, Message.Msg, Message.WParam, Message.LParam, bHandled);
@@ -2479,6 +2486,16 @@ begin
     API.SciterCloneElement(FElement, phe), 'Failed to clone element.'
   );
   Result := ElementFactory(Self.Sciter, phe);
+end;
+
+function TElement.CombineURL(const Url: WideString): WideString;
+var
+  pStr: PWideChar;
+begin
+  pStr := SysAllocStringLen(PWideChar(Url), 1024 * 10);
+  API.SciterCombineURL(FElement, pStr, 1024 * 10);
+  Result := pStr;
+  SysFreeString(pStr);
 end;
 
 function TElement.CreateElement(const Tag: WideString; const Text: WideString): IElement;
@@ -3777,7 +3794,7 @@ end;
 
 procedure TElement.Update;
 begin
-  API.SciterUpdateElement(FElement, false);
+  API.SciterUpdateElement(FElement, True);
 end;
 
 constructor TElementCollection.Create;

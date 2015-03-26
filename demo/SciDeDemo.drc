@@ -8,7 +8,9 @@
   resources were bound to the produced executable.
 */
 
-#define OleConst_SNotLicensed 65248
+#define OleConst_SInvalidLicense 65248
+#define OleConst_SNotLicensed 65249
+#define OleConst_sNoRunningObject 65250
 #define ExtCtrls_clName3DLight 65264
 #define ExtCtrls_clNameWindow 65265
 #define ExtCtrls_clNameWindowFrame 65266
@@ -19,12 +21,12 @@
 #define ComConst_SNoMethod 65271
 #define ComConst_SVarNotObject 65272
 #define ComConst_STooManyParams 65273
-#define ComConst_SAutomationWarning 65274
-#define ComConst_SNoCloseActiveServer1 65275
-#define ComConst_SNoCloseActiveServer2 65276
-#define OleConst_SCannotActivate 65277
-#define OleConst_SNoWindowHandle 65278
-#define OleConst_SInvalidLicense 65279
+#define ComConst_SDCOMNotInstalled 65274
+#define ComConst_SAutomationWarning 65275
+#define ComConst_SNoCloseActiveServer1 65276
+#define ComConst_SNoCloseActiveServer2 65277
+#define OleConst_SCannotActivate 65278
+#define OleConst_SNoWindowHandle 65279
 #define ExtCtrls_clNameBtnText 65280
 #define ExtCtrls_clNameCaptionText 65281
 #define ExtCtrls_clNameDefault 65282
@@ -283,7 +285,9 @@
 #define SysConst_SInvalidOp 65535
 STRINGTABLE
 BEGIN
+	OleConst_SInvalidLicense,	"License information for %s is invalid"
 	OleConst_SNotLicensed,	"License information for %s not found. You cannot use this control in design mode"
+	OleConst_sNoRunningObject,	"Unable to retrieve a pointer to a running object registered with OLE for %s/%s"
 	ExtCtrls_clName3DLight,	"3D Light"
 	ExtCtrls_clNameWindow,	"Window Background"
 	ExtCtrls_clNameWindowFrame,	"Window Frame"
@@ -294,12 +298,12 @@ BEGIN
 	ComConst_SNoMethod,	"Method '%s' not supported by automation object"
 	ComConst_SVarNotObject,	"Variant does not reference an automation object"
 	ComConst_STooManyParams,	"Dispatch methods do not support more than 64 parameters"
+	ComConst_SDCOMNotInstalled,	"DCOM not installed"
 	ComConst_SAutomationWarning,	"COM Server Warning"
 	ComConst_SNoCloseActiveServer1,	"There are still active COM objects in this application.  One or more clients may have references to these objects, so manually closing "
 	ComConst_SNoCloseActiveServer2,	"this application may cause those client application(s) to fail.\r\n\r\nAre you sure you want to close this application?"
 	OleConst_SCannotActivate,	"OLE control activation failed"
 	OleConst_SNoWindowHandle,	"Could not obtain OLE control window handle"
-	OleConst_SInvalidLicense,	"License information for %s is invalid"
 	ExtCtrls_clNameBtnText,	"Button Text"
 	ExtCtrls_clNameCaptionText,	"Caption Text"
 	ExtCtrls_clNameDefault,	"Default"

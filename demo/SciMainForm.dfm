@@ -1,6 +1,6 @@
 object MainForm: TMainForm
-  Left = 433
-  Top = 231
+  Left = 415
+  Top = 251
   Width = 1191
   Height = 775
   Caption = 'SciDe - test form'
