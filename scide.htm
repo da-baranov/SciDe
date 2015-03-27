@@ -204,18 +204,6 @@
   {
     view.msgbox(#alert, self#divDemoBehavior.value);
   }
-  function self#cmdDemoBehaviorSetValue.onClick()
-  {
-    self#divDemoBehavior.value = "New value";
-  }
-  function self#cmdDemoBehaviorGetText.onClick()
-  {
-    view.msgbox(#alert, self#divDemoBehavior.text);
-  }
-  function self#cmdDemoBehaviorSetText.onClick()
-  {
-    self#divDemoBehavior.value = "New text";
-  }
   
   </script>
 </head>
@@ -536,9 +524,6 @@ initialization
     
     </div>
     <button id="cmdDemoBehaviorGetValue">Show value</button>
-    <button id="cmdDemoBehaviorSetValue">Change value</button>
-    <button id="cmdDemoBehaviorGetText">Show text</button>
-    <button id="cmdDemoBehaviorSetText">Change text</button>
   </section>
   
 <!--************************************************************************-->

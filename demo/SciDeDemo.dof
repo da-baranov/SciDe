@@ -142,3 +142,18 @@ C:\bin\odacvcl70.bpl=Oracle Data Access GUI related Components
 C:\bin\odac70.bpl=Oracle Data Access Components
 C:\svn\Projects\KB85\Медицинские документы\ODAC\Bin\Delphi7\dcloraprov70.bpl=OraProvider package
 C:\bin\oraprov70.bpl=OraProvider package
+[HistoryLists\hlConditionals]
+Count=1
+Item0=WINDOWS
+[HistoryLists\hlUnitAliases]
+Count=1
+Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
+[HistoryLists\hlSearchPath]
+Count=3
+Item0=$(DELPHI)\Lib\Debug
+Item1=$(DELPHI)\Lib\Debug;..\source
+Item2=$(DELPHI)\Lib\Debug;c:\Delphi7\Source\Jcl\lib\d7\debug;c:\Delphi7\Source\Jvcl\jcl\lib\d7\debug
+[HistoryLists\hlUnitOutputDirectory]
+Count=2
+Item0=..\..\dcu
+Item1=dcu

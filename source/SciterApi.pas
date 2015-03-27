@@ -346,7 +346,7 @@ type
   end;
   PTEXT_VALUE_PARAMS = ^TEXT_VALUE_PARAMS;
 
-  VALUE_PARAMS = packed record
+  VALUE_PARAMS = record
     methodID: BEHAVIOR_METHOD_IDENTIFIERS;
     val: TSciterValue;
   end;

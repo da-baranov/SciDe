@@ -3107,10 +3107,8 @@ function TElement.HandleMethodCallEvents(var params: METHOD_PARAMS): BOOL;
 var
   x: BEHAVIOR_METHOD_IDENTIFIERS;
   EmptyParams: PIS_EMPTY_PARAMS;
-  TextValueParams: PTEXT_VALUE_PARAMS;
   ValueParams: PVALUE_PARAMS;
   vValue: OleVariant;
-  sText: WideString;
 begin
   Result := False;
 
@@ -3122,8 +3120,11 @@ begin
       begin
         EmptyParams := PIS_EMPTY_PARAMS(@params);
         EmptyParams.is_empty := 1;
-        Result := True;
+        Result := False;
       end;
+    {
+    Andrew has notified us that both GET_TEXT_VALUE and SET_TEXT_VALUE are deprecated for now
+    
     GET_TEXT_VALUE:
       begin
         TextValueParams := PTEXT_VALUE_PARAMS(@params);
@@ -3137,6 +3138,7 @@ begin
         TextValueParams := PTEXT_VALUE_PARAMS(@params);
         SetText(WideString(TextValueParams.text));
       end;
+    }
     GET_VALUE:
       begin
         ValueParams := PVALUE_PARAMS(@params);
@@ -3150,10 +3152,6 @@ begin
         S2V(@ValueParams.val, vValue);
         SetValue(vValue);
         Result := True;
-      end;
-    else
-      begin
-        //
       end;
   end;
 end;

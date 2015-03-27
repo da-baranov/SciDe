@@ -1,7 +1,7 @@
 object MainForm: TMainForm
-  Left = 415
-  Top = 251
-  Width = 1191
+  Left = 452
+  Top = 138
+  Width = 1057
   Height = 775
   Caption = 'SciDe - test form'
   Color = clBtnFace
@@ -20,7 +20,7 @@ object MainForm: TMainForm
   object pnlContainer: TPanel
     Left = 0
     Top = 29
-    Width = 1175
+    Width = 1041
     Height = 669
     Align = alClient
     BevelOuter = bvNone
@@ -29,7 +29,7 @@ object MainForm: TMainForm
     object spl1: TSplitter
       Left = 0
       Top = 480
-      Width = 1175
+      Width = 1041
       Height = 5
       Cursor = crVSplit
       Align = alBottom
@@ -37,7 +37,7 @@ object MainForm: TMainForm
     object txtLog: TMemo
       Left = 0
       Top = 485
-      Width = 1175
+      Width = 1041
       Height = 184
       Align = alBottom
       Color = 16771799
@@ -53,9 +53,11 @@ object MainForm: TMainForm
     object Sciter1: TSciter
       Left = 0
       Top = 0
-      Width = 1175
+      Width = 1041
       Height = 480
       Align = alClient
+      BevelKind = bkTile
+      BevelWidth = 2
       EventMap = <
         item
           Selector = '#cmdEventHandler, .cmd-event-handler'
@@ -72,7 +74,7 @@ object MainForm: TMainForm
   object sbr: TStatusBar
     Left = 0
     Top = 698
-    Width = 1175
+    Width = 1041
     Height = 19
     Panels = <>
     SimplePanel = True
@@ -80,19 +82,19 @@ object MainForm: TMainForm
   object cbr: TCoolBar
     Left = 0
     Top = 0
-    Width = 1175
+    Width = 1041
     Height = 29
     AutoSize = True
     Bands = <
       item
         Control = tbr
         ImageIndex = -1
-        Width = 1171
+        Width = 1037
       end>
     object tbr: TToolBar
       Left = 9
       Top = 0
-      Width = 1158
+      Width = 1024
       Height = 25
       ButtonWidth = 88
       Caption = 'tbr'
