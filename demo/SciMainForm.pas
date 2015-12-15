@@ -159,7 +159,7 @@ begin
   end;
   if sUrl = '' then
     sUrl := 'scide.htm';
-  Open(sUrl);
+  // Open(sUrl);
 
   // Registering native functions
   Sciter1.RegisterNativeFunction('CreateObject', ptiscript_method(@CreateObjectNative));

@@ -1376,6 +1376,7 @@ end;
 procedure TSciter.CreateWindowHandle(const Params: TCreateParams);
 begin
   inherited;
+  Application.ProcessMessages;
 end;
 
 procedure TSciter.CreateWnd;
@@ -1410,6 +1411,7 @@ begin
     end;
     if Assigned(FOnHandleCreated) then
       FOnHandleCreated(Self);
+    Application.ProcessMessages;
   end;
 end;
 
@@ -2234,7 +2236,8 @@ end;
 procedure TSciter.SetOption(const Key: SCITER_RT_OPTIONS;
   const Value: UINT_PTR);
 begin
-  API.SciterSetOption(Handle, Key, Value);
+  if not API.SciterSetOption(Handle, Key, Value) then
+    raise ESciterException.Create('Failed to set Sciter option');
 end;
 
 procedure TSciter.ShowInspector(const Element: IElement);

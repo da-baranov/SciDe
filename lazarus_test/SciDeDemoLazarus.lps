@@ -4,7 +4,7 @@
     <PathDelim Value="\"/>
     <Version Value="9"/>
     <BuildModes Active="Default"/>
-    <Units Count="14">
+    <Units Count="18">
       <Unit0>
         <Filename Value="SciDeDemoLazarus.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -31,8 +31,7 @@
         <Filename Value="Sciter.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="Sciter"/>
-        <IsVisibleTab Value="True"/>
-        <EditorIndex Value="1"/>
+        <EditorIndex Value="4"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1355"/>
         <CursorPos X="3" Y="1361"/>
@@ -44,7 +43,7 @@
         <Filename Value="SciterApi.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="SciterApi"/>
-        <EditorIndex Value="3"/>
+        <EditorIndex Value="6"/>
         <WindowIndex Value="0"/>
         <TopLine Value="486"/>
         <CursorPos X="34" Y="534"/>
@@ -56,7 +55,7 @@
         <Filename Value="TiScriptApi.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="TiScriptApi"/>
-        <EditorIndex Value="2"/>
+        <EditorIndex Value="5"/>
         <WindowIndex Value="0"/>
         <TopLine Value="1"/>
         <CursorPos X="1" Y="1"/>
@@ -123,6 +122,54 @@
         <CursorPos X="1" Y="7249"/>
         <UsageCount Value="10"/>
       </Unit13>
+      <Unit14>
+        <Filename Value="C:\Users\BARANO~1\AppData\Local\Temp\Rar$DI00.568\Spellers.pas"/>
+        <UnitName Value="Spellers"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="67"/>
+        <CursorPos X="26" Y="17"/>
+        <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit14>
+      <Unit15>
+        <Filename Value="C:\svn\Projects\KB85\Медицинские документы\MIKHTMLEditor.pas"/>
+        <ComponentName Value="HTMLEditor"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Frame"/>
+        <UnitName Value="MIKHTMLEditor"/>
+        <EditorIndex Value="1"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+        <LoadedDesigner Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit15>
+      <Unit16>
+        <Filename Value="C:\P8\Source\SCRSTORE\MainForm.pas"/>
+        <HasResources Value="True"/>
+        <UnitName Value="MainForm"/>
+        <EditorIndex Value="2"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="36" Y="11"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit16>
+      <Unit17>
+        <Filename Value="C:\Delphi7\Source\Jvcl\jvcl\run\JvDatePickerEdit.pas"/>
+        <UnitName Value="JvDatePickerEdit"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="3"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1"/>
+        <CursorPos X="1" Y="1"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+        <DefaultSyntaxHighlighter Value="Delphi"/>
+      </Unit17>
     </Units>
     <General>
       <ActiveWindowIndexAtStart Value="0"/>

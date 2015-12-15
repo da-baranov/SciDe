@@ -134,14 +134,12 @@ OriginalFilename=
 ProductName=
 ProductVersion=1.0.0.0
 [Excluded Packages]
-C:\svn\Projects\KB85\Медицинские документы\ODAC\Bin\Delphi7\dacvcl70.bpl=Devart Data Access GUI related Components
-C:\svn\Projects\KB85\Медицинские документы\ODAC\Bin\Delphi7\dclcrcontrols70.bpl=Devart Controls
+C:\Delphi7\Projects\Bpl\odac70.bpl=Oracle Data Access Components
 C:\svn\Projects\KB85\Медицинские документы\ODAC\Bin\Delphi7\dcldac70.bpl=Devart Data Access Components
 C:\svn\Projects\KB85\Медицинские документы\ODAC\Bin\Delphi7\dclodac70.bpl=Oracle Data Access Components
-C:\bin\odacvcl70.bpl=Oracle Data Access GUI related Components
-C:\bin\odac70.bpl=Oracle Data Access Components
 C:\svn\Projects\KB85\Медицинские документы\ODAC\Bin\Delphi7\dcloraprov70.bpl=OraProvider package
-C:\bin\oraprov70.bpl=OraProvider package
+C:\Delphi7\Projects\Bpl\oraprov70.bpl=OraProvider package
+C:\svn\Projects\KB85\Медицинские документы\ODAC\Bin\Delphi7\dclcrcontrols70.bpl=Devart Controls
 [HistoryLists\hlConditionals]
 Count=1
 Item0=WINDOWS
@@ -150,8 +148,8 @@ Count=1
 Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
 [HistoryLists\hlSearchPath]
 Count=3
-Item0=$(DELPHI)\Lib\Debug
-Item1=$(DELPHI)\Lib\Debug;..\source
+Item0=$(DELPHI)\Lib\Debug;..\source
+Item1=$(DELPHI)\Lib\Debug
 Item2=$(DELPHI)\Lib\Debug;c:\Delphi7\Source\Jcl\lib\d7\debug;c:\Delphi7\Source\Jvcl\jcl\lib\d7\debug
 [HistoryLists\hlUnitOutputDirectory]
 Count=2

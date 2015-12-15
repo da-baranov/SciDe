@@ -557,7 +557,7 @@ type
     SciterSetOption: function(hwnd: HWINDOW; option: SCITER_RT_OPTIONS; value: UINT_PTR): BOOL; stdcall;
     SciterGetPPI: procedure(hWndSciter: HWINDOW; var px: UINT; var py: UINT); stdcall;
     SciterGetViewExpando: function( hwnd: HWINDOW; pval: PSciterValue ): BOOL; stdcall;
-    SciterEnumUrlData: Pointer;  // TODO:
+    //SciterEnumUrlData: Pointer;  // TODO:
     SciterRenderD2D: TProcPointer;
     SciterD2DFactory: TProcPointer;
     SciterDWFactory: TProcPointer;
@@ -565,10 +565,10 @@ type
     SciterSetHomeURL: function(hWndSciter: HWINDOW; baseUrl: PWideChar): BOOL; stdcall;
     SciterCreateWindow: function( creationFlags: UINT; var frame: TRect; delegate: PSciterWindowDelegate; delegateParam: LPVOID; parent: HWINDOW): HWINDOW; stdcall;
     SciterSetupDebugOutput: procedure(hwndOrNull: HWINDOW; param: Pointer; pfOutput: PDEBUG_OUTPUT_PROC); stdcall;
-    SciterDebugSetupClient: TProcPointer;
-    SciterDebugAddBreakpoint: TProcPointer;
-    SciterDebugRemoveBreakpoint: TProcPointer;
-    SciterDebugEnumBreakpoints: TProcPointer;
+    //SciterDebugSetupClient: TProcPointer;
+    //SciterDebugAddBreakpoint: TProcPointer;
+    //SciterDebugRemoveBreakpoint: TProcPointer;
+    //SciterDebugEnumBreakpoints: TProcPointer;
 
 //|
 //| DOM Element API
