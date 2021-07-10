@@ -2,7 +2,7 @@
 Sciter component for Delphi
 
 *** SUPPORTED VERSIONS AND PLATFORMS ***
-Delphi 7 or newer, 32-bit platform 
+Delphi 7 or newer, 32-bit platform (x64 was not tested)
 
 *** ACTUAL SCITER VERSION: 3.2.0.3 ***
 
@@ -13,4 +13,4 @@ Delphi 7 or newer, 32-bit platform
 4. Copy sciter32.dll and sciter64.dll to %DELPHI%\Projects\Bpl directory
 
 *** RUNTIME DEPENDENCIES ***
-Put sciter32.dll or sciter64.dll near your executable
+Put sciter32.dll or sciter64.dll next to your executable
